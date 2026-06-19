@@ -23,7 +23,7 @@ scout_agent = Agent(
     backstory = 'You are an elite cyber threat intelligence researcher. You always look for real-time, current data about new vulnerabilities discovered in 2026.',
     verbose = True,
     llm = local_mistral,
-    tools = [search_tool],
+    tools = [nist_search_tool, alienvault_tool, rss_reader_tool, twitter_intel_tool],
     allow_delegation = False
 )
 

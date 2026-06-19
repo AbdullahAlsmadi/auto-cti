@@ -1,0 +1,54 @@
+{
+    "June 20, 2026": [
+        {
+            "cve_id": "CVE-2026-11442",
+            "description": "Allegra exportReport Directory Traversal Information Disclosure Vulnerability.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-11443",
+            "description": "Allegra downloadAttachment Cross-Site Scripting Authentication Bypass Vulnerability.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-12089",
+            "description": "The LWS Optimize – All-in-One Speed Booster & Cache Tools plugin for WordPress is vulnerable to Arbitrary File Read in versions up to, and including, 3.3.19.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-54228",
+            "description": "A time-of-check time-of-use (TOCTOU) race condition was found in the abrt-dbus D-Bus service's SetElement method.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-54229",
+            "description": "A race condition was found in the abrt-dbus D-Bus service's ChownProblemDir method.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-54230",
+            "description": "A symlink following vulnerability was found in the ABRT post-create event handler scripts in libreport.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-54231",
+            "description": "A content injection vulnerability was found in the ABRT post-create event handler scripts in libreport.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-9848",
+            "description": "The WP Ticket plugin for WordPress is vulnerable to SQL Injection via the WordPress search query parameter (s) in versions up to, and including, 6.0.4.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-11769",
+            "description": "CRITICAL severity security fix for a path traversal/privilege escalation vulnerability in the Grafana Operator.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-9061",
+            "description": "The Store Locator WordPress plugin before 1.6.9 does not sanitize and escape store logo metadata.",
+            "alienvault_pulses": "No pulses found"
+        }
+    ]
+}

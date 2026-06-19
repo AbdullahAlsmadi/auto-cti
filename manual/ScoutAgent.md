@@ -46,8 +46,9 @@ You must download and run the local AI model in the background so the agent can 
 ```Bash
 ollama run mistral
 ```
-
-#(Note: Wait for the download to finish if this is your first time, then type /bye to return to your normal terminal prompt).
+```
+(Note: Wait for the download to finish if this is your first time, then type /bye to return to your normal terminal prompt).
+```
 ---
 *2️⃣ Step 2: Launch the Scout Agent*
 Once you are sure Ollama is running in the background, execute the agent script to start the operation:

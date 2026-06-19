@@ -130,7 +130,7 @@ live_task = Task(
     3. Read the exact VERIFIED_CVE_IDs returned by the NIST tool.
     4. For EACH real VERIFIED_CVE_ID found, use the AlienVault tool to check if there are any active threat pulses.
     5. Compile the final report using ONLY the data retrieved from the tools.
-    CRITICAL CONSTRAINT: Do not search the internet for random CVEs. ONLY use the exact IDs provided by the NIST tool. DO NOT make up sequential numbers.
+    CRITICAL CONSTRAINT: Do not search the internet for random CVEs. ONLY use the exact IDs provided by the NIST tool in step 2. DO NOT make up sequential numbers.
     OUTPUT FORMAT: You MUST return ONLY a valid JSON array. No markdown formatting, no introductory text.''',
     expected_output='''[
         {
@@ -157,7 +157,7 @@ if __name__ == "__main__":
     print("================================================")
     print(result)
 
-    results_dir = "Scout_Agent_Results"
+    results_dir = os.path.join("JoFile", "Scout_Agent_Results")
     os.makedirs(results_dir, exist_ok=True)
 
     report_filename = os.path.join(results_dir, 'cti_report.json')

@@ -1,0 +1,54 @@
+{
+    "June 19, 2026": [
+        {
+            "cve_id": "CVE-2026-10676",
+            "description": "Rejected reason: This CVE Record has been rejected by the Zephyr Project CNA. Subsequent analysis determined that the addressed defect is not reachable in any released version of Zephyr: on every supp...",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-49482",
+            "description": "ClipBucket v5 is an open source video sharing platform. Prior to version 5.5.3 - #141, ClipBucket v5 contains an improper neutralization of SQL wildcard characters in the subtitle editing endpoint. An...",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-11933",
+            "description": "A use-after-free vulnerability exists in MongoDB Server's server-side JavaScript engine when converting BSON documents to JavaScript arrays. An authenticated user with read privileges who is able to r...",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-45170",
+            "description": "Idira Privilege Cloud Connector versions prior 1.1.100504 under specific conditions and configuration scenarios, TLS certificate validation may not be fully enforced. CyberArk Security Bulletin: CA26-...",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-9125",
+            "description": "The Presto Player plugin for WordPress is vulnerable to Stored Cross-Site Scripting via the 'link_url' parameter of the [presto_player_overlay] shortcode in versions up to, and including, 4.2.0 This i...",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-20746",
+            "description": "Virtual attribute handling in Ping Identity PingDirectory in affected versions allows only authorized users to exhaust java memory heap when recent login history is enabled and copying virtual attribu...",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-47365",
+            "description": "Argument injection vulnerability in WordPress Toolkit before 6.11.0 as used in cPanel & WHM, allows remote authenticated users to bypass cross-tenant authorization and execute arbitrary wp-toolkit CLI...",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-47366",
+            "description": "Improper verification of access permissions when modifying permissions through the Administration Control Panel (ACP) allowed an authenticated administrator to grant permissions beyond the level autho...",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-47367",
+            "description": "A malicious actor with access to the network and low privileges could exploit an Improper Input Validation vulnerability found in UID Enterprise Agent to execute a Command Injection on the host device...",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-47368",
+            "description": "A malicious actor with access to the network could exploit a Path Traversal vulnerability found in certain devices running UniFi OS to obtain data from such UniFi OS devices or instances....",
+            "alienvault_pulses": "No pulses found"
+        }
+    ]
+}

@@ -34,6 +34,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 pip install duckduckgo-search
 ```
+---
 
 ## 🚀 Usage (Core Commands)
 
@@ -51,3 +52,15 @@ ollama run mistral
 ---
 *2️⃣ Step 2: Launch the Scout Agent*
 Once you are sure Ollama is running in the background, execute the agent script to start the operation:
+
+```Bash
+python scout_agent.py
+```
+---
+
+## 🎯 What to Expect?
+
+Upon running the last command, you will see the ```CrewAI``` interface start in your terminal, and the agent will:
+1. Formulate advanced search queries based on the task.
+2. Use the custom ```Internet Search Tool``` to securely search the live web.
+3. Read and summarize the results, outputting a final report containing the top 3 most recent cybersecurity threats.

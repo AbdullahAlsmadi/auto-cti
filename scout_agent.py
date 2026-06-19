@@ -106,11 +106,11 @@ alienvault_tool = AlienVaultOTXTool()
 
 cloud_gemini = LLM(
     
-    #model="gemini/gemini-3.1-flash-lite",
-    #api_key=os.getenv("GEMINI_API_KEY")
+    model="gemini/gemini-3.1-flash-lite",
+    api_key=os.getenv("GEMINI_API_KEY")
     
-    model="ollama/qwen2.5",
-    base_url="http://localhost:11434"
+    #model="ollama/qwen2.5",
+    #base_url="http://localhost:11434"
 
 ) #I have to ask the Dr about this 
 

@@ -19,8 +19,8 @@ local_mistral = LLM(
 
 scout_agent = Agent(
     role = 'Cyber Threat Scout',
-    goal = 'Search the internet to find the latest cybersecurity threats and CVEs.',
-    backstory = 'You are an elite cyber threat intelligence researcher. You use search engines to find real-time data about new vulnerabilities.',
+    goal = 'Search the internet to find the latest 2026 cybersecurity threats and newly assigned CVEs.',
+    backstory = 'You are an elite cyber threat intelligence researcher. You always look for real-time, current data about new vulnerabilities discovered in 2026.',
     verbose = True,
     llm = local_mistral,
     tools = [search_tool],
@@ -28,8 +28,8 @@ scout_agent = Agent(
 )
 
 live_task = Task(
-    description = 'Use the search tool to find 3 cybersecurity news articles or new CVEs published this week. Provide a short summary for each.',
-    expected_output = 'A bulleted list of 3 recent cybersecurity threats with a short summary.',
+    description = 'Use the search tool to find 3 major cybersecurity news articles or new CVEs published in 2026. Ensure the vulnerabilities are current and from this year.',
+    expected_output = 'A bulleted list of 3 recent 2026 cybersecurity threats with a short summary and their CVE numbers.',
     agent = scout_agent
 )
 

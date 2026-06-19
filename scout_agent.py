@@ -7,11 +7,10 @@ from duckduckgo_search import DDGS
 from dotenv import load_dotenv
 
 load_dotenv()
-today_date = datetime.datetime.now().strftime("%B %d, %Y")
 
-# ==========================================
-# 1. Tools Definition
-# ==========================================
+today_date = datetime.datetime.now().strftime("%B %d, %Y")
+print("Gemini API Key loaded:", bool(os.getenv("GEMINI_API_KEY")))
+
 
 class InternetSearchTool(BaseTool):
     name: str = "Internet Search Tool"
@@ -20,92 +19,81 @@ class InternetSearchTool(BaseTool):
     def _run(self, query: str) -> str:
         results = DDGS().text(query, max_results=10)
         return str(list(results))
-    
+
+
 class NISTSearchTool(BaseTool):
     name: str = "NIST NVD Recent Search Tool"
     description: str = "Use this tool FIRST. It fetches the 10 MOST RECENT CVEs added to the official NIST database. DO NOT pass a specific query, just pass 'recent'."
 
-    def _run(self, query: str) -> str: 
+    def _run(self, query: str) -> str:
         try:
-            end_date = datetime.datetime(2024, 5, 20) 
+            end_date = datetime.datetime.now()
             start_date = end_date - datetime.timedelta(days=7)
-            
             start_str = start_date.strftime('%Y-%m-%dT00:00:00.000') + "Z"
             end_str = end_date.strftime('%Y-%m-%dT23:59:59.000') + "Z"
-            
             url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=10&pubStartDate={start_str}&pubEndDate={end_str}"
-            response = requests.get(url, timeout=20)
-
+            response = requests.get(url, timeout=60)
             if response.status_code != 200:
                 return f"NIST API Error: Received status code {response.status_code}"
-            
             data = response.json()
-            
             verified_cves = []
             for item in data.get("vulnerabilities", []):
-                cve_id = item.get("cve", {}).get("id") 
+                cve_id = item.get("cve", {}).get("id")
                 if not cve_id:
-                    continue 
-                
+                    continue
                 descriptions = item.get("cve", {}).get("descriptions", [])
                 desc_text = "No description provided by NIST."
                 for d in descriptions:
                     if d.get("lang") == "en":
                         desc_text = d.get("value")
                         break
-                
                 verified_cves.append(f"VERIFIED_CVE_ID: {cve_id} | DESC: {desc_text[:200]}...")
-            
             if not verified_cves:
-                 return "API returned data, but no valid CVE IDs were found."
-                 
+                return "API returned data, but no valid CVE IDs were found."
             final_output = "STRICT INSTRUCTION: USE EXACTLY THESE IDs:\n" + "\n".join(verified_cves)
             return final_output
-
         except Exception as e:
             return f"Failed to connect to NIST: {str(e)}"
+
 
 class AlienVaultOTXTool(BaseTool):
     name: str = "AlienVault OTX Search Tool"
     description: str = "Search AlienVault Open Threat Exchange for threat pulses and tags associated with a specific keyword (like a CVE ID)."
 
-    def _run(self, query: str) -> str: 
+    def _run(self, query: str) -> str:
         try:
-            url = f"https://otx.alienvault.com/api/v1/search/pulses?q={query}&limit=5"
-            response = requests.get(url, timeout=10)
+            # Get the API key from environment variables
+            api_key = os.getenv("OTX_API_KEY")
+            if not api_key:
+                return "AlienVault API Error: OTX_API_KEY is missing from environment variables."
 
+            url = f"https://otx.alienvault.com/api/v1/search/pulses?q={query}&limit=5"
+            headers = {"X-OTX-API-KEY": api_key}
+            response = requests.get(url, headers=headers, timeout=60)
             if response.status_code != 200:
                 return f"AlienVault API Error: Received status code {response.status_code}"
-            
             data = response.json()
             results = []
             for pulse in data.get("results", []):
                 pulse_name = pulse.get("name", "N/A")
-                pulse_id = pulse.get("id", "N/A")
                 tags = ", ".join(pulse.get("tags", []))
                 results.append(f"Pulse Name: {pulse_name}\nTags: {tags}\n")
-
             return "\n".join(results) if results else "No pulses found in AlienVault OTX for this CVE."
         except Exception as e:
-                return f"Failed to connect to AlienVault: {str(e)}"
-        
+            return f"Failed to connect to AlienVault: {str(e)}"
+
+
 search_tool = InternetSearchTool()
 nist_tool = NISTSearchTool()
 alienvault_tool = AlienVaultOTXTool()
 
-# ==========================================
-# 2. Agent & LLM Setup
-# ==========================================
-""""
-local_agent = LLM(
-    model="ollama/llama3.1",
-    base_url="http://localhost:11434"
-)
-"""
-
+# ========== LLM CONFIGURATION - Gemini 2.5 Flash-Lite ==========
+# Lite model has higher free-tier rate limits.
+# max_retries allows CrewAI to automatically retry on 429 errors.
 cloud_gemini = LLM(
-    model="gemini/gemini-1.5-pro",
-    api_key=os.getenv("GEMINI_API_KEY")
+    model="gemini/gemini-2.5-flash-lite",
+    api_key=os.getenv("GEMINI_API_KEY"),
+    max_retries=5 # type: ignore
 )
 
 scout_agent = Agent(
@@ -117,14 +105,10 @@ scout_agent = Agent(
     You must ONLY output information that is EXACTLY matched from the tool responses. 
     If a tool returns no data, or if you cannot find real CVEs, you must simply state: "No real data found."''',
     verbose=True,
-    llm = cloud_gemini,
+    llm=cloud_gemini,
     tools=[search_tool, nist_tool, alienvault_tool],
     allow_delegation=False
 )
-
-# ==========================================
-# 3. Task Definition
-# ==========================================
 
 live_task = Task(
     description=f'''Follow these exact steps to create a highly accurate, recent threat report:
@@ -135,23 +119,19 @@ live_task = Task(
     5. Compile the final report using ONLY the data retrieved from the tools.
     CRITICAL CONSTRAINT: Do not search the internet for random CVEs. ONLY use the exact IDs provided by the NIST tool in step 2. DO NOT make up sequential numbers.''',
     expected_output='A factual report containing the exact verified CVEs from the NIST tool, their descriptions, and any associated AlienVault pulses. Formatted cleanly.',
-    agent=scout_agent 
+    agent=scout_agent
 )
 
-# ==========================================
-# 4. Execution
-# ==========================================
-
 cyber_crew = Crew(
-    agents=[scout_agent], 
+    agents=[scout_agent],
     tasks=[live_task],
     verbose=True
 )
 
-print(f"Waking up the strict Scout. Today's date is calibrated to: {today_date}")
-result = cyber_crew.kickoff()
-
-print("\n================================================")
-print("Final Verified Cyber Threat Intelligence (CTI) Report:")
-print("================================================")
-print(result)
+if __name__ == "__main__":
+    print(f"Waking up the strict Scout. Today's date is calibrated to: {today_date}")
+    result = cyber_crew.kickoff()
+    print("\n================================================")
+    print("Final Verified Cyber Threat Intelligence (CTI) Report:")
+    print("================================================")
+    print(result)

@@ -26,7 +26,7 @@ output_dir = os.path.join("JoFile", "triage_agent_result")
 os.makedirs(output_dir, exist_ok=True)
 
 triage_llm = LLM(
-    model="ollama/llama3.1",
+    model="ollama/qwen2.5",
     base_url="http://localhost:11434"
 )
 
@@ -53,11 +53,17 @@ triage_task = Task(
     1. Filter out rejected or clearly irrelevant CVEs.
     2. Deduce an estimated CVSS severity (Critical, High, Medium, Low) based on the description.
     3. Map the described threat behavior to potential MITRE ATT&CK tactics or techniques.
-    4. Calculate a hypothetical "Urgency Score" (from 1 to 100) assuming the target organization uses a standard cloud web-app tech stack.
+    4. Calculate a hypothetical "Urgency Score" (from 1 to 100).
     
-    OUTPUT FORMAT: You MUST output a clean, highly professional Markdown report. Use tables and bold text to make the intelligence actionable for an executive team.''',
+    CRITICAL INSTRUCTION: You MUST output a clean Markdown report. Ensure every table has proper separators (|---|).''',
     
-    expected_output='An executive-ready Markdown report containing the filtered CVEs, their estimated CVSS, MITRE ATT&CK mappings, and Urgency Scores.',
+    expected_output='''An executive-ready Markdown report. You MUST strictly use exactly this table format for the output:
+    
+    | CVE ID | Description | CVSS Severity | MITRE ATT&CK Mappings | Urgency Score |
+    |---|---|---|---|---|
+    | CVE-... | ... | ... | ... | ... |
+    
+    Do not merge columns. Ensure the table is perfectly formatted.''',
     agent=triage_agent,
     output_file=output_file_path
 )

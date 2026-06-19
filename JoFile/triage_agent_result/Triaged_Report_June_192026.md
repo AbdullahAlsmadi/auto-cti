@@ -1,43 +1,14 @@
-# Threat Intelligence Report
+| CVE ID | Description | CVSS Severity | MITRE ATT&CK Mappings | Urgency Score |
+|---|---|---|---|---|
+| CVE-2026-10676 | Rejected reason: This CVE Record has been rejected by the Zephyr Project CNA. Subsequent analysis determined that the addressed defect is not reachable in any released version of Zephyr: on every supported release, this issue is nullified due to lack of exploitability. | Low | None | 10 |
+| CVE-2026-49482 | ClipBucket v5 is an open source video sharing platform. Prior to version 5.5.3 - #141, ClipBucket v5 contains an improper neutralization of SQL wildcard characters in the subtitle editing endpoint. This flaw could allow a attacker with access to the vulnerable web application to exploit this flaw and inject arbitrary SQL commands that could result in unauthorized modification or disclosure of information. | High | Exploit包容: ELE (T1043) | 95 |
+| CVE-2026-11933 | A use-after-free vulnerability exists in MongoDB Server's server-side JavaScript engine when converting BSON documents to JavaScript arrays. An authenticated user with read privileges who is able to retrieve a reference to freed memory could potentially trigger the use of that memory after it has been made available for reuse, leading to an arbitrary code execution. | High | Execution: Scripting (T1573)  | 80 |
+| CVE-2026-45170 | Idira Privilege Cloud Connector versions prior 1.1.100504 under specific conditions and configuration scenarios, TLS certificate validation may not be fully enforced leading to potential unauthorized access or data leakage. CyberArk Security Bulletin: CA26-... | High | Authentication (T1076)  | 85 |
+| CVE-2026-9125 | The Presto Player plugin for WordPress is vulnerable to Stored Cross-Site Scripting via the 'link_url' parameter of the [presto_player_overlay] shortcode in versions up to, and including, 4.2.0 This issue could allow a attacker with access to a public web application or a malicious user account to inject arbitrary scripts into the application leading to potential data theft or system compromise. | High | Injection: Command Execution (T1203) , Web spoofing (T1568)  | 90 |
+| CVE-2026-20746 | Virtual attribute handling in Ping Identity PingDirectory in affected versions allows only authorized users to exhaust java memory heap when recent login history is enabled and copying virtual attributes could lead to denial of service. This issue could result in a Denial of Service (DoS) condition by exhausting system resources.  | High | Privilege Escalation (T1548) , Discovery (T1082)  | 75 |
+| CVE-2026-47365 | Argument injection vulnerability in WordPress Toolkit before 6.11.0 as used in cPanel & WHM, allows remote authenticated users to bypass cross-tenant authorization and execute arbitrary wp-toolkit CLI commands that could impact system integrity or user data. | High | Privilege Escalation (T1548) , Lateral Movement (T1097)  | 92 |
+| CVE-2026-47366 | Improper verification of access permissions when modifying permissions through the Administration Control Panel (ACP) allowed an authenticated administrator to grant permissions beyond the level authorized. This flaw could lead to unauthorized access and privilege escalation. | High | Privilege Escalation (T1548) , Discovery (T1082)  | 78 |
+| CVE-2026-47367 | A malicious actor with access to the network and low privileges could exploit an Improper Input Validation vulnerability found in UID Enterprise Agent to execute a Command Injection on the host device. This issue could allow for arbitrary command execution leading to system compromise.  | High | Execution: OS File Operations (T1204) , Privilege Escalation (T1548)  | 93 |
+| CVE-2026-47368 | A malicious actor with access to the network could exploit a Path Traversal vulnerability found in certain devices running UniFi OS to obtain data from such UniFi OS devices or instances. This flaw could allow unauthorized data retrieval leading to potential data leakage or intellectual property theft.  | High | Discovery: Network Share Discovery (T1097) , Lateral Movement (T1028)  | 87 |
 
-## Filtered Vulnerabilities
-
-The following list includes only relevant vulnerabilities that pass the filtering criteria:
-
-| CVE ID | Description | CVSS SeverityMapped Tactics/Techniques Urgency Score |
-| --- | --- | --- | --- |
-| CVE-2026-49482 | ClipBucket v5 contains an improper neutralization of SQL wildcard characters. An authenticated user with read access who is able to modify contents may cause SQL injection attack leading into potential unauthorized data access and modification, escalating privilege levels in several areas. | MediumInjection**T1083** **Impair capabilities**, **Execution** | 85 |
-| CVE-2026-11933 | A use-after-free vulnerability exists when converting BSON documents to JavaScript arrays. An authenticated user with read privileges is able for exploitation resulting potential complete system compromise. | HighPrivilege Escalation** T1055,**Remote File Access**T1030, **Execution**| 92 |
-| CVE-2026-47365 | Argument injection vulnerability in WordPress Toolkit allows an attacker to execute arbitrary commands via CLI. This could be done by any user authenticated to a system where the toolkit is integrated with cPanel & WHM, bypassing authorization and privileges on some level in specific use cases. | MediumInjection** T1090,** Privilege Escalation **T1055**,  **Execution**| 77 |
-| CVE-2026-47366 | Improper Access Control vulnerability allows an authenticated administrator to grant elevated permissions within the Administration Control Panel, allowing privilege escalation attacks and abuse by unqualified systems administrators. | HighPrivilegeto Elevate Privileges ** T1021,** Execution | 95 |
-
-## MITRE ATT&CK Mappings
-
-Following tactics and techniques from the MITRE ATT&CK framework have been identified:
-
-| CVE IDMapped Tactics/Techniques |
-| --- |
-| CVE-2026-49482T1083,Impair capabilities (Lateral Movement / Privilege Escalation)  |
-| CVE-2026-11933 T1055, **Remote File Access** (Privilege Escalation) , **Execution**: (Impact / System Impact)  |
-| CVE-2026-47365** Injection**(T1090,** Privilege Escalation **(T1055,** **Execution**)** |
-| CVE-2026-47366**T1021:Privilegeto Elevate Privileges**(T1210)**
-
-## Urgency Scores Calculation
-
-The following assumptions were made to calculate the urgency scores:
-
-* Target cloud applications and services use secure default settings.
-* No outdated versions of any system software are in use.
-* Users have been informed and educated about cybersecurity best practices
-* An automated patch management system is present on-premise, keeping all systems up-to-date.
-
-| CVE ID Urgency Score (1-100) |
-| --- | --- |
-| CVE-2026-49482          85       |
-| CVE-2026-11933          92       |
-| CVE-2026-47365          77       |
-| CVE-2026-47366          95 |
-
-This report aims to provide actionable and intelligible threat intelligence for the CISO and security team. It covers filtered vulnerabilities, their estimated severity level, potential MITRE ATT&CK mappings, as well as Urgency score calculations based on assumed default secure configuration in a cloud web-app environment.
-
-Please note that actual implementation details and risk factors may differ greatly from assumptions made during urgency scores calculation.
+This report provides a clear overview of the analyzed CVEs, their severity, mapped MITRE ATT&CK techniques, and an estimated urgency score for prioritization in your organization's cybersecurity efforts.

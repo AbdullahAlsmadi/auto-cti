@@ -1,53 +1,53 @@
 {
-    "June 19, 2026": [
+    "June 20, 2026": [
         {
-            "cve_id": "CVE-2026-10676",
-            "description": "Rejected reason: This CVE Record has been rejected by the Zephyr Project CNA. Subsequent analysis determined that the addressed defect is not reachable in any released version of Zephyr: on every supp...",
+            "cve_id": "CVE-2026-11442",
+            "description": "Allegra exportReport Directory Traversal Information Disclosure Vulnerability. This vulnerability allows remote attackers to disclose sensitive information on affected installations of Allegra.",
             "alienvault_pulses": "No pulses found"
         },
         {
-            "cve_id": "CVE-2026-49482",
-            "description": "ClipBucket v5 is an open source video sharing platform. Prior to version 5.5.3 - #141, ClipBucket v5 contains an improper neutralization of SQL wildcard characters in the subtitle editing endpoint. An...",
+            "cve_id": "CVE-2026-11443",
+            "description": "Allegra downloadAttachment Cross-Site Scripting Authentication Bypass Vulnerability. This vulnerability allows remote attackers to execute arbitrary script on affected installations of Allegra.",
             "alienvault_pulses": "No pulses found"
         },
         {
-            "cve_id": "CVE-2026-11933",
-            "description": "A use-after-free vulnerability exists in MongoDB Server's server-side JavaScript engine when converting BSON documents to JavaScript arrays. An authenticated user with read privileges who is able to r...",
+            "cve_id": "CVE-2026-12089",
+            "description": "The LWS Optimize – All-in-One Speed Booster & Cache Tools plugin for WordPress is vulnerable to Arbitrary File Read in versions up to, and including, 3.3.19. This is due to the combine_current_css() f...",
             "alienvault_pulses": "No pulses found"
         },
         {
-            "cve_id": "CVE-2026-45170",
-            "description": "Idira Privilege Cloud Connector versions prior 1.1.100504 under specific conditions and configuration scenarios, TLS certificate validation may not be fully enforced. CyberArk Security Bulletin: CA26-...",
+            "cve_id": "CVE-2026-54228",
+            "description": "A time-of-check time-of-use (TOCTOU) race condition was found in the abrt-dbus D-Bus service's SetElement method. Between dump directory creation and post-create event execution, any local user can ca...",
             "alienvault_pulses": "No pulses found"
         },
         {
-            "cve_id": "CVE-2026-9125",
-            "description": "The Presto Player plugin for WordPress is vulnerable to Stored Cross-Site Scripting via the 'link_url' parameter of the [presto_player_overlay] shortcode in versions up to, and including, 4.2.0 This i...",
+            "cve_id": "CVE-2026-54229",
+            "description": "A race condition was found in the abrt-dbus D-Bus service's ChownProblemDir method. ChownProblemDir opens the dump directory with DD_OPEN_READONLY and calls dd_chown to change ownership of all files t...",
             "alienvault_pulses": "No pulses found"
         },
         {
-            "cve_id": "CVE-2026-20746",
-            "description": "Virtual attribute handling in Ping Identity PingDirectory in affected versions allows only authorized users to exhaust java memory heap when recent login history is enabled and copying virtual attribu...",
+            "cve_id": "CVE-2026-54230",
+            "description": "A symlink following vulnerability was found in the ABRT post-create event handler scripts in libreport. Event scripts write output files using shell redirections without the O_NOFOLLOW flag. If the ta...",
             "alienvault_pulses": "No pulses found"
         },
         {
-            "cve_id": "CVE-2026-47365",
-            "description": "Argument injection vulnerability in WordPress Toolkit before 6.11.0 as used in cPanel & WHM, allows remote authenticated users to bypass cross-tenant authorization and execute arbitrary wp-toolkit CLI...",
+            "cve_id": "CVE-2026-54231",
+            "description": "A content injection vulnerability was found in the ABRT post-create event handler scripts in libreport. The event script queries the systemd journal for log entries matching the crashed process and wr...",
             "alienvault_pulses": "No pulses found"
         },
         {
-            "cve_id": "CVE-2026-47366",
-            "description": "Improper verification of access permissions when modifying permissions through the Administration Control Panel (ACP) allowed an authenticated administrator to grant permissions beyond the level autho...",
+            "cve_id": "CVE-2026-9848",
+            "description": "The WP Ticket plugin for WordPress is vulnerable to SQL Injection via the WordPress search query parameter (`s`) in versions up to, and including, 6.0.4 The plugin hooks WordPress's `posts_request` fi...",
             "alienvault_pulses": "No pulses found"
         },
         {
-            "cve_id": "CVE-2026-47367",
-            "description": "A malicious actor with access to the network and low privileges could exploit an Improper Input Validation vulnerability found in UID Enterprise Agent to execute a Command Injection on the host device...",
+            "cve_id": "CVE-2026-11769",
+            "description": "We have released version 5.24.0 of the Grafana Operator. This patch includes a CRITICAL severity security fix for a path traversal/privilege escalation vulnerability in the Grafana Operator.",
             "alienvault_pulses": "No pulses found"
         },
         {
-            "cve_id": "CVE-2026-47368",
-            "description": "A malicious actor with access to the network could exploit a Path Traversal vulnerability found in certain devices running UniFi OS to obtain data from such UniFi OS devices or instances....",
+            "cve_id": "CVE-2026-9061",
+            "description": "The Store Locator WordPress plugin before 1.6.9 does not sanitize and escape store logo metadata before storing it and outputting it on the Store Locator WordPress plugin before 1.6.9 admin page, allo...",
             "alienvault_pulses": "No pulses found"
         }
     ]

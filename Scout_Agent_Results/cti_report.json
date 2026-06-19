@@ -1,0 +1,54 @@
+{
+    "June 19, 2026": [
+        {
+            "cve_id": "CVE-2026-10676",
+            "description": "Rejected reason: This CVE Record has been rejected by the Zephyr Project CNA.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-49482",
+            "description": "ClipBucket v5 prior to 5.5.3 - #141 contains an improper neutralization of SQL wildcard characters in the subtitle editing endpoint.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-11933",
+            "description": "A use-after-free vulnerability exists in MongoDB Server's server-side JavaScript engine when converting BSON documents to JavaScript arrays.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-45170",
+            "description": "Idira Privilege Cloud Connector versions prior 1.1.100504 may not fully enforce TLS certificate validation.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-9125",
+            "description": "The Presto Player plugin for WordPress is vulnerable to Stored Cross-Site Scripting via the 'link_url' parameter in versions up to 4.2.0.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-20746",
+            "description": "Virtual attribute handling in Ping Identity PingDirectory allows authorized users to exhaust java memory heap when recent login history is enabled.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-47365",
+            "description": "Argument injection vulnerability in WordPress Toolkit before 6.11.0 as used in cPanel & WHM.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-47366",
+            "description": "Improper verification of access permissions when modifying permissions through the Administration Control Panel (ACP).",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-47367",
+            "description": "Improper Input Validation vulnerability found in UID Enterprise Agent to execute a Command Injection on the host device.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-47368",
+            "description": "Path Traversal vulnerability found in certain devices running UniFi OS.",
+            "alienvault_pulses": "No pulses found"
+        }
+    ]
+}

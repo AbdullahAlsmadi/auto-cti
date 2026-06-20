@@ -5,6 +5,9 @@ from crewai import Agent, Task, Crew, LLM
 from dotenv import load_dotenv
 
 load_dotenv()
+if not os.getenv("ANTHROPIC_API_KEY"):
+    print("Error: ANTHROPIC_API_KEY is missing from your .env file.")
+    exit()
 
 today_date = datetime.datetime.now().strftime("%B %d, %Y")
 
@@ -25,9 +28,17 @@ if not raw_threat_data:
 output_dir = os.path.join("JoFile", "triage_agent_result")
 os.makedirs(output_dir, exist_ok=True)
 
+"""
 triage_llm = LLM(
     model="ollama/qwen2.5",
     base_url="http://localhost:11434"
+)
+"""
+
+publisher_llm = LLM(
+   model="anthropic/claude-sonnet-4-6",
+    api_key=os.getenv("ANTHROPIC_API_KEY"),
+    max_retries=5 # type: ignore
 )
 
 triage_agent = Agent(
@@ -41,10 +52,10 @@ triage_agent = Agent(
     allow_delegation=False
 )
 
-output_file_path = os.path.join(output_dir, f'Triaged_Report_{today_date.replace(", ", "").replace(" ", "_")}.md')
+output_file_path = os.path.join(output_dir, f'Triaged_Report_{today_date}.json')
 
 triage_task = Task(
-    description=f'''Analyze the following raw threat data collected by the Scout Agent today:
+    description=f'''Analyze the following raw threat data collected by the Scout Agent today {today_date}:
     
     RAW THREAT DATA:
     {json.dumps(raw_threat_data, indent=2)}
@@ -55,18 +66,32 @@ triage_task = Task(
     3. Map the described threat behavior to potential MITRE ATT&CK tactics or techniques.
     4. Calculate a hypothetical "Urgency Score" (from 1 to 100).
     
-    CRITICAL INSTRUCTION: You MUST output a clean Markdown report. Ensure every table has proper separators (|---|).''',
+    CRITICAL FORMATTING INSTRUCTIONS (MUST FOLLOW):
+    1. You MUST output the result EXCLUSIVELY as a valid JSON array of objects.
+    2. Do NOT wrap the output in Markdown code blocks (like ```json). Just output the raw JSON text.
+    3. Keep the description concise and clear. Keep MITRE mappings to codes only.''',
     
-    expected_output='''An executive-ready Markdown report. You MUST strictly use exactly this table format for the output:
-    
-    | CVE ID | Description | CVSS Severity | MITRE ATT&CK Mappings | Urgency Score |
-    |---|---|---|---|---|
-    | CVE-... | ... | ... | ... | ... |
-    
-    Do not merge columns. Ensure the table is perfectly formatted.''',
+    expected_output='''A valid JSON array of objects. You MUST strictly use exactly this JSON structure:
+    [
+      {
+        "CVE_ID": "CVE-YYYY-NNNN",
+        "Description": "Short, concise description of the vulnerability.",
+        "CVSS_Severity": "Critical",
+        "MITRE_Mappings": ["T1234", "T5678"],
+        "Urgency_Score": 95
+      },
+      {
+        "CVE_ID": "CVE-YYYY-NNNN",
+        "Description": "...",
+        "CVSS_Severity": "Medium",
+        "MITRE_Mappings": ["T1111"],
+        "Urgency_Score": 45
+      }
+    ]''',
     agent=triage_agent,
     output_file=output_file_path
 )
+
 
 triage_crew = Crew(
     agents=[triage_agent],
@@ -77,7 +102,12 @@ triage_crew = Crew(
 if __name__ == "__main__":
     print(f"Waking up the Triage Agent to analyze threats for {today_date}...")
     result = triage_crew.kickoff()
+
+    final_data = {
+        "date": today_date,
+    }
     
+
     print("\n================================================")
     print("Triage Analysis Complete! Executive Briefing:")
     print("================================================")

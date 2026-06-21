@@ -1,0 +1,72 @@
+[
+  {
+    "CVE_ID": "CVE-2026-12192",
+    "Description": "Buffer overflow in GALAYOU Y4 Web Server (Unknown function)",
+    "CVSS_Severity": "High",
+    "MITRE_Mappings": ["T1133"],
+    "Urgency_Score": 85
+  },
+  {
+    "CVE_ID": "CVE-2026-12193",
+    "Description": "Ioctl_handler function vulnerability in VS RevoRevoUninstaller (RevoDetector.sys)",
+    "CVSS_Severity": "High",
+    "MITRE_Mappings": ["T1059"],
+    "Urgency_Score": 75
+  },
+  {
+    "CVE_ID": "CVE-2026-12197",
+    "Description": "nslookup function vulnerability in Ruijie EG105G-P (cgi-bin/luci/api/diagnose)",
+    "CVSS_Severity": "Medium",
+    "MITRE_Mappings": ["T1210"],
+    "Urgency_Score": 60
+  },
+  {
+    "CVE_ID": "CVE-2026-12198",
+    "Description": "File path vulnerability in Microweber up to 2.0.20 (userfiles_path)",
+    "CVSS_Severity": "Low",
+    "MITRE_Mappings": ["T1193"],
+    "Urgency_Score": 35
+  },
+  {
+    "CVE_ID": "CVE-2026-12200",
+    "Description": "Vulnerability in Ritlabs TinyWeb Server (libeay32.dll.html, unknown function)",
+    "CVSS_Severity": "Medium",
+    "MITRE_Mappings": ["T1210"],
+    "Urgency_Score": 65
+  },
+  {
+    "CVE_ID": "CVE-2026-12201",
+    "Description": "DLL Handler vulnerability in IObit Malware Fighter (Unknown functionality)",
+    "CVSS_Severity": "Medium",
+    "MITRE_Mappings": ["T1047"],
+    "Urgency_Score": 60
+  },
+  {
+    "CVE_ID": "CVE-2026-12202",
+    "Description": "Unknown functionality vulnerability in Intelliants Subrion CMS (Blocks Endpoint)",
+    "CVSS_Severity": "Low",
+    "MITRE_Mappings": ["T1341"],
+    "Urgency_Score": 45
+  },
+  {
+    "CVE_ID": "CVE-2026-12203",
+    "Description": "Unknown part of file vulnerability in HKUDS AI-Trader (agents.csv)",
+    "CVSS_Severity": "Low",
+    "MITRE_Mappings": ["T1074"],
+    "Urgency_Score": 50
+  },
+  {
+    "CVE_ID": "CVE-2026-12204",
+    "Description": "Order functionality vulnerability in ShopXO (OrderClose/OrderSuccess/PayLogOrderClose/GoodsGiveIntegral)",
+    "CVSS_Severity": "High",
+    "MITRE_Mappings": ["T1568"],
+    "Urgency_Score": 70
+  },
+  {
+    "CVE_ID": "CVE-2026-12206",
+    "Description": "DataTableEntity function vulnerability in Grit42 Grit (assays/data_table_entity.rb)",
+    "CVSS_Severity": "Medium",
+    "MITRE_Mappings": ["T1133"],
+    "Urgency_Score": 55
+  }
+]

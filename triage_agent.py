@@ -5,9 +5,6 @@ from crewai import Agent, Task, Crew, LLM
 from dotenv import load_dotenv
 
 load_dotenv()
-if not os.getenv("ANTHROPIC_API_KEY"):
-    print("Error: ANTHROPIC_API_KEY is missing from your .env file.")
-    exit()
 
 today_date = datetime.datetime.now().strftime("%B %d, %Y")
 
@@ -28,18 +25,12 @@ if not raw_threat_data:
 output_dir = os.path.join("JoFile", "triage_agent_result")
 os.makedirs(output_dir, exist_ok=True)
 
-"""
+
 triage_llm = LLM(
     model="ollama/qwen2.5",
     base_url="http://localhost:11434"
 )
-"""
 
-publisher_llm = LLM(
-   model="anthropic/claude-sonnet-4-6",
-    api_key=os.getenv("ANTHROPIC_API_KEY"),
-    max_retries=5 # type: ignore
-)
 
 triage_agent = Agent(
     role='Senior Cyber Threat Analyst',

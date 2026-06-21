@@ -129,23 +129,42 @@ scout_agent = Agent(
 )
 
 live_task = Task(
+
     description=f'''Follow these exact steps to create a highly accurate, recent threat report:
+
     1. Keep in mind that today's current date is strictly {today_date}.
+
     2. USE THE NIST TOOL FIRST. Pass the query "recent" to fetch the most recent CVEs published in the last 7 days leading up to {today_date}.
+
     3. Read the exact VERIFIED_CVE_IDs returned by the NIST tool.
+
     4. For EACH real VERIFIED_CVE_ID found, use the AlienVault tool to check if there are any active threat pulses.
+
     5. Compile the final report using ONLY the data retrieved from the tools.
+
     CRITICAL CONSTRAINT: Do not search the internet for random CVEs. ONLY use the exact IDs provided by the NIST tool in step 2. DO NOT make up sequential numbers.
+
     OUTPUT FORMAT: You MUST return ONLY a valid JSON array. No markdown formatting, no introductory text.''',
+
     expected_output='''[
+
         {
+
             "cve_id": "CVE-XXXX-XXXX",
+
             "description": "Short description...",
+
             "alienvault_pulses": "Data from AlienVault or 'No pulses found'"
+
         }
+
     ]''',
+
     agent=scout_agent
+
 )
+
+
 
 cyber_crew = Crew(
     agents=[scout_agent],

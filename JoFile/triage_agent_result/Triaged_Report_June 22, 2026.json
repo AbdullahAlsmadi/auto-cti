@@ -1,0 +1,23 @@
+[
+  {
+    "CVE_ID": "CVE-2026-45585",
+    "Description": "Bypasses security features in Windows BitLocker.",
+    "CVSS_Severity": "High",
+    "MITRE_Mappings": ["T1548"],
+    "Urgency_Score": 90
+  },
+  {
+    "CVE_ID": "CVE-2026-45586",
+    "Description": "Elevation of privilege affecting CTFMON in Windows.",
+    "CVSS_Severity": "Medium",
+    "MITRE_Mappings": ["T1546"],
+    "Urgency_Score": 50
+  },
+  {
+    "CVE_ID": "CVE-2026-44812",
+    "Description": "Remote code execution vulnerability in Windows Graphics.",
+    "CVSS_Severity": "Critical",
+    "MITRE_Mappings": ["T1115"],
+    "Urgency_Score": 98
+  }
+]

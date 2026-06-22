@@ -1,0 +1,45 @@
+{
+    "report_date": "June 22, 2026",
+    "executive_summary": "The organization faces a critical risk posture with three vulnerabilities identified. One 'Critical' severity vulnerability (CVE-2026-44812) represents an immediate threat due to its high urgency score of 98 and relates to remote code execution in Windows Graphics, necessitating urgent mitigation actions.",
+    "critical_actions": [
+        "Apply vendor-issued patches for CVE-2026-44812 within 24 hours.",
+        "Enhance monitoring and alerting for T1548 activities associated with BV2026-45585 to mitigate potential bypasses of security features in Windows BitLocker."
+    ],
+    "cve_summary": [
+        {
+            "cve_id": "CVE-2026-44812",
+            "description": "Remote code execution vulnerability in Windows Graphics.",
+            "severity": "Critical",
+            "mitre_mappings": [
+                "T1115"
+            ],
+            "urgency_score": 98
+        },
+        {
+            "cve_id": "CVE-2026-45585",
+            "description": "Bypasses security features in Windows BitLocker.",
+            "severity": "High",
+            "mitre_mappings": [
+                "T1548"
+            ],
+            "urgency_score": 90
+        },
+        {
+            "cve_id": "CVE-2026-45586",
+            "description": "Elevation of privilege affecting CTFMON in Windows.",
+            "severity": "Medium",
+            "mitre_mappings": [
+                "T1546"
+            ],
+            "urgency_score": 50
+        }
+    ],
+    "severity_stats": {
+        "Critical": 1,
+        "High": 1,
+        "Medium": 1,
+        "Low": 0,
+        "Unknown": 0,
+        "Total": 3
+    }
+}

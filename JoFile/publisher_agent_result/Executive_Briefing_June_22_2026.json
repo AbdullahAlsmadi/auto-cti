@@ -1,36 +1,46 @@
 {
     "report_date": "June 22, 2026",
-    "executive_summary": "The current risk posture for our organization is moderately concerning with one critical and one high urgency vulnerability. The most urgent concern is CVE-2026-12845, which has a published exploit addressing a reported vulnerability from June 21st and an urgency score of 98, indicating immediate action required to mitigate potential exploitation.",
+    "executive_summary": "The current threat landscape reveals an elevated risk posture with one critical and two high severity vulnerabilities. The most urgent concern is the active exploitation of CVE-2026-41091, which necessitates immediate action. This threat poses a direct compromise to system integrity and must be addressed promptly.",
     "critical_actions": [
-        "Apply vendor-issued patches for CVE-2026-12845 within 24 hours.",
-        "Ensure all instances of BerriAI libraries up to version 1.63.1 are updated to the latest stable release without delay."
+        "Apply vendor-issued patches for CVE-2026-41091 within 24 hours",
+        "Implement rapid mitigation strategies to address the BitLocker Security Feature Bypass vulnerability (CVE-2026-45585) as per the highest urgency score of 90",
+        "Deploy immediate countermeasures for Elevation of Privilege via CTFMON (CVE-2026-45586) with an urgency score of 80"
     ],
     "cve_summary": [
         {
-            "cve_id": "CVE-2026-12845",
-            "description": "Exploit published for vulnerability reported on 2026-06-21.",
-            "severity": "High",
+            "cve_id": "CVE-2026-41091",
+            "description": "Active exploitation confirmed.",
+            "severity": "Critical",
             "mitre_mappings": [
-                "T1553.001"
+                "T1089"
             ],
-            "urgency_score": 98
+            "urgency_score": 100
         },
         {
-            "cve_id": "CVE-2026-12770",
-            "description": "Vulnerability in BerriAI litellm up to 1.63.1.",
-            "severity": "Medium",
+            "cve_id": "CVE-2026-45585",
+            "description": "BitLocker Security Feature Bypass.",
+            "severity": "High",
             "mitre_mappings": [
-                "T1190"
+                "T1560"
             ],
-            "urgency_score": 55
+            "urgency_score": 90
+        },
+        {
+            "cve_id": "CVE-2026-45586",
+            "description": "Elevation of Privilege via CTFMON.",
+            "severity": "High",
+            "mitre_mappings": [
+                "T1548"
+            ],
+            "urgency_score": 80
         }
     ],
     "severity_stats": {
-        "Critical": 0,
-        "High": 1,
-        "Medium": 1,
+        "Critical": 1,
+        "High": 2,
+        "Medium": 0,
         "Low": 0,
         "Unknown": 0,
-        "Total": 2
+        "Total": 3
     }
 }

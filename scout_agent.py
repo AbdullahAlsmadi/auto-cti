@@ -26,7 +26,7 @@ class NISTSearchTool(BaseTool):
     description: str = "Use this tool FIRST. It fetches the 10 MOST RECENT CVEs added to the official NIST database. DO NOT pass a specific query, just pass 'recent'."
 
     def _run(self, query: str) -> str:
-        for attempt in range(3):
+        for attempt in range(10):
             try:
                 end_date = datetime.datetime.now()
                 start_date = end_date - datetime.timedelta(days=7)

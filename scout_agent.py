@@ -5,7 +5,7 @@ import datetime
 import time
 from crewai import Agent, Task, Crew, LLM
 from crewai.tools import BaseTool
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -107,8 +107,9 @@ alienvault_tool = AlienVaultOTXTool()
 cloud_gemini = LLM(
     
     model="gemini/gemini-3.1-flash-lite",
-    api_key=os.getenv("GEMINI_API_KEY")
-    
+    api_key=os.getenv("GEMINI_API_KEY"),
+    max_retries=5 # type: ignore
+
     #model="ollama/qwen2.5",
     #base_url="http://localhost:11434"
 

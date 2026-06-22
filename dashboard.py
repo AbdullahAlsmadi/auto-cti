@@ -356,23 +356,108 @@ def generate_agent_rings_html(T, agents_data):
     return html
 
 
-def render_console(T, log_lines, height=270):
-    safe_lines = [l.replace("<", "&lt;").replace(">", "&gt;") for l in log_lines[-300:]]
-    body = "\n".join(safe_lines) if safe_lines else "Waiting for agent output..."
+def classify_log_line(line: str):
+    """
+    Classifies a raw agent log line into (icon, css_color, display_text).
+    Noise lines (CrewAI internal events, charmap errors) are returned as None
+    so they can be filtered from the smart feed but kept in the raw log.
+    """
+    # --- Filter out noise: CrewAI internal event bus & Windows encoding errors ---
+    noise_patterns = [
+        "[CrewAIEventsBus]", "charmap", "codec can't encode",
+        "character maps to <undefined>", "Sync handler error",
+    ]
+    for pattern in noise_patterns:
+        if pattern in line:
+            return None  # suppress from smart feed
+
+    l = line.strip().lower()
+
+    # --- Success / completion ---
+    if any(k in l for k in ["[ok]", "successfully", "generated successfully", "saved at", "finished successfully", "complete"]):
+        return ("✅", "#10b981", line.strip())
+
+    # --- Errors (real ones) ---
+    if any(k in l for k in ["[failed]", "[exception]", "error:", "traceback", "exit code"]):
+        return ("⛔", "#ef4444", line.strip())
+
+    # --- Warnings ---
+    if any(k in l for k in ["warning", "warn:", "could not parse", "skipping"]):
+        return ("⚠️", "#f59e0b", line.strip())
+
+    # --- Agent startup / progress signals ---
+    if any(k in l for k in ["waking up", "compiling", "agent is", "publisher agent", "triage agent",
+                              "scout agent", "kickoff", "task started", "starting"]):
+        return ("🔄", "#22d3ee", line.strip())
+
+    # --- API / config info ---
+    if any(k in l for k in ["api key", "loaded:", "base_url", "model:", "gemini", "ollama"]):
+        return ("ℹ️", "#3b82f6", line.strip())
+
+    # --- LLM / CrewAI verbose thinking (long lines, usually reasoning output) ---
+    if len(line.strip()) > 120:
+        return ("💬", "#7d8da3", line.strip()[:160] + "…")
+
+    # --- Default: informational ---
+    if line.strip():
+        return ("▸", "#7d8da3", line.strip())
+
+    return None  # blank lines → suppress
+
+
+def render_console(T, log_lines, height=300):
+    """
+    Smart console with two layers:
+    1. A styled terminal showing only classified, meaningful lines (color-coded).
+    2. A collapsed expander with the full raw log for debugging.
+    """
+    # Build smart feed rows
+    rows_html = ""
+    for line in log_lines[-500:]:
+        result = classify_log_line(line)
+        if result is None:
+            continue
+        icon, color, text = result
+        safe_text = text.replace("<", "&lt;").replace(">", "&gt;")
+        rows_html += f'<div style="display:flex; gap:0.5rem; margin-bottom:0.3rem;">' \
+                     f'<span style="flex-shrink:0;">{icon}</span>' \
+                     f'<span style="color:{color}; word-break:break-word;">{safe_text}</span>' \
+                     f'</div>'
+
+    if not rows_html:
+        rows_html = '<span style="color:#7d8da3;">Waiting for agent output...</span>'
+
     html = f"""
-    <div class="console-wrap">
-        <div class="console-header">
-            <span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span>
-            <span style="margin-left:0.5rem;">SYSTEM CONSOLE — live agent output</span>
+    <div style="background:{T['CONSOLE_BG']}; border:1px solid {T['BORDER']};
+                border-radius:10px; overflow:hidden; margin-top:0.5rem;">
+        <div style="background:{T['BANNER_BG']}; padding:0.45rem 0.9rem;
+                    display:flex; align-items:center; gap:0.4rem;
+                    border-bottom:1px solid {T['BORDER']};
+                    font-family:'JetBrains Mono',monospace; font-size:0.7rem; color:{T['TEXT_DIM']};">
+            <span style="width:9px;height:9px;border-radius:50%;background:#ef4444;display:inline-block;"></span>
+            <span style="width:9px;height:9px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
+            <span style="width:9px;height:9px;border-radius:50%;background:#10b981;display:inline-block;"></span>
+            <span style="margin-left:0.5rem;">SYSTEM CONSOLE — Smart Feed</span>
         </div>
-        <div class="console-body" id="console-body">{body}</div>
+        <div id="smart-console"
+             style="font-family:'JetBrains Mono',monospace; font-size:0.8rem;
+                    padding:0.9rem 1rem; height:{height}px; overflow-y:auto;
+                    line-height:1.65; background:{T['CONSOLE_BG']};">
+            {rows_html}
+        </div>
     </div>
     <script>
-        var el = document.getElementById('console-body');
-        if (el) {{ el.scrollTop = el.scrollHeight; }}
+        var el = document.getElementById('smart-console');
+        if (el) el.scrollTop = el.scrollHeight;
     </script>
     """
-    components.html(html, height=height, scrolling=False)
+    components.html(html, height=height + 55, scrolling=False)
+
+    # Raw log in a collapsed expander for debugging — always available
+    if log_lines:
+        with st.expander("🔍 Raw Agent Log (debug)", expanded=False):
+            raw_text = "\n".join(log_lines[-300:])
+            st.code(raw_text, language="bash")
 
 
 # =====================================================================
@@ -449,6 +534,16 @@ def display_console_tools(T):
     st.markdown(f"<h3 style='font-weight:700; color:{T['WHITE']};'>🖥️ Console Tools</h3>", unsafe_allow_html=True)
 
     c1, c2, c3 = st.columns(3)
+
+    # داخل display_console_tools بعد c1, c2, c3 = st.columns(3)
+    # غيّرها إلى أربعة أعمدة:
+    c1, c2, c3, c4 = st.columns(4)
+    # ... (نفس المحتوى السابق في c1, c2, c3)
+    with c4:
+        noise_count = sum(1 for l in st.session_state.get("console_log", [])
+                          if classify_log_line(l) is None)
+        st.button(f"🔇 {noise_count} filtered", disabled=True, use_container_width=True,
+                  help="Lines filtered from Smart Feed (CrewAI internal noise, encoding errors)")
 
     report_dir = os.path.join("JoFile", "Reports")
     pdf_files = glob.glob(os.path.join(report_dir, "*.pdf")) if os.path.exists(report_dir) else []

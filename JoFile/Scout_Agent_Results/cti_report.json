@@ -1,19 +1,54 @@
 {
     "June 22, 2026": [
         {
-            "cve_id": "CVE-2026-45585",
-            "description": "Windows BitLocker Security Feature Bypass Vulnerability.",
-            "alienvault_pulses": "Multiple pulses found"
+            "cve_id": "CVE-2026-12192",
+            "description": "A vulnerability was determined in GALAYOU Y4 1.0.0. Impacted is an unknown function of the component Web Server. This manipulation causes buffer overflow.",
+            "alienvault_pulses": "No pulses found"
         },
         {
-            "cve_id": "CVE-2026-45586",
-            "description": "Important elevation of privilege vulnerability affecting Windows Collaborative Translation Framework (CTFMON).",
-            "alienvault_pulses": "Multiple pulses found"
+            "cve_id": "CVE-2026-12193",
+            "description": "A vulnerability was identified in VS Revo RevoUninstaller 2.5.x/2.6.x. The affected element is the function IOCtl_Handler in the library RevoDetector.sys.",
+            "alienvault_pulses": "No pulses found"
         },
         {
-            "cve_id": "CVE-2026-41091",
-            "description": "Vulnerability confirmed under active exploitation.",
-            "alienvault_pulses": "Multiple pulses found"
+            "cve_id": "CVE-2026-12197",
+            "description": "A security flaw has been discovered in Ruijie EG105G-P 2.340 in the function nslookup of the file /cgi-bin/luci/api/diagnose.",
+            "alienvault_pulses": "Known_Cve pulses detected"
+        },
+        {
+            "cve_id": "CVE-2026-12198",
+            "description": "A weakness has been identified in Microweber up to 2.0.20. This affects the function userfiles_path of the file /api_nosession/thumbnail_img.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-12200",
+            "description": "A security vulnerability has been detected in Ritlabs TinyWeb Server up to 1.94 on Win32. This impacts an unknown function in the library libeay32.dll.html.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-12201",
+            "description": "A flaw has been found in IObit Malware Fighter up to 13.2.0. Affected by this vulnerability is an unknown functionality of the component DLL Handler.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-12202",
+            "description": "A vulnerability has been found in Intelliants Subrion CMS up to 4.0.3. Affected by this issue is some unknown functionality of the component Blocks Endpoint.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-12203",
+            "description": "A vulnerability was found in HKUDS AI-Trader up to 74caf996f78dcc0c657df8365c8544678a16e215 in the file /api/research/agents.csv.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-12204",
+            "description": "A vulnerability was determined in ShopXO up to 6.7.1 in the function OrderClose/OrderSuccess/PayLogOrderClose/GoodsGiveIntegral of the file app/api/controller/Crontab.php.",
+            "alienvault_pulses": "No pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-12206",
+            "description": "A vulnerability was identified in Grit42 Grit up to 0.11.0. This issue affects the function Grit::Assays::DataTableEntity of the file modules/assays/backend/app/models/grit/assays/data_table_entity.rb.",
+            "alienvault_pulses": "Known_Cve pulses detected"
         }
     ]
 }

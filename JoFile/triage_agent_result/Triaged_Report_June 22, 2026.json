@@ -1,23 +1,72 @@
 [
-    {
-        "CVE_ID": "CVE-2026-45585",
-        "Description": "BitLocker Security Feature Bypass.",
-        "CVSS_Severity": "High",
-        "MITRE_Mappings": ["T1560"],
-        "Urgency_Score": 90
-    },
-    {
-        "CVE_ID": "CVE-2026-45586",
-        "Description": "Elevation of Privilege via CTFMON.",
-        "CVSS_Severity": "High",
-        "MITRE_Mappings": ["T1548"],
-        "Urgency_Score": 80
-    },
-    {
-        "CVE_ID": "CVE-2026-41091",
-        "Description": "Active exploitation confirmed.",
-        "CVSS_Severity": "Critical",
-        "MITRE_Mappings": ["T1089"],
-        "Urgency_Score": 100
-    }
+  {
+    "CVE_ID": "CVE-2026-12192",
+    "Description": "Buffer overflow in Web Server component.",
+    "CVSS_Severity": "High",
+    "MITRE_Mappings": ["T1133"],
+    "Urgency_Score": 85
+  },
+  {
+    "CVE_ID": "CVE-2026-12193",
+    "Description": "Ioctl handling vulnerability in Revo Detector.sys.",
+    "CVSS_Severity": "Medium",
+    "MITRE_Mappings": ["T1046"],
+    "Urgency_Score": 55
+  },
+  {
+    "CVE_ID": "CVE-2026-12197",
+    "Description": "nslookup function in EG105G-P.",
+    "CVSS_Severity": "High",
+    "MITRE_Mappings": ["T1133"],
+    "Urgency_Score": 80
+  },
+  {
+    "CVE_ID": "CVE-2026-12198",
+    "Description": "Weakness in userfiles_path function.",
+    "CVSS_Severity": "Low",
+    "MITRE_Mappings": [],
+    "Urgency_Score": 30
+  },
+  {
+    "CVE_ID": "CVE-2026-12200",
+    "Description": "Vulnerability in libeay32.dll.",
+    "CVSS_Severity": "Medium",
+    "MITRE_Mappings": ["T1249"],
+    "Urgency_Score": 58
+  },
+  {
+    "CVE_ID": "CVE-2026-12201",
+    "Description": "Unknown functionality in DLL Handler.",
+    "CVSS_Severity": "Low",
+    "MITRE_Mappings": [],
+    "Urgency_Score": 35
+  },
+  {
+    "CVE_ID": "CVE-2026-12202",
+    "Description": "Unknown functionality in Blocks Endpoint.",
+    "CVSS_Severity": "Low",
+    "MITRE_Mappings": [],
+    "Urgency_Score": 35
+  },
+  {
+    "CVE_ID": "CVE-2026-12203",
+    "Description": "Vulnerability in agents.csv.",
+    "CVSS_Severity": "Low",
+    "MITRE_Mappings": [],
+    "Urgency_Score": 40
+  },
+  {
+    "CVE_ID": "CVE-2026-12204",
+    "Description": "Functionality in Crontab.php.",
+    "CVSS_Severity": "Medium",
+    "MITRE_Mappings": ["T1133"],
+    "Urgency_Score": 50
+  },
+  {
+    "CVE_ID": "CVE-2026-12206",
+    "Description": "Vulnerability in DataTableEntity.",
+    "CVSS_Severity": "Medium",
+    "MITRE_Mappings": ["T1133"],
+    "Urgency_Score": 58
+  }
 ]

@@ -18,7 +18,7 @@ class InternetSearchTool(BaseTool):
     description: str = "Search the open internet specifically for recent articles containing the keyword 'CVE-' to find real vulnerabilities."
 
     def _run(self, query: str) -> str:
-        results = DDGS().text(query, max_results=10)
+        results = DDGS().text(query, max_results=20)
         return str(list(results))
 
 class NISTSearchTool(BaseTool):
@@ -81,7 +81,7 @@ class AlienVaultOTXTool(BaseTool):
             if not api_key:
                 return "AlienVault API Error: OTX_API_KEY is missing from environment variables."
 
-            url = f"https://otx.alienvault.com/api/v1/search/pulses?q={query}&limit=5"
+            url = f"https://otx.alienvault.com/api/v1/search/pulses?q={query}&limit=10"
             headers = {"X-OTX-API-KEY": api_key}
             response = requests.get(url, headers=headers, timeout=60)
             

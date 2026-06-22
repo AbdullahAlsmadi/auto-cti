@@ -33,7 +33,6 @@ try:
         else:
             report_date = triage_data.get("date", today_date)
             triage_content = triage_data.get("report", str(triage_data))
-            # Normalize: ensure triage_data is always the list of CVE objects downstream
             triage_data = triage_data.get("report", [])
             if isinstance(triage_data, str):
                 triage_data = json.loads(triage_data)
@@ -52,14 +51,7 @@ os.makedirs(output_dir, exist_ok=True)
 reports_dir = os.path.join("JoFile", "Reports")
 os.makedirs(reports_dir, exist_ok=True)
 
-
-# =====================================================================
-# DETERMINISTIC DATA LAYER (built in Python, NOT by the LLM)
-# This guarantees every single CVE appears in the final report, with
-# exact, unaltered values — no risk of the LLM truncating or summarizing.
-# =====================================================================
 def build_cve_summary(data: list) -> list:
-    """Normalizes and sorts the full CVE list (most urgent first)."""
     normalized = []
     for entry in data:
         try:
@@ -75,9 +67,7 @@ def build_cve_summary(data: list) -> list:
         })
     return sorted(normalized, key=lambda x: x["urgency_score"], reverse=True)
 
-
 def compute_severity_stats(data: list) -> dict:
-    """Counts CVEs per severity level for the report's risk statistics section."""
     stats = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0, "Unknown": 0}
     for entry in data:
         sev = str(entry.get("CVSS_Severity", "Unknown")).strip().capitalize()
@@ -87,14 +77,9 @@ def compute_severity_stats(data: list) -> dict:
     stats["Total"] = len(data)
     return stats
 
-
 cve_summary = build_cve_summary(triage_data)
 severity_stats = compute_severity_stats(triage_data)
 
-
-# =====================================================================
-# NARRATIVE LAYER (LLM-generated: summary + action list only)
-# =====================================================================
 publisher_llm = LLM(
     model="ollama/qwen2.5",
     base_url="http://localhost:11434"
@@ -148,7 +133,6 @@ publish_task = Task(
          "executive_summary": "...",
          "critical_actions": ["...", "..."]
        }}''',
-
     expected_output='A single valid JSON object with only "report_date", "executive_summary", and "critical_actions".',
     agent=publisher_agent,
     output_file=json_output_path
@@ -160,12 +144,7 @@ publisher_crew = Crew(
     verbose=True
 )
 
-
-# =====================================================================
-# TEXT SANITIZATION HELPERS
-# =====================================================================
 def sanitize_text_field(text) -> str:
-    """Strips stray JSON-like wrapping ({"..."}) the LLM sometimes adds by mistake."""
     if not isinstance(text, str):
         return str(text)
     text = text.strip()
@@ -177,9 +156,7 @@ def sanitize_text_field(text) -> str:
         text = text[1:-1]
     return text.strip()
 
-
 def clean_text_for_pdf(text: str) -> str:
-    """Replaces unicode characters unsupported by the core PDF font."""
     replacements = {
         '\u201c': '"', '\u201d': '"', '\u2018': "'", '\u2019': "'",
         '\u2013': '-', '\u2014': '-', '\u2026': '...',
@@ -187,7 +164,6 @@ def clean_text_for_pdf(text: str) -> str:
     for bad, good in replacements.items():
         text = text.replace(bad, good)
     return text.encode('latin-1', 'replace').decode('latin-1')
-
 
 def severity_color(severity: str):
     severity = (severity or "").strip().lower()
@@ -201,17 +177,11 @@ def severity_color(severity: str):
         return (75, 85, 99)
     return (100, 116, 139)
 
-
-# =====================================================================
-# FORMAL PDF DOCUMENT CLASS
-# Subclassing FPDF lets us define a header/footer that repeats
-# automatically on every page (classification banner + page numbers).
-# =====================================================================
 CLASSIFICATION = "TLP:AMBER - FOR INTERNAL DISTRIBUTION ONLY"
 
 class CTIReportPDF(FPDF):
     def header(self):
-        self.set_fill_color(15, 23, 42)  # dark navy banner
+        self.set_fill_color(15, 23, 42)
         self.rect(0, 0, 210, 9, 'F')
         self.set_text_color(255, 255, 255)
         self.set_font("Arial", 'B', 8)
@@ -228,16 +198,13 @@ class CTIReportPDF(FPDF):
         self.set_y(-12)
         self.cell(0, 6, f"{CLASSIFICATION}  |  Auto-CTI Automated Threat Intelligence System  |  Page {self.page_no()}", 0, 0, 'C') # type: ignore
 
-
 def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_path: str) -> None:
-    """Builds a formal, comprehensive CTI executive PDF report."""
     pdf = CTIReportPDF()
     pdf.set_auto_page_break(auto=True, margin=20)
     pdf.add_page()
 
-    # --- Document Title Block ---
     pdf.set_font("Arial", 'B', 18)
-    pdf.set_text_color(15, 23, 42)
+    pdf.set_text_color(15, 23, 42) 
     pdf.cell(0, 10, txt="Cyber Threat Intelligence Executive Briefing", ln=True, align='C') # type: ignore
     pdf.set_font("Arial", '', 10)
     pdf.set_text_color(100, 116, 139)
@@ -245,7 +212,6 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
     pdf.cell(0, 6, txt=f"Document Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')} UTC", ln=True, align='C') # type: ignore
     pdf.ln(6)
 
-    # --- Risk Statistics Summary ---
     pdf.set_font("Arial", 'B', 13)
     pdf.set_text_color(0, 0, 0)
     pdf.cell(0, 9, txt="1. Risk Statistics Summary", ln=True) # type: ignore
@@ -266,7 +232,6 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
         pdf.cell(col_w, 9, txt=str(value), border=1, fill=True, align='C') # type: ignore
     pdf.ln(13)
 
-    # --- Executive Summary ---
     pdf.set_font("Arial", 'B', 13)
     pdf.cell(0, 9, txt="2. Executive Summary", ln=True) # type: ignore
     pdf.set_font("Arial", '', 11)
@@ -274,7 +239,6 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
     pdf.multi_cell(0, 6, txt=summary, wrapmode="CHAR") # type: ignore
     pdf.ln(4)
 
-    # --- Critical Action List ---
     pdf.set_font("Arial", 'B', 13)
     pdf.cell(0, 9, txt="3. Critical Action List", ln=True) # type: ignore
     pdf.set_font("Arial", '', 11)
@@ -288,7 +252,6 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
         pdf.cell(0, 6, txt="No critical actions identified.", ln=True) # type: ignore
     pdf.ln(4)
 
-    # --- Quick Reference CVE Table ---
     pdf.set_font("Arial", 'B', 13)
     pdf.cell(0, 9, txt="4. Quick Reference: All Identified Vulnerabilities", ln=True) # type: ignore
     pdf.set_font("Arial", 'B', 10)
@@ -313,7 +276,6 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
 
     pdf.ln(8)
 
-    # --- Detailed Findings (full description + MITRE mapping per CVE) ---
     pdf.set_font("Arial", 'B', 13)
     pdf.cell(0, 9, txt="5. Detailed Vulnerability Findings", ln=True) # type: ignore
     pdf.ln(2)
@@ -327,9 +289,9 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
 
         pdf.set_font("Arial", 'B', 9)
         pdf.set_text_color(r, g, b)
-        pdf.cell(0, 6, txt=clean_text_for_pdf(  # type: ignore
+        pdf.cell(0, 6, txt=clean_text_for_pdf( # type: ignore
             f"Severity: {entry['severity']}   |   Urgency Score: {entry['urgency_score']}/100"
-        ), ln=True) 
+        ), ln=True)
 
         pdf.set_font("Arial", '', 10)
         pdf.set_text_color(0, 0, 0)
@@ -349,7 +311,6 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
 
     pdf.output(output_path)
 
-
 if __name__ == "__main__":
     print(f"Publisher Agent is compiling the formal executive briefing for: {report_date}...")
     result = publisher_crew.kickoff()
@@ -364,8 +325,6 @@ if __name__ == "__main__":
     try:
         parsed = json.loads(raw_result)
 
-        # Merge the deterministic data layer into the final JSON output
-        # so the saved file and the PDF stay perfectly in sync.
         parsed["cve_summary"] = cve_summary
         parsed["severity_stats"] = severity_stats
 

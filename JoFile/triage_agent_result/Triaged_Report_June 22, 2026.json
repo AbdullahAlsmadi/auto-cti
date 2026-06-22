@@ -1,23 +1,16 @@
 [
   {
-    "CVE_ID": "CVE-2026-45585",
-    "Description": "Bypasses security features in Windows BitLocker.",
-    "CVSS_Severity": "High",
-    "MITRE_Mappings": ["T1548"],
-    "Urgency_Score": 90
-  },
-  {
-    "CVE_ID": "CVE-2026-45586",
-    "Description": "Elevation of privilege affecting CTFMON in Windows.",
+    "CVE_ID": "CVE-2026-12770",
+    "Description": "Vulnerability in BerriAI litellm up to 1.63.1.",
     "CVSS_Severity": "Medium",
-    "MITRE_Mappings": ["T1546"],
-    "Urgency_Score": 50
+    "MITRE_Mappings": ["T1190"],
+    "Urgency_Score": 55
   },
   {
-    "CVE_ID": "CVE-2026-44812",
-    "Description": "Remote code execution vulnerability in Windows Graphics.",
-    "CVSS_Severity": "Critical",
-    "MITRE_Mappings": ["T1115"],
+    "CVE_ID": "CVE-2026-12845",
+    "Description": "Exploit published for vulnerability reported on 2026-06-21.",
+    "CVSS_Severity": "High",
+    "MITRE_Mappings": ["T1553.001"],
     "Urgency_Score": 98
   }
 ]

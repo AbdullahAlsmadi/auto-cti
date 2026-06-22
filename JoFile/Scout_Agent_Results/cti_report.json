@@ -1,19 +1,14 @@
 {
     "June 22, 2026": [
         {
-            "cve_id": "CVE-2026-45585",
-            "description": "Windows BitLocker Security Feature Bypass Vulnerability",
-            "alienvault_pulses": "Active pulses found: Known_Cve"
+            "cve_id": "CVE-2026-12770",
+            "description": "A vulnerability was determined in BerriAI litellm up to 1.63.1. The impacted element is an unknown function of the file.",
+            "alienvault_pulses": "No pulses found"
         },
         {
-            "cve_id": "CVE-2026-45586",
-            "description": "Important elevation of privilege vulnerability affecting Windows Collaborative Translation Framework (CTFMON)",
-            "alienvault_pulses": "Active pulses found: Known_Cve"
-        },
-        {
-            "cve_id": "CVE-2026-44812",
-            "description": "Critical Remote Code Execution Vulnerability in the Windows Graphics component",
-            "alienvault_pulses": "Active pulses found: Known_Cve"
+            "cve_id": "CVE-2026-12845",
+            "description": "Vulnerability reported on 2026-06-21 where an exploit has been published and may be used.",
+            "alienvault_pulses": "No pulses found"
         }
     ]
 }

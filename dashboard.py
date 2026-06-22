@@ -8,16 +8,10 @@ import streamlit as st
 import pandas as pd
 import streamlit.components.v1 as components
 
-# =====================================================================
-# SECTION 1: PAGE CONFIG
-# =====================================================================
 st.set_page_config(page_title="Auto-CTI | SOC Console", layout="wide", initial_sidebar_state="collapsed")
 
 CLASSIFICATION = "TLP:AMBER  —  FOR INTERNAL DISTRIBUTION ONLY"
 
-# =====================================================================
-# SECTION 2: THEME DEFINITIONS (Dark / Light)
-# =====================================================================
 THEMES = {
     "dark": {
         "BG": "#0a0e17", "BG_GRADIENT": "radial-gradient(circle at top, #0f1623 0%, #060a12 100%)",
@@ -31,7 +25,7 @@ THEMES = {
         "CARD": "#ffffff", "BORDER": "#d7dee8", "TEXT": "#0f172a", "TEXT_DIM": "#5b6b85",
         "ACCENT_BLUE": "#1d4ed8", "ACCENT_CYAN": "#0891b2", "SUCCESS": "#059669",
         "DANGER": "#dc2626", "WARN": "#d97706", "WHITE": "#0f172a",
-        "CONSOLE_BG": "#0f172a", "CONSOLE_TEXT": "#22d3ee", "BANNER_BG": "#0f1c2e",
+        "CONSOLE_BG": "#f8fafc", "CONSOLE_TEXT": "#1e40af", "BANNER_BG": "#0f1c2e",
     },
 }
 
@@ -41,16 +35,11 @@ PIPELINE_STAGES = [
     {"name": "Publisher", "script": "publisher_agent.py"},
 ]
 
-
 def get_theme():
     if "theme" not in st.session_state:
         st.session_state.theme = "dark"
     return THEMES[st.session_state.theme]
 
-
-# =====================================================================
-# SECTION 3: CSS INJECTION
-# =====================================================================
 def inject_custom_css(T):
     st.markdown(f"""
     <style>
@@ -67,13 +56,10 @@ def inject_custom_css(T):
     #MainMenu {{ visibility: hidden; }}
     footer {{ visibility: hidden; }}
 
-    /* Force every piece of text inside the app to respect our theme color
-       unless explicitly overridden below (fixes invisible / mismatched text) */
     .stApp, .stApp p, .stApp span, .stApp div, .stApp label {{
         color: {T['TEXT']};
     }}
 
-    /* Classification banner */
     .tlp-banner {{
         background: {T['BANNER_BG']};
         border: 1px solid {T['BORDER']};
@@ -89,7 +75,6 @@ def inject_custom_css(T):
     }}
     .tlp-banner * {{ color: {T['ACCENT_CYAN']} !important; }}
 
-    /* Hero header */
     .hero-wrap {{ text-align: center; padding: 0.8rem 0 1.6rem 0; }}
     .hero-icon {{ font-size: 1.6rem; margin-bottom: 0.3rem; }}
     .hero-title {{
@@ -108,7 +93,6 @@ def inject_custom_css(T):
         font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: {T['TEXT_DIM']} !important;
     }}
 
-    /* Metric cards */
     .metric-card {{
         background: {T['CARD']}; border: 1px solid {T['BORDER']}; border-radius: 10px;
         padding: 1.1rem 1rem; box-shadow: 0 4px 10px -4px rgba(0,0,0,0.3);
@@ -122,7 +106,6 @@ def inject_custom_css(T):
     .metric-value {{ font-size: 2rem; font-weight: 700; color: {T['WHITE']} !important; margin-top: 0.2rem; }}
     .metric-sub {{ font-size: 0.72rem; color: {T['TEXT_DIM']} !important; margin-top: 0.2rem; }}
 
-    /* Status badge */
     .status-badge {{
         display: inline-block; padding: 0.3rem 0.85rem; border-radius: 20px;
         font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em;
@@ -132,7 +115,6 @@ def inject_custom_css(T):
     .status-scanning {{ background: {T['WARN']}22; color: {T['WARN']} !important; border: 1px solid {T['WARN']}55; }}
     .status-completed {{ background: {T['ACCENT_BLUE']}22; color: {T['ACCENT_BLUE']} !important; border: 1px solid {T['ACCENT_BLUE']}55; }}
 
-    /* Progress bar */
     .progress-track {{ background: {T['BORDER']}; border-radius: 100px; height: 7px; width: 100%; overflow: hidden; margin-top: 0.4rem; }}
     .progress-fill {{
         height: 100%; border-radius: 100px;
@@ -140,7 +122,6 @@ def inject_custom_css(T):
         transition: width 0.5s ease; width: 0%;
     }}
 
-    /* Terminal console */
     .console-wrap {{
         background: {T['CONSOLE_BG']}; border: 1px solid {T['BORDER']}; border-radius: 10px;
         overflow: hidden; margin-top: 0.5rem;
@@ -157,7 +138,6 @@ def inject_custom_css(T):
         padding: 0.8rem 1rem; height: 230px; overflow-y: auto; white-space: pre-wrap; line-height: 1.5;
     }}
 
-    /* Custom notice boxes (replace native st.info/st.success entirely) */
     .notice-box {{
         border-radius: 8px; padding: 0.8rem 1rem; font-size: 0.9rem;
         background: {T['CARD']}; color: {T['TEXT']} !important;
@@ -166,7 +146,6 @@ def inject_custom_css(T):
 
     hr {{ border-color: {T['BORDER']}; margin: 1.4rem 0; }}
 
-    /* ===== Force native Streamlit widgets to respect our theme ===== */
     .stButton > button, .stDownloadButton > button {{
         background-color: {T['CARD']} !important;
         color: {T['TEXT']} !important;
@@ -187,7 +166,6 @@ def inject_custom_css(T):
         color: {T['ACCENT_CYAN']} !important;
     }}
 
-    /* Native alert fallback override, in case any st.error/st.warning is used */
     [data-testid="stAlert"], .stAlert {{
         background-color: {T['CARD']} !important;
         color: {T['TEXT']} !important;
@@ -207,13 +185,39 @@ def inject_custom_css(T):
         border: 1px solid {T['BORDER']} !important;
         border-radius: 8px !important;
     }}
+
+    [data-testid="stCode"] pre, .stCodeBlock, .stCodeBlock pre {{
+        background-color: {T['CONSOLE_BG']} !important;
+        color: {T['CONSOLE_TEXT']} !important;
+        border: 1px solid {T['BORDER']} !important;
+        border-radius: 8px !important;
+    }}
+
+    [data-testid="stDownloadButton"] > button p,
+    [data-testid="stDownloadButton"] > button span,
+    [data-testid="stDownloadButton"] > button {{
+        color: {T['TEXT']} !important;
+        font-size: 0.85rem !important;
+    }}
+
+    h3 {{ color: {T['WHITE']} !important; }}
+
+    [data-testid="stDataFrame"] th {{
+        background-color: {T['BANNER_BG']} !important;
+        color: #ffffff !important;
+    }}
+    [data-testid="stDataFrame"] td {{
+        color: {T['TEXT']} !important;
+        background-color: {T['CARD']} !important;
+    }}
+
+    [data-testid="stExpander"] summary p,
+    [data-testid="stExpander"] summary span {{
+        color: {T['TEXT']} !important;
+    }}
     </style>
     """, unsafe_allow_html=True)
 
-
-# =====================================================================
-# SECTION 4: DATA HELPERS
-# =====================================================================
 def load_latest_json(directory, extension="*.json"):
     if not os.path.exists(directory):
         return None, None
@@ -226,7 +230,6 @@ def load_latest_json(directory, extension="*.json"):
             return json.load(f), latest
     except Exception:
         return None, latest
-
 
 def get_severity_stats():
     pub_data, _ = load_latest_json(os.path.join("JoFile", "publisher_agent_result"))
@@ -244,13 +247,8 @@ def get_severity_stats():
         return total, "-", "-", "-"
     return "-", "-", "-", "-"
 
-
-# =====================================================================
-# SECTION 5: UI COMPONENTS
-# =====================================================================
 def render_classification_banner():
     st.markdown(f'<div class="tlp-banner">{CLASSIFICATION}</div>', unsafe_allow_html=True)
-
 
 def render_theme_toggle():
     label = "☀️ Light Mode" if st.session_state.theme == "dark" else "🌙 Dark Mode"
@@ -258,9 +256,7 @@ def render_theme_toggle():
         st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
         st.rerun()
 
-
 def render_notice(T, text, kind="info"):
-    """Fully custom-styled notice box — replaces st.info/st.success to guarantee theme consistency."""
     colors = {"info": T['ACCENT_CYAN'], "success": T['SUCCESS'], "warning": T['WARN'], "error": T['DANGER']}
     icons = {"info": "ℹ️", "success": "✅", "warning": "⚠️", "error": "⛔"}
     c = colors.get(kind, T['ACCENT_CYAN'])
@@ -270,9 +266,7 @@ def render_notice(T, text, kind="info"):
     </div>
     """, unsafe_allow_html=True)
 
-
 def render_hero_header(T, status_text, status_class):
-    """Centered, high-impact title block that gives the console a formal, authoritative presence."""
     st.markdown(f"""
     <div class="hero-wrap">
         <div class="hero-icon">🛡️</div>
@@ -285,7 +279,6 @@ def render_hero_header(T, status_text, status_class):
         </div>
     </div>
     """, unsafe_allow_html=True)
-
 
 def render_executive_dashboard(T, agents_state):
     total_pct = sum(a['pct'] for a in agents_state) / len(agents_state) if agents_state else 0
@@ -330,7 +323,6 @@ def render_executive_dashboard(T, agents_state):
     """
     st.markdown(html, unsafe_allow_html=True)
 
-
 def generate_agent_rings_html(T, agents_data):
     html = '<div style="display:flex; justify-content:center; align-items:center; gap:2.5rem; flex-wrap:wrap; margin:1.3rem 0;">'
     for agent in agents_data:
@@ -355,63 +347,42 @@ def generate_agent_rings_html(T, agents_data):
     html += '</div>'
     return html
 
-
 def classify_log_line(line: str):
-    """
-    Classifies a raw agent log line into (icon, css_color, display_text).
-    Noise lines (CrewAI internal events, charmap errors) are returned as None
-    so they can be filtered from the smart feed but kept in the raw log.
-    """
-    # --- Filter out noise: CrewAI internal event bus & Windows encoding errors ---
     noise_patterns = [
         "[CrewAIEventsBus]", "charmap", "codec can't encode",
         "character maps to <undefined>", "Sync handler error",
     ]
     for pattern in noise_patterns:
         if pattern in line:
-            return None  # suppress from smart feed
+            return None
 
     l = line.strip().lower()
 
-    # --- Success / completion ---
     if any(k in l for k in ["[ok]", "successfully", "generated successfully", "saved at", "finished successfully", "complete"]):
         return ("✅", "#10b981", line.strip())
 
-    # --- Errors (real ones) ---
     if any(k in l for k in ["[failed]", "[exception]", "error:", "traceback", "exit code"]):
         return ("⛔", "#ef4444", line.strip())
 
-    # --- Warnings ---
     if any(k in l for k in ["warning", "warn:", "could not parse", "skipping"]):
         return ("⚠️", "#f59e0b", line.strip())
 
-    # --- Agent startup / progress signals ---
     if any(k in l for k in ["waking up", "compiling", "agent is", "publisher agent", "triage agent",
                               "scout agent", "kickoff", "task started", "starting"]):
         return ("🔄", "#22d3ee", line.strip())
 
-    # --- API / config info ---
     if any(k in l for k in ["api key", "loaded:", "base_url", "model:", "gemini", "ollama"]):
         return ("ℹ️", "#3b82f6", line.strip())
 
-    # --- LLM / CrewAI verbose thinking (long lines, usually reasoning output) ---
     if len(line.strip()) > 120:
         return ("💬", "#7d8da3", line.strip()[:160] + "…")
 
-    # --- Default: informational ---
     if line.strip():
         return ("▸", "#7d8da3", line.strip())
 
-    return None  # blank lines → suppress
-
+    return None
 
 def render_console(T, log_lines, height=300):
-    """
-    Smart console with two layers:
-    1. A styled terminal showing only classified, meaningful lines (color-coded).
-    2. A collapsed expander with the full raw log for debugging.
-    """
-    # Build smart feed rows
     rows_html = ""
     for line in log_lines[-500:]:
         result = classify_log_line(line)
@@ -453,16 +424,31 @@ def render_console(T, log_lines, height=300):
     """
     components.html(html, height=height + 55, scrolling=False)
 
-    # Raw log in a collapsed expander for debugging — always available
     if log_lines:
         with st.expander("🔍 Raw Agent Log (debug)", expanded=False):
             raw_text = "\n".join(log_lines[-300:])
-            st.code(raw_text, language="bash")
+            safe_raw = (raw_text
+                        .replace("&", "&amp;")
+                        .replace("<", "&lt;")
+                        .replace(">", "&gt;")
+                        .replace("\n", "<br>"))
+            st.markdown(f"""
+            <div style="
+                background: {T['CONSOLE_BG']};
+                color: {T['CONSOLE_TEXT']} !important;
+                font-family: 'JetBrains Mono', 'Courier New', monospace;
+                font-size: 0.75rem;
+                line-height: 1.6;
+                padding: 0.9rem 1rem;
+                border-radius: 8px;
+                border: 1px solid #243248;
+                max-height: 260px;
+                overflow-y: auto;
+                white-space: pre-wrap;
+                word-break: break-all;
+            ">{safe_raw}</div>
+            """, unsafe_allow_html=True)
 
-
-# =====================================================================
-# SECTION 6: PIPELINE EXECUTION (with real-time console capture)
-# =====================================================================
 def run_agent_with_console(ring_placeholder, console_placeholder, T, agents_data, current_index, script_name):
     try:
         process = subprocess.Popen(
@@ -508,10 +494,6 @@ def run_agent_with_console(ring_placeholder, console_placeholder, T, agents_data
         st.error(f"⚠️ Exception while running {script_name}: {e}")
         return False
 
-
-# =====================================================================
-# SECTION 7: REPORT / CONSOLE TOOLS
-# =====================================================================
 def display_statistics(T):
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown(f"<h3 style='font-weight:700; color:{T['WHITE']};'>📊 Detailed Vulnerability Findings</h3>", unsafe_allow_html=True)
@@ -528,22 +510,11 @@ def display_statistics(T):
     else:
         render_notice(T, "No vulnerability data found yet.", "info")
 
-
 def display_console_tools(T):
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown(f"<h3 style='font-weight:700; color:{T['WHITE']};'>🖥️ Console Tools</h3>", unsafe_allow_html=True)
 
-    c1, c2, c3 = st.columns(3)
-
-    # داخل display_console_tools بعد c1, c2, c3 = st.columns(3)
-    # غيّرها إلى أربعة أعمدة:
     c1, c2, c3, c4 = st.columns(4)
-    # ... (نفس المحتوى السابق في c1, c2, c3)
-    with c4:
-        noise_count = sum(1 for l in st.session_state.get("console_log", [])
-                          if classify_log_line(l) is None)
-        st.button(f"🔇 {noise_count} filtered", disabled=True, use_container_width=True,
-                  help="Lines filtered from Smart Feed (CrewAI internal noise, encoding errors)")
 
     report_dir = os.path.join("JoFile", "Reports")
     pdf_files = glob.glob(os.path.join(report_dir, "*.pdf")) if os.path.exists(report_dir) else []
@@ -571,10 +542,15 @@ def display_console_tools(T):
             st.session_state.console_log = []
             st.rerun()
 
+    with c4:
+        noise_count = sum(1 for l in st.session_state.get("console_log", [])
+                          if classify_log_line(l) is None)
+        st.button(f"🔇 {noise_count} filtered", disabled=True, use_container_width=True,
+                  help="Lines filtered from Smart Feed (CrewAI internal noise, encoding errors)")
+
     if pub_data:
         with st.expander("🔍 View Raw Executive Briefing JSON"):
             st.json(pub_data)
-
 
 def display_report_history(T):
     st.markdown("<hr>", unsafe_allow_html=True)
@@ -598,12 +574,12 @@ def display_report_history(T):
             st.markdown(f"📄 **{file_name}** <span style='color:{T['TEXT_DIM']};'>({creation_time})</span>", unsafe_allow_html=True)
         with col2:
             with open(pdf_file, "rb") as f:
-                st.download_button("📥", data=f.read(), file_name=file_name, mime="application/pdf", key=pdf_file)
+                st.download_button(
+                    "📥 Download", data=f.read(),
+                    file_name=file_name, mime="application/pdf",
+                    key=pdf_file, use_container_width=True
+                )
 
-
-# =====================================================================
-# SECTION 8: MAIN APPLICATION LOOP
-# =====================================================================
 def main():
     T = get_theme()
     inject_custom_css(T)
@@ -619,7 +595,6 @@ def main():
     with top_r:
         render_theme_toggle()
 
-    # ---------------- STATE 1: IDLE ----------------
     if not st.session_state.running:
         dummy_state = [{"name": s["name"], "pct": 0} for s in PIPELINE_STAGES]
         render_executive_dashboard(T, dummy_state)
@@ -635,7 +610,6 @@ def main():
 
         display_report_history(T)
 
-    # ---------------- STATE 2: RUNNING / COMPLETED ----------------
     if st.session_state.running:
         if "agents_state" not in st.session_state:
             st.session_state.agents_state = [{"name": s["name"], "pct": 0} for s in PIPELINE_STAGES]
@@ -668,9 +642,16 @@ def main():
                     st.rerun()
                     break
         else:
+            ring_placeholder.empty()
+            console_placeholder.empty()
+
+            components.html(
+                generate_agent_rings_html(T, st.session_state.agents_state),
+                height=170, scrolling=False
+            )
+
             st.markdown("<br>", unsafe_allow_html=True)
             render_notice(T, "Pipeline completed successfully. Final report generated by the Publisher Agent.", "success")
-
             display_console_tools(T)
             display_statistics(T)
             display_report_history(T)
@@ -684,7 +665,6 @@ def main():
                         del st.session_state.agents_state
                     st.session_state.console_log = []
                     st.rerun()
-
 
 if __name__ == "__main__":
     main()

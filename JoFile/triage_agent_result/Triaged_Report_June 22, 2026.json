@@ -2,71 +2,71 @@
   {
     "CVE_ID": "CVE-2026-12192",
     "Description": "Buffer overflow in Web Server component.",
-    "CVSS_Severity": "High",
-    "MITRE_Mappings": ["T1133"],
-    "Urgency_Score": 85
+    "CVSS_Severity": "Critical",
+    "MITRE_Mappings": ["T1133", "T1204"],
+    "Urgency_Score": 95
   },
   {
     "CVE_ID": "CVE-2026-12193",
-    "Description": "Ioctl handling vulnerability in Revo Detector.sys.",
-    "CVSS_Severity": "Medium",
-    "MITRE_Mappings": ["T1046"],
-    "Urgency_Score": 55
+    "Description": "Manipulation in IOCtl_Handler function of RevoDetector.sys.",
+    "CVSS_Severity": "High",
+    "MITRE_Mappings": ["T1134"],
+    "Urgency_Score": 85
   },
   {
     "CVE_ID": "CVE-2026-12197",
-    "Description": "nslookup function in EG105G-P.",
-    "CVSS_Severity": "High",
-    "MITRE_Mappings": ["T1133"],
-    "Urgency_Score": 80
+    "Description": "Security flaw in nslookup function of JSON-RPC Diagnose Endpoint.",
+    "CVSS_Severity": "Medium",
+    "MITRE_Mappings": ["T1135"],
+    "Urgency_Score": 70
   },
   {
     "CVE_ID": "CVE-2026-12198",
-    "Description": "Weakness in userfiles_path function.",
+    "Description": "Weakness in userfiles_path function of API Endpoint.",
+    "CVSS_Severity": "Low",
+    "MITRE_Mappings": ["T1137"],
+    "Urgency_Score": 50
+  },
+  {
+    "CVE_ID": "CVE-2026-12200",
+    "Description": "Security vulnerability in Header Handler library.",
+    "CVSS_Severity": "High",
+    "MITRE_Mappings": ["T1138"],
+    "Urgency_Score": 85
+  },
+  {
+    "CVE_ID": "CVE-2026-12201",
+    "Description": "Permission issues in DLL Handler component.",
+    "CVSS_Severity": "High",
+    "MITRE_Mappings": ["T1139"],
+    "Urgency_Score": 80
+  },
+  {
+    "CVE_ID": "CVE-2026-12202",
+    "Description": "Argument manipulation in Blocks Endpoint.",
+    "CVSS_Severity": "Medium",
+    "MITRE_Mappings": ["T1555"],
+    "Urgency_Score": 70
+  },
+  {
+    "CVE_ID": "CVE-2026-12203",
+    "Description": "Vulnerability in Research Export component.",
+    "CVSS_Severity": "Low",
+    "MITRE_Mappings": ["T1546"],
+    "Urgency_Score": 50
+  },
+  {
+    "CVE_ID": "CVE-2026-12204",
+    "Description": "Unknown issue in OrderClose/OrderSuccess/PayLogOrderClose/GoodsGiveIntegral functions.",
     "CVSS_Severity": "Low",
     "MITRE_Mappings": [],
     "Urgency_Score": 30
   },
   {
-    "CVE_ID": "CVE-2026-12200",
-    "Description": "Vulnerability in libeay32.dll.",
-    "CVSS_Severity": "Medium",
-    "MITRE_Mappings": ["T1249"],
-    "Urgency_Score": 58
-  },
-  {
-    "CVE_ID": "CVE-2026-12201",
-    "Description": "Unknown functionality in DLL Handler.",
-    "CVSS_Severity": "Low",
-    "MITRE_Mappings": [],
-    "Urgency_Score": 35
-  },
-  {
-    "CVE_ID": "CVE-2026-12202",
-    "Description": "Unknown functionality in Blocks Endpoint.",
-    "CVSS_Severity": "Low",
-    "MITRE_Mappings": [],
-    "Urgency_Score": 35
-  },
-  {
-    "CVE_ID": "CVE-2026-12203",
-    "Description": "Vulnerability in agents.csv.",
-    "CVSS_Severity": "Low",
-    "MITRE_Mappings": [],
-    "Urgency_Score": 40
-  },
-  {
-    "CVE_ID": "CVE-2026-12204",
-    "Description": "Functionality in Crontab.php.",
-    "CVSS_Severity": "Medium",
-    "MITRE_Mappings": ["T1133"],
-    "Urgency_Score": 50
-  },
-  {
     "CVE_ID": "CVE-2026-12206",
-    "Description": "Vulnerability in DataTableEntity.",
+    "Description": "DataTableEntity function issue in Grit::Assays module.",
     "CVSS_Severity": "Medium",
-    "MITRE_Mappings": ["T1133"],
-    "Urgency_Score": 58
+    "MITRE_Mappings": ["T1134"],
+    "Urgency_Score": 75
   }
 ]

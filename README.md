@@ -3,6 +3,9 @@
 > **TLP:AMBER** — For internal distribution only.  
 > An academic internship project demonstrating a production-grade, multi-agent AI pipeline for automated cybersecurity threat intelligence.
 
+**Author:** Abdullah Al Smadi  
+**Supervisor:** Dr. Ahmet Albayrak
+
 ---
 
 ## 📋 Table of Contents
@@ -337,6 +340,11 @@ A TLP:AMBER classified PDF containing:
 
 **Auto-CTI** · Autonomous Cyber Threat Intelligence Pipeline  
 Built with CrewAI · Claude · Mistral · NIST NVD · MITRE ATT&CK
+
+---
+
+**Developed by:** Abdullah Al Smadi  
+**Supervisor:** Dr. Ahmet Albayrak  
 
 *Internship Project — For Academic and Demonstration Purposes*
 

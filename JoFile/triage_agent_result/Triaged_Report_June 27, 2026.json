@@ -1,0 +1,158 @@
+[
+  {
+    "CVE_ID": "CVE-2026-55700",
+    "Description": "pnpm allows an attacker to traverse through manifest name and version fields to write outside its intended destination directory. This can lead to unauthorized file manipulations, potentially compromising system integrity and confidentiality.",
+    "CVSS_Score": 7.1,
+    "CVSS_Severity": "High",
+    "CWE_ID": "CWE-22",
+    "MITRE_Mappings": [
+      "T1190"
+    ],
+    "Urgency_Score": 84,
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-55700",
+      "https://www.cve.org/CVERecord?id=CVE-2026-55700"
+    ]
+  },
+  {
+    "CVE_ID": "CVE-2026-55699",
+    "Description": "pnpm's global remove functionality can be exploited by reserved bin names to delete PNPM_HOME, potentially leading to the complete removal of pnpm and associated systems, impacting system integrity.",
+    "CVSS_Score": 6.5,
+    "CVSS_Severity": "Moderate",
+    "CWE_ID": "CWE-22",
+    "MITRE_Mappings": [
+      "T1097"
+    ],
+    "Urgency_Score": 75,
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-55699",
+      "https://www.cve.org/CVERecord?id=CVE-2026-55699"
+    ]
+  },
+  {
+    "CVE_ID": "CVE-2026-55698",
+    "Description": "pnpm can be manipulated by a malicious lockfile to execute arbitrary code, potentially leading to data loss or unauthorized access through the use of preselected pacquet native install engines. This could compromise the confidentiality and integrity of the affected system.",
+    "CVSS_Score": 8.8,
+    "CVSS_Severity": "High",
+    "CWE_ID": "CWE-345",
+    "MITRE_Mappings": [
+      "T1204",
+      "T1069"
+    ],
+    "Urgency_Score": 98,
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-55698",
+      "https://www.cve.org/CVERecord?id=CVE-2026-55698"
+    ]
+  },
+  {
+    "CVE_ID": "CVE-2026-49338",
+    "Description": "The Subsonic API allows an attacker to manipulate playlist IDs in a way that bypasses authentication checks, potentially enabling unauthorized access to or deletion of playlists belonging to other users.",
+    "CVSS_Score": 7.1,
+    "CVSS_Severity": "High",
+    "CWE_ID": "CWE-285",
+    "MITRE_Mappings": [
+      "T1046",
+      "T1097"
+    ],
+    "Urgency_Score": 83,
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-49338",
+      "https://www.cve.org/CVERecord?id=CVE-2026-49338"
+    ]
+  },
+  {
+    "CVE_ID": "CVE-2026-49339",
+    "Description": "The gonic package allows path traversal attacks through playlist IDs, enabling attackers to bypass ownership checks and gain unauthorized read or delete permissions on other users' playlists.",
+    "CVSS_Score": 7.1,
+    "CVSS_Severity": "High",
+    "CWE_ID": "CWE-22",
+    "MITRE_Mappings": [
+      "T1036",
+      "T1551"
+    ],
+    "Urgency_Score": 86,
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-49339",
+      "https://www.cve.org/CVERecord?id=CVE-2026-49339"
+    ]
+  },
+  {
+    "CVE_ID": "CVE-2026-49340",
+    "Description": "The gonic package's createPlaylist function allows any authenticated user to write playlist M3U content to attacker-controlled paths on the host, potentially leading to unauthorized file injection and execution.",
+    "CVSS_Score": 8.1,
+    "CVSS_Severity": "High",
+    "CWE_ID": "CWE-22",
+    "MITRE_Mappings": [
+      "T1036",
+      "T1574"
+    ],
+    "Urgency_Score": 98,
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-49340",
+      "https://www.cve.org/CVERecord?id=CVE-2026-49340"
+    ]
+  },
+  {
+    "CVE_ID": "CVE-2026-55697",
+    "Description": "pnpm's configDependencies feature can be controlled by repositories to inject an attacker-selected native install engine, potentially leading to arbitrary code execution and compromise of the system’s integrity.",
+    "CVSS_Score": 7.5,
+    "CVSS_Severity": "High",
+    "CWE_ID": "CWE-78",
+    "MITRE_Mappings": [
+      "T1203",
+      "T1069"
+    ],
+    "Urgency_Score": 94,
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-55697",
+      "https://www.cve.org/CVERecord?id=CVE-2026-55697"
+    ]
+  },
+  {
+    "CVE_ID": "CVE-2026-55487",
+    "Description": "pnpm's manifest identity can be spoofed by attackers to satisfy allowBuilds and execute attacker-specified lifecycle scripts, which could compromise system integrity through arbitrary code execution.",
+    "CVSS_Score": 7.5,
+    "CVSS_Severity": "High",
+    "CWE_ID": "CWE-346",
+    "MITRE_Mappings": [
+      "T1078",
+      "T1204"
+    ],
+    "Urgency_Score": 94,
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-55487",
+      "https://www.cve.org/CVERecord?id=CVE-2026-55487"
+    ]
+  },
+  {
+    "CVE_ID": "CVE-2026-55180",
+    "Description": "pnpm’s repository config settings can leak victim environment secrets into registry requests, potentially leading to unauthorized API access or data exfiltration.",
+    "CVSS_Score": 6.5,
+    "CVSS_Severity": "Moderate",
+    "CWE_ID": "CWE-798",
+    "MITRE_Mappings": [
+      "T1041"
+    ],
+    "Urgency_Score": 72,
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-55180",
+      "https://www.cve.org/CVERecord?id=CVE-2026-55180"
+    ]
+  },
+  {
+    "CVE_ID": "CVE-2026-49337",
+    "Description": "Subsonic's API allows an attacker to execute malicious code by controlling playlists, impacting the system’s integrity and confidentiality.",
+    "CVSS_Score": 8.5,
+    "CVSS_Severity": "High",
+    "CWE_ID": "CWE-104",
+    "MITRE_Mappings": [
+      "T1204"
+    ],
+    "Urgency_Score": 97,
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-49337",
+      "https://www.cve.org/CVERecord?id=CVE-2026-49337"
+    ]
+  }
+]

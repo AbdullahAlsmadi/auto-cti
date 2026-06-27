@@ -59,7 +59,7 @@ def inject_custom_css(T):
     .stApp, .stApp p, .stApp span, .stApp div, .stApp label {{
         color: {T['TEXT']};
     }}
-
+ 
     .tlp-banner {{
         background: {T['BANNER_BG']};
         border: 1px solid {T['BORDER']};
@@ -351,7 +351,9 @@ def classify_log_line(line: str):
     noise_patterns = [
         "[CrewAIEventsBus]", "charmap", "codec can't encode",
         "character maps to <undefined>", "Sync handler error",
+        "DeprecationWarning", "deprecated since", "has been renamed",
     ]
+
     for pattern in noise_patterns:
         if pattern in line:
             return None
@@ -452,9 +454,11 @@ def render_console(T, log_lines, height=300):
 def run_agent_with_console(ring_placeholder, console_placeholder, T, agents_data, current_index, script_name):
     try:
         process = subprocess.Popen(
-            [sys.executable, script_name],
+            [sys.executable, "-u", script_name],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, bufsize=1, universal_newlines=True
+            text=True, bufsize=1, universal_newlines=True,
+            encoding="utf-8", errors="replace",
+            env={**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1"}
         )
 
         progress = 0
@@ -506,7 +510,23 @@ def display_statistics(T):
         df = pd.DataFrame(triage_data) if isinstance(triage_data, list) else pd.DataFrame()
 
     if not df.empty:
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        rename_map = {
+            "cve_id": "CVE ID",
+            "description": "Description",
+            "cvss_score": "CVSS Score",
+            "severity": "Severity",
+            "cwe_id": "CWE",
+            "urgency_score": "Urgency Score",
+            "mitre_mappings": "MITRE ATT&CK",
+            "references": "References",
+        }
+        display_cols = [c for c in rename_map if c in df.columns]
+        st.dataframe(
+            df[display_cols].rename(columns=rename_map),
+            use_container_width=True,
+            hide_index=True
+        )
+
     else:
         render_notice(T, "No vulnerability data found yet.", "info")
 
@@ -668,3 +688,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+run_agent_with_console

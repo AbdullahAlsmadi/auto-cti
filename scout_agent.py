@@ -2,170 +2,296 @@ import os
 import json
 import requests
 import datetime
-import time
 from crewai import Agent, Task, Crew, LLM
 from crewai.tools import BaseTool
-from ddgs import DDGS
 from dotenv import load_dotenv
+import sys
+
+sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
 
 load_dotenv()
 
 today_date = datetime.datetime.now().strftime("%B %d, %Y")
-print("Gemini API Key loaded:", bool(os.getenv("GEMINI_API_KEY")))
+print(f"Scout Agent started. Today: {today_date}")
+print(f"Gemini API Key loaded: {bool(os.getenv('GEMINI_API_KEY'))}")
+print(f"NVD API Key loaded: {bool(os.getenv('NVD_API_KEY'))}")
 
-class InternetSearchTool(BaseTool):
-    name: str = "Internet Search Tool"
-    description: str = "Search the open internet specifically for recent articles containing the keyword 'CVE-' to find real vulnerabilities."
-
-    def _run(self, query: str) -> str:
-        results = DDGS().text(query, max_results=20)
-        return str(list(results))
 
 class NISTSearchTool(BaseTool):
     name: str = "NIST NVD Recent Search Tool"
-    description: str = "Use this tool FIRST. It fetches the 10 MOST RECENT CVEs added to the official NIST database. DO NOT pass a specific query, just pass 'recent'."
+    description: str = "Fetches the 20 most recent CVEs published in the last 7 days."
 
     def _run(self, query: str) -> str:
-        for attempt in range(10):
-            try:
-                end_date = datetime.datetime.now()
-                start_date = end_date - datetime.timedelta(days=7)
-                start_str = start_date.strftime('%Y-%m-%dT00:00:00.000') + "Z"
-                end_str = end_date.strftime('%Y-%m-%dT23:59:59.000') + "Z"
-                url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=10&pubStartDate={start_str}&pubEndDate={end_str}"
-                response = requests.get(url, timeout=120)
-                
-                if response.status_code != 200:
-                    return f"NIST API Error: Received status code {response.status_code}"
-                
-                data = response.json()
-                verified_cves = []
-                
-                for item in data.get("vulnerabilities", []):
-                    cve_id = item.get("cve", {}).get("id")
-                    if not cve_id:
-                        continue
-                    
-                    descriptions = item.get("cve", {}).get("descriptions", [])
-                    desc_text = "No description provided by NIST."
-                    for d in descriptions:
-                        if d.get("lang") == "en":
-                            desc_text = d.get("value")
-                            break
-                    
-                    verified_cves.append(f"VERIFIED_CVE_ID: {cve_id} | DESC: {desc_text[:200]}...")
-                
-                if not verified_cves:
-                    return "API returned data, but no valid CVE IDs were found."
-                
-                final_output = "STRICT INSTRUCTION: USE EXACTLY THESE IDs:\n" + "\n".join(verified_cves)
-                return final_output
-                
-            except requests.exceptions.Timeout:
-                if attempt < 2:
-                    time.sleep(5)
+        headers = {"User-Agent": "Auto-CTI-Agent/1.0"}
+        nvd_api_key = os.getenv("NVD_API_KEY")
+        if nvd_api_key:
+            headers["apiKey"] = nvd_api_key
+
+        nvd_url = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+
+        def parse_nvd_response(data):
+            verified_cves = []
+            for item in data.get("vulnerabilities", []):
+                cve    = item.get("cve", {})
+                cve_id = cve.get("id")
+                if not cve_id:
                     continue
+                desc = "No description available."
+                for d in cve.get("descriptions", []):
+                    if d.get("lang") == "en":
+                        desc = d.get("value", desc)
+                        break
+                cvss_score    = "N/A"
+                cvss_severity = "N/A"
+                cwe_id        = "N/A"
+                metrics   = cve.get("metrics", {})
+                cvss_list = metrics.get("cvssMetricV31", metrics.get("cvssMetricV30", []))
+                if cvss_list:
+                    cvss_data     = cvss_list[0].get("cvssData", {})
+                    cvss_score    = cvss_data.get("baseScore", "N/A")
+                    cvss_severity = cvss_data.get("baseSeverity", "N/A")
+                for weakness in cve.get("weaknesses", []):
+                    for wd in weakness.get("description", []):
+                        if wd.get("lang") == "en":
+                            cwe_id = wd.get("value", "N/A")
+                            break
+                verified_cves.append(
+                    f"VERIFIED_CVE_ID: {cve_id} | "
+                    f"CVSS: {cvss_score} | SEVERITY: {cvss_severity} | "
+                    f"CWE: {cwe_id} | DESC: {desc[:500]}"
+                )
+            return verified_cves
+
+        try:
+            print("DEBUG - Trying NVD (no date filter)...")
+            r = requests.get(nvd_url, headers=headers, params={"resultsPerPage": 20}, timeout=30)
+            print(f"DEBUG - NVD Status: {r.status_code}")
+            if r.status_code == 200:
+                cves = parse_nvd_response(r.json())
+                if cves:
+                    return "STRICT INSTRUCTION: USE EXACTLY THESE IDs AND SCORES:\n" + "\n".join(cves)
+        except Exception as e:
+            print(f"DEBUG - NVD Error: {e}")
+
+        try:
+            end_dt   = datetime.datetime.utcnow()
+            start_dt = end_dt - datetime.timedelta(days=7)
+            params   = {
+                "resultsPerPage":   20,
+                "lastModStartDate": start_dt.strftime("%Y-%m-%dT%H:%M:%S"),
+                "lastModEndDate":   end_dt.strftime("%Y-%m-%dT%H:%M:%S"),
+            }
+            print("DEBUG - Trying NVD (lastModified 7 days)...")
+            r = requests.get(nvd_url, headers=headers, params=params, timeout=30)
+            print(f"DEBUG - NVD lastMod Status: {r.status_code}")
+            if r.status_code == 200:
+                cves = parse_nvd_response(r.json())
+                if cves:
+                    return "STRICT INSTRUCTION: USE EXACTLY THESE IDs AND SCORES:\n" + "\n".join(cves)
+        except Exception as e:
+            print(f"DEBUG - NVD lastMod Error: {e}")
+
+        # GitHub Advisory Database — always fresh, no auth needed, real CVE IDs with scores
+        try:
+            print("DEBUG - Trying GitHub Advisory Database (GraphQL)...")
+            query_body = """
+            {
+              securityAdvisories(first: 20, orderBy: {field: PUBLISHED_AT, direction: DESC}) {
+                nodes {
+                  ghsaId
+                  summary
+                  severity
+                  publishedAt
+                  cvss { score vectorString }
+                  cwes(first: 1) { nodes { cweId name } }
+                  identifiers { type value }
+                  vulnerabilities(first: 1) { nodes { package { name ecosystem } } }
+                }
+              }
+            }
+            """
+            gh_headers = {"Content-Type": "application/json"}
+            gh_token   = os.getenv("GITHUB_TOKEN")
+            if gh_token:
+                gh_headers["Authorization"] = f"Bearer {gh_token}"
+
+            r = requests.post(
+                "https://api.github.com/graphql",
+                json={"query": query_body},
+                headers=gh_headers,
+                timeout=30
+            )
+            print(f"DEBUG - GitHub Advisory Status: {r.status_code}")
+
+            if r.status_code == 200:
+                advisories = (
+                    r.json()
+                     .get("data", {})
+                     .get("securityAdvisories", {})
+                     .get("nodes", [])
+                )
+                verified_cves = []
+                for adv in advisories:
+                    cve_id = None
+                    for ident in adv.get("identifiers", []):
+                        if ident.get("type") == "CVE":
+                            cve_id = ident.get("value")
+                            break
+                    if not cve_id or not cve_id.startswith("CVE-"):
+                        continue
+
+                    summary       = adv.get("summary", "No description available.")
+                    cvss_score    = adv.get("cvss", {}).get("score", "N/A")
+                    cvss_severity = adv.get("severity", "N/A").capitalize()
+                    cwe_nodes     = adv.get("cwes", {}).get("nodes", [])
+                    cwe_id        = cwe_nodes[0].get("cweId", "N/A") if cwe_nodes else "N/A"
+                    published     = adv.get("publishedAt", "")[:20]
+
+                    verified_cves.append(
+                        f"VERIFIED_CVE_ID: {cve_id} | "
+                        f"CVSS: {cvss_score} | SEVERITY: {cvss_severity} | "
+                        f"CWE: {cwe_id} | PUBLISHED: {published} | DESC: {summary[:500]}"
+                    )
+
+                if verified_cves:
+                    print(f"DEBUG - GitHub Advisory returned {len(verified_cves)} CVEs")
+                    return "STRICT INSTRUCTION: USE EXACTLY THESE IDs AND SCORES:\n" + "\n".join(verified_cves)
                 else:
-                    return f"Failed to connect to NIST: Request timed out after multiple attempts."
-            except Exception as e:
-                return f"Failed to connect to NIST: {str(e)}"
-        return "Failed to connect to NIST after retries."
+                    print("DEBUG - GitHub Advisory: no CVE identifiers found in response")
+
+        except Exception as e:
+            print(f"DEBUG - GitHub Advisory Error: {e}")
+
+        # OSV.dev — Google's open vulnerability database, no auth, always available
+        try:
+            print("DEBUG - Trying OSV.dev API...")
+            osv_cves = []
+            for eco in ["PyPI", "npm", "Go", "Maven", "NuGet", "crates.io"]:
+                if len(osv_cves) >= 20:
+                    break
+                try:
+                    r = requests.post(
+                        "https://api.osv.dev/v1/query",
+                        json={"page_size": 3, "query": {"package": {"ecosystem": eco}}},
+                        timeout=20
+                    )
+                    if r.status_code == 200:
+                        for vuln in r.json().get("vulns", []):
+                            vuln_id = vuln.get("id", "")
+                            if not vuln_id.startswith("CVE-"):
+                                vuln_id = next(
+                                    (a for a in vuln.get("aliases", []) if a.startswith("CVE-")),
+                                    None
+                                )
+                            if not vuln_id:
+                                continue
+                            published = vuln.get("published", "")[:20]
+                            summary   = vuln.get("summary", vuln.get("details", "No description."))
+                            osv_cves.append(
+                                f"VERIFIED_CVE_ID: {vuln_id} | "
+                                f"PUBLISHED: {published} | DESC: {str(summary)[:500]}"
+                            )
+                except Exception:
+                    continue
+
+            if osv_cves:
+                print(f"DEBUG - OSV returned {len(osv_cves)} CVEs")
+                return "STRICT INSTRUCTION: USE EXACTLY THESE IDs:\n" + "\n".join(osv_cves[:20])
+
+        except Exception as e:
+            print(f"DEBUG - OSV Error: {e}")
+
+        return "Failed to fetch CVEs from all sources."
+
 
 class AlienVaultOTXTool(BaseTool):
     name: str = "AlienVault OTX Search Tool"
-    description: str = "Search AlienVault Open Threat Exchange for threat pulses and tags associated with a specific keyword (like a CVE ID)."
+    description: str = (
+        "Search AlienVault OTX for active threat pulses for a given CVE ID. "
+        "Pass the CVE ID as the query."
+    )
 
     def _run(self, query: str) -> str:
         try:
             api_key = os.getenv("OTX_API_KEY")
             if not api_key:
-                return "AlienVault API Error: OTX_API_KEY is missing from environment variables."
+                return "AlienVault Error: OTX_API_KEY missing."
 
-            url = f"https://otx.alienvault.com/api/v1/search/pulses?q={query}&limit=10"
-            headers = {"X-OTX-API-KEY": api_key}
+            url      = f"https://otx.alienvault.com/api/v1/search/pulses?q={query}&limit=10"
+            headers  = {"X-OTX-API-KEY": api_key}
             response = requests.get(url, headers=headers, timeout=60)
-            
+
             if response.status_code != 200:
-                return f"AlienVault API Error: Received status code {response.status_code}"
-            
-            data = response.json()
+                return f"AlienVault Error: Status {response.status_code}"
+
             results = []
-            
-            for pulse in data.get("results", []):
+            for pulse in response.json().get("results", []):
                 pulse_name = pulse.get("name", "N/A")
-                tags = ", ".join(pulse.get("tags", []))
-                results.append(f"Pulse Name: {pulse_name}\nTags: {tags}\n")
-                
-            return "\n".join(results) if results else "No pulses found in AlienVault OTX for this CVE."
+                tags       = ", ".join(pulse.get("tags", []))
+                results.append(f"Pulse: {pulse_name} | Tags: {tags}")
+
+            return "\n".join(results) if results else "No active threat pulses found."
+
         except Exception as e:
             return f"Failed to connect to AlienVault: {str(e)}"
 
-search_tool = InternetSearchTool()
-nist_tool = NISTSearchTool()
+
+nist_tool       = NISTSearchTool()
 alienvault_tool = AlienVaultOTXTool()
 
-cloud_gemini = LLM(
-    
+scout_llm = LLM(
     model="gemini/gemini-3.1-flash-lite",
     api_key=os.getenv("GEMINI_API_KEY"),
-    max_retries=5 # type: ignore
-
-    #model="ollama/qwen2.5",
-    #base_url="http://localhost:11434"
-
-) #I have to ask the Dr about this 
+    max_retries=5  # type: ignore
+)
 
 scout_agent = Agent(
-    role='Strict Cyber Threat Analyst',
-    goal=f'Retrieve and report ONLY real, verified cybersecurity threats and existing CVEs published around the current date: {today_date}.',
-    backstory=f'''You are a meticulous and strictly factual cybersecurity researcher. 
-    You are fully aware that today's date is {today_date}.
-    YOUR ABSOLUTE RULE: NEVER invent, guess, or hallucinate CVE numbers, data, or descriptions. 
-    You must ONLY output information that is EXACTLY matched from the tool responses. 
-    If a tool returns no data, or if you cannot find real CVEs, you must simply state: "No real data found."''',
+    role='Strict Cyber Threat Data Collector',
+    goal=(
+        f'Retrieve ONLY real, verified CVEs published recently. '
+        f'Today is {today_date}. Never guess or hallucinate any data.'
+    ),
+    backstory=(
+        f'You are a meticulous cybersecurity data collector. Today is {today_date}. '
+        f'YOUR ABSOLUTE RULE: NEVER invent CVE IDs, scores, or descriptions. '
+        f'ONLY report data exactly as returned by your tools. '
+        f'If the tool returns no valid CVE IDs, output exactly: "No real data found."'
+    ),
     verbose=True,
-    llm=cloud_gemini,
-    tools=[search_tool, nist_tool, alienvault_tool],
+    llm=scout_llm,
+    tools=[nist_tool, alienvault_tool],
     allow_delegation=False
 )
 
 live_task = Task(
+    description=f'''Follow these exact steps for {today_date}:
 
-    description=f'''Follow these exact steps to create a highly accurate, recent threat report:
+    STEP 1: Call the NIST NVD tool with query "recent".
+            It will return real CVEs with CVSS scores and CWE IDs.
 
-    1. Keep in mind that today's current date is strictly {today_date}.
+    STEP 2: For EACH CVE ID returned, call AlienVault OTX to check for active pulses.
 
-    2. USE THE NIST TOOL FIRST. Pass the query "recent" to fetch the most recent CVEs published in the last 7 days leading up to {today_date}.
+    STEP 3: Compile the final JSON using ONLY data from the tools.
+            Do NOT modify CVE IDs, scores, or descriptions.
 
-    3. Read the exact VERIFIED_CVE_IDs returned by the NIST tool.
-
-    4. For EACH real VERIFIED_CVE_ID found, use the AlienVault tool to check if there are any active threat pulses.
-
-    5. Compile the final report using ONLY the data retrieved from the tools.
-
-    CRITICAL CONSTRAINT: Do not search the internet for random CVEs. ONLY use the exact IDs provided by the NIST tool in step 2. DO NOT make up sequential numbers.
-
-    OUTPUT FORMAT: You MUST return ONLY a valid JSON array. No markdown formatting, no introductory text.''',
+    RULES:
+    - Use ONLY CVE IDs that start with "CVE-" from the tool output. Never invent IDs.
+    - Copy CVSS scores and CWE IDs exactly as returned by the tool.
+    - Output ONLY a valid JSON array. No markdown, no extra text.
+    - If all returned IDs are "N/A" or invalid, output exactly: "No real data found."''',
 
     expected_output='''[
-
         {
-
-            "cve_id": "CVE-XXXX-XXXX",
-
-            "description": "Short description...",
-
-            "alienvault_pulses": "Data from AlienVault or 'No pulses found'"
-
+            "cve_id": "CVE-YYYY-NNNNN",
+            "description": "Description...",
+            "cvss_score": 9.8,
+            "cvss_severity": "Critical",
+            "cwe_id": "CWE-89",
+            "alienvault_pulses": "Pulse info or No active threat pulses found"
         }
-
     ]''',
-
     agent=scout_agent
-
 )
-
-
 
 cyber_crew = Crew(
     agents=[scout_agent],
@@ -174,22 +300,26 @@ cyber_crew = Crew(
 )
 
 if __name__ == "__main__":
-    print(f"Waking up the strict Scout. Today's date is calibrated to: {today_date}")
+    print(f"\n{'='*60}")
+    print(f"  Auto-CTI Scout Agent — {today_date}")
+    print(f"{'='*60}\n")
+
     result = cyber_crew.kickoff()
-    
-    print("\n================================================")
-    print("Final Verified Cyber Threat Intelligence (CTI) Report:")
-    print("================================================")
+
+    print("\n" + "="*60)
+    print("Scout Agent Output:")
+    print("="*60)
     print(result)
 
-    results_dir = os.path.join("JoFile", "Scout_Agent_Results")
+    results_dir     = os.path.join("JoFile", "Scout_Agent_Results")
     os.makedirs(results_dir, exist_ok=True)
-
     report_filename = os.path.join(results_dir, 'cti_report.json')
+
     raw_result = str(result).strip()
-    
     if raw_result.startswith("```json"):
         raw_result = raw_result[7:]
+    if raw_result.startswith("```"):
+        raw_result = raw_result[3:]
     if raw_result.endswith("```"):
         raw_result = raw_result[:-3]
     raw_result = raw_result.strip()
@@ -197,20 +327,12 @@ if __name__ == "__main__":
     try:
         new_data = json.loads(raw_result)
     except json.JSONDecodeError:
-        new_data = {"error": "Invalid JSON format returned", "raw_text": raw_result}
+        print("Warning: Could not parse output as JSON. Saving raw text.")
+        new_data = {"error": "Invalid JSON returned", "raw_text": raw_result}
 
-    if os.path.exists(report_filename):
-        try:
-            with open(report_filename, 'r', encoding='utf-8') as f:
-                all_reports = json.load(f)
-        except json.JSONDecodeError:
-            all_reports = {} 
-    else:
-        all_reports = {}
+    all_reports = {today_date: new_data}
 
-    all_reports[today_date] = new_data
+with open(report_filename, 'w', encoding='utf-8') as f:
+    json.dump(all_reports, f, indent=4, ensure_ascii=False)
 
-    with open(report_filename, 'w', encoding='utf-8') as f:
-        json.dump(all_reports, f, indent=4, ensure_ascii=False)
-        
-    print(f"\nReport successfully saved to {report_filename}")
+    print(f"\nReport saved to: {report_filename}")

@@ -61,7 +61,9 @@ def build_cve_summary(data: list) -> list:
         normalized.append({
             "cve_id": entry.get("CVE_ID", "N/A"),
             "description": entry.get("Description", "No description available."),
+            "cvss_score": entry.get("CVSS_Score", "N/A"),
             "severity": entry.get("CVSS_Severity", "Unknown"),
+            "cwe_id": entry.get("CWE_ID", "N/A"),
             "mitre_mappings": entry.get("MITRE_Mappings", []),
             "urgency_score": urgency,
         })
@@ -290,7 +292,13 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
         pdf.set_font("Arial", 'B', 9)
         pdf.set_text_color(r, g, b)
         pdf.cell(0, 6, txt=clean_text_for_pdf( # type: ignore
-            f"Severity: {entry['severity']}   |   Urgency Score: {entry['urgency_score']}/100"
+            f"Severity: {entry['severity']}   |   CVSS Score: {entry.get('cvss_score', 'N/A')}   |   Urgency Score: {entry['urgency_score']}/100"
+        ), ln=True)
+
+        pdf.set_font("Arial", 'I', 9)
+        pdf.set_text_color(100, 116, 139)
+        pdf.cell(0, 6, txt=clean_text_for_pdf( # type: ignore
+            f"CWE: {entry.get('cwe_id', 'N/A')}"
         ), ln=True)
 
         pdf.set_font("Arial", '', 10)

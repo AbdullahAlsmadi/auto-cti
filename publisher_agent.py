@@ -469,3 +469,4 @@ if __name__ == "__main__":
         print(f"\nWarning: Could not parse LLM output as clean JSON: {e}")
         print("PDF generation was skipped.")
         print(f"Raw output preview:\n{raw_result[:500]}")
+

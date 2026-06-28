@@ -591,7 +591,8 @@ def display_report_history(T):
         creation_time = datetime.datetime.fromtimestamp(os.path.getctime(pdf_file)).strftime("%Y-%m-%d %H:%M:%S")
         col1, col2 = st.columns([4, 1])
         with col1:
-            st.markdown(f"📄 **{file_name}** <span style='color:{T['TEXT_DIM']};'>({creation_time})</span>", unsafe_allow_html=True)
+            dim = T['TEXT_DIM']
+            st.markdown(f"📄 **{file_name}** <span style='color:{dim};'>({creation_time})</span>", unsafe_allow_html=True)
         with col2:
             with open(pdf_file, "rb") as f:
                 st.download_button(
@@ -688,5 +689,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-run_agent_with_console

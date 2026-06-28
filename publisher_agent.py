@@ -6,6 +6,7 @@ import sys
 from crewai import Agent, Task, Crew, LLM
 from dotenv import load_dotenv
 from fpdf import FPDF
+from fpdf.enums import XPos, YPos
 
 sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
 
@@ -51,7 +52,6 @@ reports_dir = os.path.join("JoFile", "Reports")
 os.makedirs(reports_dir, exist_ok=True)
 
 
-
 def build_cve_summary(data: list) -> list:
     seen = set()
     normalized = []
@@ -95,12 +95,7 @@ def compute_severity_stats(data: list) -> dict:
 
 cve_summary    = build_cve_summary(triage_data)
 severity_stats = compute_severity_stats(triage_data)
-"""
-publisher_llm = LLM(
-    model="ollama/qwen2.5",
-    base_url="http://localhost:11434"
-)
-"""
+
 publisher_llm = LLM(
     model="gemini/gemini-3.1-flash-lite",
     api_key=os.getenv("GEMINI_API_KEY"),
@@ -236,28 +231,30 @@ class CTIReportPDF(FPDF):
         self.set_fill_color(15, 23, 42)
         self.rect(0, 0, 210, 9, 'F')
         self.set_text_color(255, 255, 255)
-        self.set_font("Arial", 'B', 8)
+        self.set_font("Helvetica", 'B', 8)
         self.set_y(2)
-        self.cell(0, 5, CLASSIFICATION, 0, 0, 'C')  # type: ignore
-        self.ln(14)
+        self.cell(0, 5, CLASSIFICATION, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
+        self.ln(9)
 
     def footer(self):
         self.set_y(-15)
         self.set_draw_color(200, 200, 200)
         self.line(10, self.get_y(), 200, self.get_y())
-        self.set_font("Arial", 'I', 7)
+        self.set_font("Helvetica", 'I', 7)
         self.set_text_color(120, 120, 120)
         self.set_y(-12)
-        self.cell(0, 6,
+        self.cell(
+            0, 6,
             f"{CLASSIFICATION}  |  Auto-CTI Automated Threat Intelligence System  |  Page {self.page_no()}",
-            0, 0, 'C')  # type: ignore
+            new_x=XPos.RIGHT, new_y=YPos.TOP, align='C'
+        )
 
 
 def section_header(pdf: FPDF, number: str, title: str):
-    pdf.set_font("Arial", 'B', 13)
+    pdf.set_font("Helvetica", 'B', 13)
     pdf.set_text_color(15, 23, 42)
     pdf.set_fill_color(235, 240, 248)
-    pdf.cell(0, 9, txt=f"{number}. {title}", ln=True, fill=True)  # type: ignore
+    pdf.cell(0, 9, text=f"{number}. {title}", new_x=XPos.LMARGIN, new_y=YPos.NEXT, fill=True)
     pdf.ln(2)
 
 
@@ -266,16 +263,19 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
     pdf.set_auto_page_break(auto=True, margin=22)
     pdf.add_page()
 
-    pdf.set_font("Arial", 'B', 20)
+    pdf.set_font("Helvetica", 'B', 20)
     pdf.set_text_color(15, 23, 42)
-    pdf.cell(0, 12, txt="Cyber Threat Intelligence", ln=True, align='C')  # type: ignore
-    pdf.cell(0, 12, txt="Executive Briefing", ln=True, align='C')  # type: ignore
+    pdf.cell(0, 12, text="Cyber Threat Intelligence", new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
+    pdf.cell(0, 12, text="Executive Briefing",        new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
 
-    pdf.set_font("Arial", '', 10)
+    pdf.set_font("Helvetica", '', 10)
     pdf.set_text_color(100, 116, 139)
-    pdf.cell(0, 6, txt=clean_for_pdf(f"Report Date: {briefing.get('report_date', today_date)}"), ln=True, align='C')  # type: ignore
-    pdf.cell(0, 6, txt=f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')} UTC  |  Classification: TLP:AMBER", ln=True, align='C')  # type: ignore
-    pdf.cell(0, 6, txt="Prepared by: Auto-CTI Autonomous Threat Intelligence Pipeline", ln=True, align='C')  # type: ignore
+    pdf.cell(0, 6, text=clean_for_pdf(f"Report Date: {briefing.get('report_date', today_date)}"),
+             new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
+    pdf.cell(0, 6, text=f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')} UTC  |  Classification: TLP:AMBER",
+             new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
+    pdf.cell(0, 6, text="Prepared by: Auto-CTI Autonomous Threat Intelligence Pipeline",
+             new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
     pdf.ln(6)
 
     pdf.set_draw_color(15, 23, 42)
@@ -284,72 +284,75 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
     pdf.ln(6)
 
     section_header(pdf, "1", "Risk Statistics Summary")
-    pdf.set_font("Arial", 'B', 10)
+    pdf.set_font("Helvetica", 'B', 10)
     col_w  = 38
     labels = ["Critical", "High", "Medium", "Low", "Total"]
     for label in labels:
         color = severity_color(label) if label != "Total" else (15, 23, 42)
         pdf.set_text_color(255, 255, 255)
         pdf.set_fill_color(*color)
-        pdf.cell(col_w, 9, txt=label, border=0, fill=True, align='C')  # type: ignore
+        pdf.cell(col_w, 9, text=label, border=0, fill=True, align='C',
+                 new_x=XPos.RIGHT, new_y=YPos.TOP)
     pdf.ln(9)
-    pdf.set_font("Arial", 'B', 12)
+    pdf.set_font("Helvetica", 'B', 12)
     pdf.set_text_color(15, 23, 42)
     for label in labels:
         value = stats.get(label, 0)
         pdf.set_fill_color(243, 244, 246)
-        pdf.cell(col_w, 10, txt=str(value), border=1, fill=True, align='C')  # type: ignore
+        pdf.cell(col_w, 10, text=str(value), border=1, fill=True, align='C',
+                 new_x=XPos.RIGHT, new_y=YPos.TOP)
     pdf.ln(14)
 
     section_header(pdf, "2", "Executive Summary")
-    pdf.set_font("Arial", '', 11)
+    pdf.set_font("Helvetica", '', 11)
     pdf.set_text_color(30, 30, 30)
     summary = clean_for_pdf(sanitize_text(briefing.get("executive_summary", "Not available.")))
-    pdf.multi_cell(0, 6.5, txt=summary, wrapmode="CHAR")  # type: ignore
+    pdf.multi_cell(0, 6.5, text=summary, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(6)
 
     section_header(pdf, "3", "Critical Action List")
-    pdf.set_font("Arial", '', 11)
+    pdf.set_font("Helvetica", '', 11)
     pdf.set_text_color(30, 30, 30)
     actions = briefing.get("critical_actions", [])
     if actions:
         for i, action in enumerate(actions, start=1):
             clean_action = clean_for_pdf(sanitize_text(action))
-            pdf.set_font("Arial", 'B', 10)
+            pdf.set_font("Helvetica", 'B', 10)
             pdf.set_text_color(185, 28, 28)
-            pdf.cell(8, 6, txt=f"{i}.", ln=False)  # type: ignore
-            pdf.set_font("Arial", '', 10)
+            pdf.cell(8, 6, text=f"{i}.", new_x=XPos.RIGHT, new_y=YPos.TOP)
+            pdf.set_font("Helvetica", '', 10)
             pdf.set_text_color(30, 30, 30)
-            pdf.multi_cell(0, 6, txt=clean_action, wrapmode="CHAR")  # type: ignore
+            pdf.multi_cell(0, 6, text=clean_action, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             pdf.ln(1)
     else:
-        pdf.cell(0, 6, txt="No critical actions identified.", ln=True)  # type: ignore
+        pdf.cell(0, 6, text="No critical actions identified.",
+                 new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(4)
 
     section_header(pdf, "4", "Quick Reference: All Identified Vulnerabilities")
-    pdf.set_font("Arial", 'B', 9)
+    pdf.set_font("Helvetica", 'B', 9)
     pdf.set_fill_color(15, 23, 42)
     pdf.set_text_color(255, 255, 255)
-    pdf.cell(55, 8, txt="CVE ID",     border=1, fill=True, align='C')  # type: ignore
-    pdf.cell(25, 8, txt="CVSS Score", border=1, fill=True, align='C')  # type: ignore
-    pdf.cell(30, 8, txt="Severity",   border=1, fill=True, align='C')  # type: ignore
-    pdf.cell(25, 8, txt="Urgency",    border=1, fill=True, align='C')  # type: ignore
-    pdf.cell(0,  8, txt="CWE",        border=1, fill=True, align='C', ln=True)  # type: ignore
+    pdf.cell(55, 8, text="CVE ID",     border=1, fill=True, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
+    pdf.cell(25, 8, text="CVSS Score", border=1, fill=True, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
+    pdf.cell(30, 8, text="Severity",   border=1, fill=True, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
+    pdf.cell(25, 8, text="Urgency",    border=1, fill=True, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
+    pdf.cell(0,  8, text="CWE",        border=1, fill=True, align='C', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
-    pdf.set_font("Arial", '', 9)
+    pdf.set_font("Helvetica", '', 9)
     for entry in cve_list:
         r, g, b = severity_color(entry["severity"])
         pdf.set_text_color(0, 0, 0)
-        pdf.cell(55, 7, txt=clean_for_pdf(entry["cve_id"]),              border=1, align='L')  # type: ignore
-        pdf.cell(25, 7, txt=str(entry.get("cvss_score", "N/A")),         border=1, align='C')  # type: ignore
+        pdf.cell(55, 7, text=clean_for_pdf(entry["cve_id"]),            border=1, align='L',  new_x=XPos.RIGHT, new_y=YPos.TOP)
+        pdf.cell(25, 7, text=str(entry.get("cvss_score", "N/A")),       border=1, align='C',  new_x=XPos.RIGHT, new_y=YPos.TOP)
         pdf.set_text_color(r, g, b)
-        pdf.cell(30, 7, txt=clean_for_pdf(entry["severity"]),            border=1, align='C')  # type: ignore
+        pdf.cell(30, 7, text=clean_for_pdf(entry["severity"]),          border=1, align='C',  new_x=XPos.RIGHT, new_y=YPos.TOP)
         pdf.set_text_color(0, 0, 0)
-        pdf.cell(25, 7, txt=str(entry["urgency_score"]) + "/100",        border=1, align='C')  # type: ignore
-        pdf.cell(0,  7, txt=clean_for_pdf(entry.get("cwe_id", "N/A")),   border=1, align='C', ln=True)  # type: ignore
+        pdf.cell(25, 7, text=str(entry["urgency_score"]) + "/100",      border=1, align='C',  new_x=XPos.RIGHT, new_y=YPos.TOP)
+        pdf.cell(0,  7, text=clean_for_pdf(entry.get("cwe_id", "N/A")), border=1, align='C',  new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     if not cve_list:
-        pdf.cell(0, 8, txt="No CVE entries found.", border=1, ln=True)  # type: ignore
+        pdf.cell(0, 8, text="No CVE entries found.", border=1, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(8)
 
     section_header(pdf, "5", "Detailed Vulnerability Findings")
@@ -358,35 +361,39 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
     for entry in cve_list:
         r, g, b = severity_color(entry["severity"])
 
-        pdf.set_font("Arial", 'B', 11)
+        pdf.set_font("Helvetica", 'B', 11)
         pdf.set_text_color(15, 23, 42)
-        pdf.cell(0, 7, txt=clean_for_pdf(entry["cve_id"]), ln=True)  # type: ignore
+        pdf.cell(0, 7, text=clean_for_pdf(entry["cve_id"]),
+                 new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
-        pdf.set_font("Arial", 'B', 9)
+        pdf.set_font("Helvetica", 'B', 9)
         pdf.set_text_color(r, g, b)
-        pdf.cell(0, 6, txt=clean_for_pdf( # type: ignore
+        pdf.cell(0, 6, text=clean_for_pdf(
             f"CVSS v3.1 Score: {entry.get('cvss_score', 'N/A')}  |  "
             f"Severity: {entry['severity']}  |  "
             f"Urgency Score: {entry['urgency_score']}/100  |  "
             f"CWE: {entry.get('cwe_id', 'N/A')}"
-        ), ln=True)  # type: ignore
+        ), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
         mitre = entry.get("mitre_mappings", [])
         if mitre:
-            pdf.set_font("Arial", 'I', 9)
+            pdf.set_font("Helvetica", 'I', 9)
             pdf.set_text_color(70, 100, 160)
-            pdf.cell(0, 6, txt=clean_for_pdf("MITRE ATT&CK: " + ", ".join(mitre)), ln=True)  # type: ignore
+            pdf.cell(0, 6, text=clean_for_pdf("MITRE ATT&CK: " + ", ".join(mitre)),
+                     new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
-        pdf.set_font("Arial", '', 10)
+        pdf.set_font("Helvetica", '', 10)
         pdf.set_text_color(30, 30, 30)
-        pdf.multi_cell(0, 5.5, txt=clean_for_pdf(entry["description"]), wrapmode="CHAR")  # type: ignore
+        pdf.multi_cell(0, 5.5, text=clean_for_pdf(entry["description"]),
+                       new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
         refs = entry.get("references", [])
         if refs:
-            pdf.set_font("Arial", 'I', 8)
+            pdf.set_font("Helvetica", 'I', 8)
             pdf.set_text_color(100, 116, 139)
             for ref in refs:
-                pdf.cell(0, 5, txt=clean_for_pdf(f"  Ref: {ref}"), ln=True)  # type: ignore
+                pdf.multi_cell(0, 5, text=clean_for_pdf(f"  Ref: {ref}"),
+                               new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
         pdf.set_draw_color(210, 218, 230)
         pdf.ln(2)
@@ -394,7 +401,7 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
         pdf.ln(5)
 
     section_header(pdf, "6", "Methodology & Data Sources")
-    pdf.set_font("Arial", '', 10)
+    pdf.set_font("Helvetica", '', 10)
     pdf.set_text_color(30, 30, 30)
     methodology = (
         "This report was generated by the Auto-CTI Autonomous Cyber Threat Intelligence Pipeline, "
@@ -409,13 +416,13 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
         "Severity classification follows the CVSS v3.1 standard: Critical (9.0-10.0), High (7.0-8.9), "
         "Medium (4.0-6.9), Low (0.1-3.9)."
     )
-    pdf.multi_cell(0, 6, txt=clean_for_pdf(methodology), wrapmode="CHAR")  # type: ignore
+    pdf.multi_cell(0, 6, text=clean_for_pdf(methodology), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(4)
 
-    pdf.set_font("Arial", 'B', 9)
+    pdf.set_font("Helvetica", 'B', 9)
     pdf.set_text_color(15, 23, 42)
-    pdf.cell(0, 6, txt="Primary Data Sources:", ln=True)  # type: ignore
-    pdf.set_font("Arial", '', 9)
+    pdf.cell(0, 6, text="Primary Data Sources:", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_font("Helvetica", '', 9)
     pdf.set_text_color(30, 30, 30)
     sources = [
         "GitHub Advisory Database  --  https://github.com/advisories",
@@ -427,7 +434,7 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
         "CVE Program  --  https://www.cve.org/",
     ]
     for src in sources:
-        pdf.cell(0, 6, txt=clean_for_pdf(f"  - {src}"), ln=True)  # type: ignore
+        pdf.cell(0, 6, text=clean_for_pdf(f"  - {src}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     pdf.output(output_path)
 
@@ -476,4 +483,3 @@ if __name__ == "__main__":
         print(f"\nWarning: Could not parse LLM output as clean JSON: {e}")
         print("PDF generation was skipped.")
         print(f"Raw output preview:\n{raw_result[:500]}")
-

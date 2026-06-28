@@ -94,10 +94,16 @@ def compute_severity_stats(data: list) -> dict:
 
 cve_summary    = build_cve_summary(triage_data)
 severity_stats = compute_severity_stats(triage_data)
-
+"""
 publisher_llm = LLM(
     model="ollama/qwen2.5",
     base_url="http://localhost:11434"
+)
+"""
+publisher_llm = LLM(
+    model="gemini/gemini-3.1-flash-lite",
+    api_key=os.getenv("GEMINI_API_KEY"),
+    max_retries=5  # type: ignore
 )
 
 publisher_agent = Agent(

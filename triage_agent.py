@@ -2,6 +2,7 @@ import os
 import json
 import re
 import datetime
+from altair import Then
 from crewai import Agent, Task, Crew, LLM
 from dotenv import load_dotenv
 import sys
@@ -26,14 +27,22 @@ if not raw_threat_data:
     print(f"No data found for today ({today_date}) in the JSON file.")
     exit()
 
+cve_count = len(raw_threat_data) if isinstance(raw_threat_data, list) else len(raw_threat_data.get("vulnerabilities", raw_threat_data))
+print(f"DEBUG - CVEs received from Scout: {cve_count}")
+
 output_dir = os.path.join("JoFile", "triage_agent_result")
 os.makedirs(output_dir, exist_ok=True)
-
+"""
 triage_llm = LLM(
     model="ollama/qwen2.5",
     base_url="http://localhost:11434"
 )
-
+"""
+triage_llm = LLM(
+    model="gemini/gemini-3.1-flash-lite",
+    api_key=os.getenv("GEMINI_API_KEY"),
+    max_retries=5  # type: ignore
+)
 triage_agent = Agent(
     role='Senior Cyber Threat Intelligence Analyst',
     goal=(
@@ -57,6 +66,8 @@ output_file_path = os.path.join(output_dir, f'Triaged_Report_{today_date}.json')
 
 triage_task = Task(
     description=f'''You are analyzing CVE threat data collected on {today_date}.
+
+MANDATORY: The input contains exactly {cve_count} CVE entries. You MUST produce exactly {cve_count} objects in your output array. Do NOT stop early. Do NOT skip any entry. Process every single one.
 
 RAW THREAT DATA:
 {json.dumps(raw_threat_data, indent=2)}
@@ -103,11 +114,11 @@ CRITICAL OUTPUT RULES:
 - Every field must be present in every object.
 - The JSON must be parseable by Python json.loads() without any cleanup.''',
 
-    expected_output='''A raw valid JSON array. Every object must follow this exact structure:
+       expected_output=f'''A raw valid JSON array containing exactly {cve_count} objects. Every object must follow this exact structure:
 [
-  {
+  {{
     "CVE_ID": "CVE-2026-XXXXX",
-    "Description": "Professional 2-3 sentence explanation of the vulnerability concept, exploitation method, and impact.",
+    "Description": "Professional 2-3 sentence explanation.",
     "CVSS_Score": 9.8,
     "CVSS_Severity": "Critical",
     "CWE_ID": "CWE-89",
@@ -117,8 +128,10 @@ CRITICAL OUTPUT RULES:
       "https://nvd.nist.gov/vuln/detail/CVE-2026-XXXXX",
       "https://www.cve.org/CVERecord?id=CVE-2026-XXXXX"
     ]
-  }
-]''',
+  }}
+]
+The array MUST contain {cve_count} entries - one per CVE in the input.''', 
+
     agent=triage_agent,
     output_file=output_file_path
 )

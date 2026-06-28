@@ -90,7 +90,7 @@ For EACH CVE entry, produce a complete professional triage record following thes
 
 7. Urgency_Score: Calculate a score from 1 to 100 using this logic:
    - Start with CVSS score * 9 as base (max 90 from CVSS alone)
-   - Add 20 if AlienVault pulses are present (active exploitation evidence)
+   - Add 10 if AlienVault pulses are present (active exploitation evidence)
    - Subtract 5 if severity is Low or None
    Round to nearest integer.
 

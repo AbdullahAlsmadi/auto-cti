@@ -2,7 +2,6 @@ import os
 import json
 import re
 import datetime
-from altair import Then
 from crewai import Agent, Task, Crew, LLM
 from dotenv import load_dotenv
 import sys
@@ -32,23 +31,20 @@ print(f"DEBUG - CVEs received from Scout: {cve_count}")
 
 output_dir = os.path.join("JoFile", "triage_agent_result")
 os.makedirs(output_dir, exist_ok=True)
-"""
-triage_llm = LLM(
-    model="ollama/qwen2.5",
-    base_url="http://localhost:11434"
-)
-"""
+
 triage_llm = LLM(
     model="gemini/gemini-3.1-flash-lite",
     api_key=os.getenv("GEMINI_API_KEY"),
     max_retries=5  # type: ignore
 )
+
 triage_agent = Agent(
     role='Senior Cyber Threat Intelligence Analyst',
     goal=(
         'Analyze raw CVE data using CVSS v3.1, assign CWE classifications, '
         'map to MITRE ATT&CK techniques, write professional descriptions, '
-        'provide verifiable online references, and calculate an Urgency Score.'
+        'provide verifiable online references, assign a finding name, '
+        'write a proof of concept, and calculate an Urgency Score.'
     ),
     backstory=(
         'You are an elite threat intelligence analyst with deep expertise in '
@@ -76,61 +72,94 @@ For EACH CVE entry, produce a complete professional triage record following thes
 
 1. CVE_ID: Copy exactly as given. Never modify.
 
-2. Description: Write 2-3 professional sentences that explain:
+2. Finding_Name: A short, descriptive human-readable title for the vulnerability (3-8 words).
+   Examples: "Remote Code Execution in Apache HTTP Server", "SQL Injection in Login Handler",
+   "Privilege Escalation via Buffer Overflow in Linux Kernel".
+
+3. Description: Write 2-3 professional sentences explaining:
    - What the vulnerability is and which component is affected
    - How it can be exploited (the attack concept)
    - What the potential impact is on confidentiality, integrity, or availability
-   Keep it formal and suitable for a CISO-level audience.
 
-3. CVSS_Score: Copy the numeric score exactly as given. Do NOT estimate or change it.
-   This score follows the CVSS v3.1 standard (Common Vulnerability Scoring System version 3.1).
+4. CVSS_Score: Copy the numeric score exactly as given. Do NOT estimate or change it.
 
-4. CVSS_Severity: Map the score to the correct CVSS v3.1 severity label:
-   - 0.0       = None
-   - 0.1-3.9   = Low
-   - 4.0-6.9   = Medium
-   - 7.0-8.9   = High
-   - 9.0-10.0  = Critical
-   Use these exact labels. Do NOT use "Moderate" or "Important" — those are not CVSS v3.1 terms.
+5. CVSS_Severity: Map the score to the correct CVSS v3.1 label:
+   - 0.0 = None | 0.1-3.9 = Low | 4.0-6.9 = Medium | 7.0-8.9 = High | 9.0-10.0 = Critical
+   Do NOT use "Moderate" or "Important".
 
-5. CWE_ID: Copy exactly as given from the raw data. This identifies the root cause weakness category.
+6. CVSS_Vector: The CVSS v3.1 vector string. Use data if available, otherwise derive from vulnerability type.
+   Format: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
+   Must include all 8 base metrics: AV, AC, PR, UI, S, C, I, A.
 
-6. MITRE_Mappings: Provide 1-3 relevant MITRE ATT&CK technique IDs (e.g. T1190, T1059).
-   Choose techniques that match the vulnerability's exploitation method.
-   Use only technique codes — no names, no descriptions.
+7. CVSS_Breakdown: Human-readable interpretation of each CVSS v3.1 base metric as a JSON object:
+   {{
+     "Attack_Vector": "Network" | "Adjacent" | "Local" | "Physical",
+     "Attack_Complexity": "Low" | "High",
+     "Privileges_Required": "None" | "Low" | "High",
+     "User_Interaction": "None" | "Required",
+     "Scope": "Unchanged" | "Changed",
+     "Confidentiality": "None" | "Low" | "High",
+     "Integrity": "None" | "Low" | "High",
+     "Availability": "None" | "Low" | "High"
+   }}
 
-7. Urgency_Score: Calculate a score from 1 to 100 using this logic:
-   - Start with CVSS score * 9 as base (max 90 from CVSS alone)
-   - Add 10 if AlienVault pulses are present (active exploitation evidence)
-   - Subtract 5 if severity is Low or None
-   Round to nearest integer.
+8. CWE_ID: Copy exactly as given from the raw data.
 
-8. References: Provide exactly 2 real, publicly accessible online URLs:
-   - Always include: https://nvd.nist.gov/vuln/detail/{{CVE_ID}}
-   - Always include: https://www.cve.org/CVERecord?id={{CVE_ID}}
+9. MITRE_Mappings: 1-3 relevant MITRE ATT&CK technique IDs (e.g. T1190, T1059). Codes only.
+
+10. Urgency_Score: 1-100 score:
+    - Base = CVSS score * 9 (max 90)
+    - Add 10 if AlienVault pulses are present
+    - Subtract 5 if severity is Low or None
+    Round to nearest integer.
+
+11. PoC: Write 2-4 sentences describing HOW an attacker would realistically exploit this vulnerability.
+    Be specific about: attack vector and prerequisites, the specific action taken, and the outcome.
+    Technical enough for a security engineer. Do NOT include actual exploit code.
+    Example format: "An unauthenticated remote attacker can send a specially crafted HTTP POST request
+    to the vulnerable endpoint. The server processes the malicious payload without input validation,
+    resulting in arbitrary code execution under the web server process context. This grants the attacker
+    full system access and the ability to pivot to internal network resources."
+
+12. References: Exactly 2 URLs:
+    - https://nvd.nist.gov/vuln/detail/{{CVE_ID}}
+    - https://www.cve.org/CVERecord?id={{CVE_ID}}
 
 CRITICAL OUTPUT RULES:
 - Output ONLY a raw valid JSON array. No markdown. No code fences. No extra text.
 - Every field must be present in every object.
 - The JSON must be parseable by Python json.loads() without any cleanup.''',
 
-       expected_output=f'''A raw valid JSON array containing exactly {cve_count} objects. Every object must follow this exact structure:
+    expected_output=f'''A raw valid JSON array containing exactly {cve_count} objects:
 [
   {{
     "CVE_ID": "CVE-2026-XXXXX",
+    "Finding_Name": "Remote Code Execution in Example Component",
     "Description": "Professional 2-3 sentence explanation.",
     "CVSS_Score": 9.8,
     "CVSS_Severity": "Critical",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    "CVSS_Breakdown": {{
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "High",
+      "Availability": "High"
+    }},
     "CWE_ID": "CWE-89",
     "MITRE_Mappings": ["T1190", "T1059"],
     "Urgency_Score": 95,
+    "PoC": "An unauthenticated attacker can exploit this by...",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-XXXXX",
       "https://www.cve.org/CVERecord?id=CVE-2026-XXXXX"
     ]
   }}
 ]
-The array MUST contain {cve_count} entries - one per CVE in the input.''', 
+The array MUST contain {cve_count} entries.''',
 
     agent=triage_agent,
     output_file=output_file_path

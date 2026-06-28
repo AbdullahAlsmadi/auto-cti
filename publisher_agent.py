@@ -65,14 +65,18 @@ def build_cve_summary(data: list) -> list:
         except (ValueError, TypeError):
             urgency = 0
         normalized.append({
-            "cve_id":         cve_id,
-            "description":    entry.get("Description", "No description available."),
-            "cvss_score":     entry.get("CVSS_Score", "N/A"),
-            "severity":       entry.get("CVSS_Severity", "Unknown"),
-            "cwe_id":         entry.get("CWE_ID", "N/A"),
-            "mitre_mappings": entry.get("MITRE_Mappings", []),
-            "urgency_score":  urgency,
-            "references":     entry.get("References", []),
+            "cve_id":          cve_id,
+            "finding_name":    entry.get("Finding_Name", "N/A"),
+            "description":     entry.get("Description", "No description available."),
+            "cvss_score":      entry.get("CVSS_Score", "N/A"),
+            "severity":        entry.get("CVSS_Severity", "Unknown"),
+            "cvss_vector":     entry.get("CVSS_Vector", "N/A"),
+            "cvss_breakdown":  entry.get("CVSS_Breakdown", {}),
+            "cwe_id":          entry.get("CWE_ID", "N/A"),
+            "mitre_mappings":  entry.get("MITRE_Mappings", []),
+            "urgency_score":   urgency,
+            "poc":             entry.get("PoC", "No proof of concept available."),
+            "references":      entry.get("References", []),
         })
     return sorted(normalized, key=lambda x: x["urgency_score"], reverse=True)
 
@@ -131,7 +135,7 @@ publish_task = Task(
     Total Vulnerabilities Analyzed: {severity_stats['Total']}
 
     TOP CVEs BY URGENCY (for context — do NOT enumerate these in your output):
-    {json.dumps([{"cve_id": c["cve_id"], "severity": c["severity"], "urgency_score": c["urgency_score"], "description": c["description"][:120]} for c in cve_summary[:5]], indent=2)}
+    {json.dumps([{"cve_id": c["cve_id"], "finding_name": c["finding_name"], "severity": c["severity"], "urgency_score": c["urgency_score"], "description": c["description"][:120]} for c in cve_summary[:5]], indent=2)}
 
     YOUR TASK — produce TWO sections only:
 
@@ -139,8 +143,8 @@ publish_task = Task(
     - State the date and total vulnerability count
     - Reference the exact severity breakdown numbers above
     - Describe the overall organizational risk posture using CVSS v3.1 terminology
-    - Name the single most critical threat by CVE ID and explain why it is the top priority
-    - State the recommended immediate response posture (e.g. emergency patching, isolation)
+    - Name the single most critical threat by CVE ID and finding name, and explain why it is the top priority
+    - State the recommended immediate response posture
     - Keep the tone formal, authoritative, and board-level
 
     SECTION 2 — Critical Action List:
@@ -149,7 +153,7 @@ publish_task = Task(
     - Order from most urgent (highest Urgency Score) to least urgent
     - Include only CVEs with severity High or Critical
 
-    CRITICAL OUTPUT RULES — you MUST follow these exactly:
+    CRITICAL OUTPUT RULES:
     1. Output ONLY a valid JSON object. No markdown. No code fences. No extra text.
     2. The "executive_summary" value MUST be a single plain string on one line — no newlines inside it.
     3. Use exactly this structure:
@@ -258,6 +262,89 @@ def section_header(pdf: FPDF, number: str, title: str):
     pdf.ln(2)
 
 
+def render_cvss_breakdown_table(pdf: FPDF, breakdown: dict, vector: str):
+    """Renders a two-column CVSS v3.1 scoring criteria table inside the PDF."""
+
+    metric_colors = {
+        "Network":    (185, 28, 28),
+        "Adjacent":   (217, 119, 6),
+        "Local":      (217, 119, 6),
+        "Physical":   (75, 85, 99),
+        "Low":        (8, 145, 178),
+        "High":       (185, 28, 28),
+        "None":       (75, 85, 99),
+        "Required":   (217, 119, 6),
+        "Changed":    (185, 28, 28),
+        "Unchanged":  (75, 85, 99),
+    }
+
+    label_map = {
+        "Attack_Vector":       "Attack Vector",
+        "Attack_Complexity":   "Attack Complexity",
+        "Privileges_Required": "Privileges Required",
+        "User_Interaction":    "User Interaction",
+        "Scope":               "Scope",
+        "Confidentiality":     "Confidentiality Impact",
+        "Integrity":           "Integrity Impact",
+        "Availability":        "Availability Impact",
+    }
+
+    if vector and vector != "N/A":
+        pdf.set_font("Helvetica", 'I', 8)
+        pdf.set_text_color(100, 116, 139)
+        pdf.cell(0, 5, text=clean_for_pdf(f"Vector: {vector}"),
+                 new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.ln(1)
+
+    col_label_w = 55
+    col_value_w = 35
+    row_h       = 6
+    gap         = 6
+    items       = list(label_map.items())
+
+    pdf.set_font("Helvetica", 'B', 8)
+    pdf.set_fill_color(220, 228, 240)
+    pdf.set_text_color(15, 23, 42)
+
+    for i in range(0, len(items), 2):
+        left_key,  left_label  = items[i]
+        right_key, right_label = items[i + 1] if i + 1 < len(items) else (None, None)
+
+        left_val  = breakdown.get(left_key,  "N/A")
+        right_val = breakdown.get(right_key, "N/A") if right_key else ""
+
+        lc = metric_colors.get(left_val,  (100, 116, 139))
+        rc = metric_colors.get(right_val, (100, 116, 139)) if right_key else (100, 116, 139)
+
+        pdf.set_font("Helvetica", '', 8)
+        pdf.set_text_color(50, 50, 50)
+        pdf.set_fill_color(243, 244, 246)
+        pdf.cell(col_label_w, row_h, text=clean_for_pdf(left_label),
+                 border=1, fill=True, new_x=XPos.RIGHT, new_y=YPos.TOP)
+        pdf.set_font("Helvetica", 'B', 8)
+        pdf.set_text_color(*lc)
+        pdf.cell(col_value_w, row_h, text=clean_for_pdf(str(left_val)),
+                 border=1, fill=False, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
+
+        pdf.cell(gap, row_h, text="", border=0, new_x=XPos.RIGHT, new_y=YPos.TOP)
+
+        if right_key:
+            pdf.set_font("Helvetica", '', 8)
+            pdf.set_text_color(50, 50, 50)
+            pdf.set_fill_color(243, 244, 246)
+            pdf.cell(col_label_w, row_h, text=clean_for_pdf(right_label), # type: ignore
+                     border=1, fill=True, new_x=XPos.RIGHT, new_y=YPos.TOP)
+            pdf.set_font("Helvetica", 'B', 8)
+            pdf.set_text_color(*rc)
+            pdf.cell(col_value_w, row_h, text=clean_for_pdf(str(right_val)),
+                     border=1, fill=False, align='C', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        else:
+            pdf.ln(row_h)
+
+    pdf.set_text_color(30, 30, 30)
+    pdf.ln(3)
+
+
 def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_path: str) -> None:
     pdf = CTIReportPDF()
     pdf.set_auto_page_break(auto=True, margin=22)
@@ -283,6 +370,7 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
     pdf.line(10, pdf.get_y(), 200, pdf.get_y())
     pdf.ln(6)
 
+    # ── Section 1: Risk Statistics ────────────────────────────────────────────
     section_header(pdf, "1", "Risk Statistics Summary")
     pdf.set_font("Helvetica", 'B', 10)
     col_w  = 38
@@ -303,6 +391,7 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
                  new_x=XPos.RIGHT, new_y=YPos.TOP)
     pdf.ln(14)
 
+    # ── Section 2: Executive Summary ─────────────────────────────────────────
     section_header(pdf, "2", "Executive Summary")
     pdf.set_font("Helvetica", '', 11)
     pdf.set_text_color(30, 30, 30)
@@ -310,6 +399,7 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
     pdf.multi_cell(0, 6.5, text=summary, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(6)
 
+    # ── Section 3: Critical Action List ──────────────────────────────────────
     section_header(pdf, "3", "Critical Action List")
     pdf.set_font("Helvetica", '', 11)
     pdf.set_text_color(30, 30, 30)
@@ -329,43 +419,62 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
                  new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(4)
 
+    # ── Section 4: Quick Reference Table ─────────────────────────────────────
     section_header(pdf, "4", "Quick Reference: All Identified Vulnerabilities")
-    pdf.set_font("Helvetica", 'B', 9)
+
+    pdf.set_font("Helvetica", 'B', 8)
     pdf.set_fill_color(15, 23, 42)
     pdf.set_text_color(255, 255, 255)
-    pdf.cell(55, 8, text="CVE ID",     border=1, fill=True, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
-    pdf.cell(25, 8, text="CVSS Score", border=1, fill=True, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
-    pdf.cell(30, 8, text="Severity",   border=1, fill=True, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
-    pdf.cell(25, 8, text="Urgency",    border=1, fill=True, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
-    pdf.cell(0,  8, text="CWE",        border=1, fill=True, align='C', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    # Column widths: CVE ID=42, Finding Name=58, CVSS=20, Severity=25, Urgency=20, CWE=25
+    pdf.cell(42, 8, text="CVE ID",       border=1, fill=True, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
+    pdf.cell(58, 8, text="Finding Name", border=1, fill=True, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
+    pdf.cell(20, 8, text="CVSS",         border=1, fill=True, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
+    pdf.cell(25, 8, text="Severity",     border=1, fill=True, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
+    pdf.cell(20, 8, text="Urgency",      border=1, fill=True, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
+    pdf.cell(0,  8, text="CWE",          border=1, fill=True, align='C', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
-    pdf.set_font("Helvetica", '', 9)
+    pdf.set_font("Helvetica", '', 8)
     for entry in cve_list:
-        r, g, b = severity_color(entry["severity"])
+        r, g, b      = severity_color(entry["severity"])
+        finding_name = clean_for_pdf(entry.get("finding_name", "N/A"))
+        if len(finding_name) > 34:
+            finding_name = finding_name[:33] + "..."
+
         pdf.set_text_color(0, 0, 0)
-        pdf.cell(55, 7, text=clean_for_pdf(entry["cve_id"]),            border=1, align='L',  new_x=XPos.RIGHT, new_y=YPos.TOP)
-        pdf.cell(25, 7, text=str(entry.get("cvss_score", "N/A")),       border=1, align='C',  new_x=XPos.RIGHT, new_y=YPos.TOP)
+        pdf.cell(42, 7, text=clean_for_pdf(entry["cve_id"]),            border=1, align='L',  new_x=XPos.RIGHT, new_y=YPos.TOP)
+        pdf.cell(58, 7, text=finding_name,                               border=1, align='L',  new_x=XPos.RIGHT, new_y=YPos.TOP)
+        pdf.cell(20, 7, text=str(entry.get("cvss_score", "N/A")),        border=1, align='C',  new_x=XPos.RIGHT, new_y=YPos.TOP)
         pdf.set_text_color(r, g, b)
-        pdf.cell(30, 7, text=clean_for_pdf(entry["severity"]),          border=1, align='C',  new_x=XPos.RIGHT, new_y=YPos.TOP)
+        pdf.cell(25, 7, text=clean_for_pdf(entry["severity"]),           border=1, align='C',  new_x=XPos.RIGHT, new_y=YPos.TOP)
         pdf.set_text_color(0, 0, 0)
-        pdf.cell(25, 7, text=str(entry["urgency_score"]) + "/100",      border=1, align='C',  new_x=XPos.RIGHT, new_y=YPos.TOP)
+        pdf.cell(20, 7, text=str(entry["urgency_score"]) + "/100",       border=1, align='C',  new_x=XPos.RIGHT, new_y=YPos.TOP)
         pdf.cell(0,  7, text=clean_for_pdf(entry.get("cwe_id", "N/A")), border=1, align='C',  new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     if not cve_list:
         pdf.cell(0, 8, text="No CVE entries found.", border=1, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(8)
 
+    # ── Section 5: Detailed Vulnerability Findings ────────────────────────────
     section_header(pdf, "5", "Detailed Vulnerability Findings")
     pdf.ln(2)
 
     for entry in cve_list:
         r, g, b = severity_color(entry["severity"])
 
-        pdf.set_font("Helvetica", 'B', 11)
+        # CVE ID header
+        pdf.set_font("Helvetica", 'B', 12)
         pdf.set_text_color(15, 23, 42)
         pdf.cell(0, 7, text=clean_for_pdf(entry["cve_id"]),
                  new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
+        # Finding name subtitle
+        finding_name = entry.get("finding_name", "N/A")
+        pdf.set_font("Helvetica", 'B', 10)
+        pdf.set_text_color(50, 80, 140)
+        pdf.cell(0, 6, text=clean_for_pdf(f"Finding: {finding_name}"),
+                 new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+        # CVSS score line
         pdf.set_font("Helvetica", 'B', 9)
         pdf.set_text_color(r, g, b)
         pdf.cell(0, 6, text=clean_for_pdf(
@@ -375,6 +484,7 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
             f"CWE: {entry.get('cwe_id', 'N/A')}"
         ), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
+        # MITRE ATT&CK
         mitre = entry.get("mitre_mappings", [])
         if mitre:
             pdf.set_font("Helvetica", 'I', 9)
@@ -382,11 +492,41 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
             pdf.cell(0, 6, text=clean_for_pdf("MITRE ATT&CK: " + ", ".join(mitre)),
                      new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
+        pdf.ln(2)
+
+        # CVSS v3.1 Scoring Criteria table
+        breakdown = entry.get("cvss_breakdown", {})
+        vector    = entry.get("cvss_vector", "N/A")
+        if breakdown:
+            pdf.set_font("Helvetica", 'B', 9)
+            pdf.set_text_color(15, 23, 42)
+            pdf.cell(0, 6, text="CVSS v3.1 Scoring Criteria:",
+                     new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            render_cvss_breakdown_table(pdf, breakdown, vector)
+
+        # Description
+        pdf.set_font("Helvetica", 'B', 9)
+        pdf.set_text_color(15, 23, 42)
+        pdf.cell(0, 6, text="Description:", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.set_font("Helvetica", '', 10)
         pdf.set_text_color(30, 30, 30)
         pdf.multi_cell(0, 5.5, text=clean_for_pdf(entry["description"]),
                        new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.ln(2)
 
+        # Proof of Concept
+        poc = entry.get("poc", "No proof of concept available.")
+        pdf.set_font("Helvetica", 'B', 9)
+        pdf.set_text_color(185, 28, 28)
+        pdf.cell(0, 6, text="Proof of Concept (PoC):", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.set_font("Helvetica", '', 10)
+        pdf.set_text_color(30, 30, 30)
+        pdf.set_fill_color(255, 248, 248)
+        pdf.multi_cell(0, 5.5, text=clean_for_pdf(poc),
+                       new_x=XPos.LMARGIN, new_y=YPos.NEXT, fill=True)
+        pdf.ln(2)
+
+        # References
         refs = entry.get("references", [])
         if refs:
             pdf.set_font("Helvetica", 'I', 8)
@@ -400,6 +540,7 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
         pdf.line(10, pdf.get_y(), 200, pdf.get_y())
         pdf.ln(5)
 
+    # ── Section 6: Methodology ────────────────────────────────────────────────
     section_header(pdf, "6", "Methodology & Data Sources")
     pdf.set_font("Helvetica", '', 10)
     pdf.set_text_color(30, 30, 30)

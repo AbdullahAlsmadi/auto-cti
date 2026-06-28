@@ -51,6 +51,7 @@ reports_dir = os.path.join("JoFile", "Reports")
 os.makedirs(reports_dir, exist_ok=True)
 
 
+
 def build_cve_summary(data: list) -> list:
     seen = set()
     normalized = []

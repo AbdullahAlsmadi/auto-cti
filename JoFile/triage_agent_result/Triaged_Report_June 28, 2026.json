@@ -1,13 +1,13 @@
 [
   {
     "CVE_ID": "CVE-2026-55700",
-    "Description": "The pnpm package manager is vulnerable to path traversal during the stage download process. By manipulating manifest names or versions, an attacker can write files outside the intended destination directory, potentially leading to unauthorized system file modification.",
+    "Description": "The pnpm package manager is vulnerable to path traversal during the stage download process due to improper validation of manifest names and versions. An attacker can exploit this to write files outside of the intended destination directory, potentially leading to arbitrary code execution or system compromise.",
     "CVSS_Score": 7.1,
     "CVSS_Severity": "High",
     "CWE_ID": "CWE-22",
     "MITRE_Mappings": [
       "T1083",
-      "T1202"
+      "T1190"
     ],
     "Urgency_Score": 74,
     "References": [
@@ -17,14 +17,15 @@
   },
   {
     "CVE_ID": "CVE-2026-55699",
-    "Description": "A vulnerability in the pnpm global remove operation allows for the deletion of the PNPM_HOME directory when a reserved bin name is encountered. This unintended file deletion can disrupt service availability and environment stability for the affected user.",
+    "Description": "A vulnerability in pnpm allows for the deletion of the PNPM_HOME directory during a global package removal process when a reserved bin name is utilized. This can result in a denial of service by removing critical configuration files or environment state data.",
     "CVSS_Score": 6.5,
     "CVSS_Severity": "Medium",
     "CWE_ID": "CWE-22",
     "MITRE_Mappings": [
-      "T1485"
+      "T1485",
+      "T1070"
     ],
-    "Urgency_Score": 59,
+    "Urgency_Score": 69,
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-55699",
       "https://www.cve.org/CVERecord?id=CVE-2026-55699"
@@ -32,13 +33,13 @@
   },
   {
     "CVE_ID": "CVE-2026-55698",
-    "Description": "The pnpm project environment lockfile is susceptible to a resolution bypass, allowing an attacker to override package-manager logic and force the execution of arbitrary bytes. This flaw compromises the integrity of the software supply chain by potentially executing malicious code during dependency resolution.",
+    "Description": "The pnpm project environment lockfile implementation fails to properly validate package resolution, allowing for short-circuiting of the resolution process. An attacker can supply malicious lockfile bytes that the manager executes, leading to unauthorized code execution during the installation phase.",
     "CVSS_Score": 8.8,
     "CVSS_Severity": "High",
     "CWE_ID": "CWE-345",
     "MITRE_Mappings": [
-      "T1195",
-      "T1059"
+      "T1204",
+      "T1195"
     ],
     "Urgency_Score": 89,
     "References": [
@@ -48,13 +49,13 @@
   },
   {
     "CVE_ID": "CVE-2026-49338",
-    "Description": "The Subsonic API suffers from an Insecure Direct Object Reference (IDOR) vulnerability that permits authenticated users to access, read, or delete playlists belonging to other users. This unauthorized access poses a significant threat to user data confidentiality and integrity.",
+    "Description": "The Subsonic API exhibits an insecure direct object reference (IDOR) vulnerability that permits authenticated users to read or delete playlists belonging to other users. This compromise of access controls impacts user data confidentiality and integrity.",
     "CVSS_Score": 7.1,
     "CVSS_Severity": "High",
     "CWE_ID": "CWE-285",
     "MITRE_Mappings": [
-      "T1083",
-      "T1485"
+      "T1592",
+      "T1078"
     ],
     "Urgency_Score": 74,
     "References": [
@@ -64,13 +65,13 @@
   },
   {
     "CVE_ID": "CVE-2026-49339",
-    "Description": "Gonic contains a path traversal vulnerability in the playlist ID handling that bypasses owner-based authorization checks. Attackers can leverage this to manipulate and delete playlists across the entire application user base.",
+    "Description": "Gonic contains a path traversal vulnerability in its playlist ID parameter that bypasses ownership checks. An attacker can leverage this flaw to access or delete playlists belonging to other users, resulting in unauthorized data manipulation.",
     "CVSS_Score": 7.1,
     "CVSS_Severity": "High",
     "CWE_ID": "CWE-22",
     "MITRE_Mappings": [
       "T1083",
-      "T1485"
+      "T1190"
     ],
     "Urgency_Score": 74,
     "References": [
@@ -80,13 +81,13 @@
   },
   {
     "CVE_ID": "CVE-2026-49340",
-    "Description": "Gonic is susceptible to an arbitrary file write vulnerability within the playlist creation process, allowing authenticated users to write M3U content to arbitrary paths on the underlying host. This level of access could facilitate remote code execution or significant system configuration corruption.",
+    "Description": "Gonic is susceptible to an arbitrary file write vulnerability during playlist creation, where authenticated users can inject M3U content to arbitrary paths on the host. This could be leveraged for system-wide configuration changes or remote code execution.",
     "CVSS_Score": 8.1,
     "CVSS_Severity": "High",
     "CWE_ID": "CWE-22",
     "MITRE_Mappings": [
-      "T1068",
-      "T1205"
+      "T1059",
+      "T1068"
     ],
     "Urgency_Score": 83,
     "References": [
@@ -96,12 +97,13 @@
   },
   {
     "CVE_ID": "CVE-2026-55697",
-    "Description": "A vulnerability in pnpm's configuration handling allows repository-controlled dependencies to influence the selection of the pacquet native install engine. This improper validation can lead to the execution of unintended native code, increasing the attack surface.",
+    "Description": "A vulnerability in pnpm allows a repository-controlled configuration to influence the selection of a pacquet native installation engine. This flaw allows an attacker to execute arbitrary commands on the system running the build process.",
     "CVSS_Score": 7.5,
     "CVSS_Severity": "High",
     "CWE_ID": "CWE-78",
     "MITRE_Mappings": [
-      "T1203"
+      "T1203",
+      "T1059"
     ],
     "Urgency_Score": 78,
     "References": [
@@ -111,14 +113,15 @@
   },
   {
     "CVE_ID": "CVE-2026-55487",
-    "Description": "The pnpm package manager suffers from manifest identity spoofing, which allows attackers to bypass security checks and execute lifecycle scripts under elevated contexts. This flaw exposes build environments to unauthorized script execution.",
+    "Description": "The pnpm package manager suffers from a manifest identity spoofing vulnerability, allowing an attacker to bypass build restrictions and trigger arbitrary lifecycle scripts. This flaw can lead to full system compromise during package installation.",
     "CVSS_Score": 7.5,
     "CVSS_Severity": "High",
     "CWE_ID": "CWE-346",
     "MITRE_Mappings": [
+      "T1195",
       "T1059"
     ],
-    "Urgency_Score": 68,
+    "Urgency_Score": 78,
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-55487",
       "https://www.cve.org/CVERecord?id=CVE-2026-55487"
@@ -126,11 +129,12 @@
   },
   {
     "CVE_ID": "CVE-2026-55180",
-    "Description": "pnpm configuration can be manipulated to leak environment secrets by expanding them into registry requests before package installation scripts execute. This potential exposure of sensitive credentials poses a critical risk to organizational infrastructure secrets.",
+    "Description": "Pnpm is vulnerable to a configuration flaw where environment secrets can be inadvertently expanded into registry requests. This facilitates the unauthorized exfiltration of sensitive credentials to third-party domains.",
     "CVSS_Score": 6.5,
     "CVSS_Severity": "Medium",
     "CWE_ID": "CWE-200",
     "MITRE_Mappings": [
+      "T1048",
       "T1552"
     ],
     "Urgency_Score": 69,
@@ -141,13 +145,13 @@
   },
   {
     "CVE_ID": "CVE-2026-53465",
-    "Description": "ImageMagick is vulnerable to a heap buffer overflow in the SF3 encoder when processing multi-frame images. Successful exploitation could lead to application crashes or arbitrary code execution in the context of the user running the image processing utility.",
+    "Description": "ImageMagick contains a heap-based buffer overflow in the SF3 encoder that occurs during the processing of multi-frame images. An attacker may trigger this vulnerability via a maliciously crafted file, potentially leading to application crashes or arbitrary code execution.",
     "CVSS_Score": 6.2,
     "CVSS_Severity": "Medium",
     "CWE_ID": "CWE-122",
     "MITRE_Mappings": [
       "T1203",
-      "T1068"
+      "T1195"
     ],
     "Urgency_Score": 66,
     "References": [
@@ -157,7 +161,7 @@
   },
   {
     "CVE_ID": "CVE-2026-53464",
-    "Description": "ImageMagick contains a memory leak in the wand option parser when handling malformed or invalid arguments. This resource exhaustion vulnerability could be leveraged to degrade application performance or lead to process termination.",
+    "Description": "A memory leak vulnerability exists in the ImageMagick wand option parser, which can be triggered when providing specially crafted invalid arguments. Repeated exploitation of this defect could lead to significant memory exhaustion and denial of service.",
     "CVSS_Score": 4.0,
     "CVSS_Severity": "Medium",
     "CWE_ID": "CWE-401",
@@ -172,12 +176,12 @@
   },
   {
     "CVE_ID": "CVE-2026-54244",
-    "Description": "Statamic CMS features an incorrect authorization implementation allowing users with view-only permissions to submit content for Live Preview, a feature intended for editors. This elevation of privilege impacts administrative access controls.",
+    "Description": "Statamic CMS has an authorization flaw where users with view-only permissions can submit content for Live Preview, an action restricted to editors. While limited, this impacts the integrity of content management workflows.",
     "CVSS_Score": 3.5,
     "CVSS_Severity": "Low",
     "CWE_ID": "CWE-863",
     "MITRE_Mappings": [
-      "T1068"
+      "T1078"
     ],
     "Urgency_Score": 27,
     "References": [
@@ -187,13 +191,12 @@
   },
   {
     "CVE_ID": "CVE-2026-53523",
-    "Description": "Nezha Monitoring contains a Host Header Injection vulnerability during OAuth2 redirects. Attackers can manipulate these redirects to facilitate phishing attacks or redirect users to malicious domains, undermining trust in the authentication flow.",
+    "Description": "Nezha Monitoring is vulnerable to host header injection during the OAuth2 redirect process. An attacker can leverage this to redirect users to arbitrary external domains, facilitating phishing campaigns.",
     "CVSS_Score": 6.8,
     "CVSS_Severity": "Medium",
     "CWE_ID": "CWE-601",
     "MITRE_Mappings": [
-      "T1566",
-      "T1210"
+      "T1566"
     ],
     "Urgency_Score": 71,
     "References": [
@@ -203,7 +206,7 @@
   },
   {
     "CVE_ID": "CVE-2026-53522",
-    "Description": "Nezha Monitoring allows unbounded WebSocket streams, which can be exploited to perform resource exhaustion denial-of-service attacks. This vulnerability can lead to service outages by overwhelming the backend server infrastructure.",
+    "Description": "Nezha Monitoring contains an issue with unbounded WebSocket streams, leading to resource exhaustion. This can be exploited by an unauthenticated attacker to cause a denial of service on the monitoring instance.",
     "CVSS_Score": 6.5,
     "CVSS_Severity": "Medium",
     "CWE_ID": "CWE-770",
@@ -218,13 +221,12 @@
   },
   {
     "CVE_ID": "CVE-2026-54243",
-    "Description": "Statamic CMS is vulnerable to CSV formula injection via exported form submissions. If opened in spreadsheet software, these submissions could execute malicious macros or commands on the administrator's system.",
+    "Description": "Statamic is vulnerable to CSV formula injection when exporting form submission data. An attacker can inject malicious spreadsheet formulas that are executed when an administrator opens the exported file.",
     "CVSS_Score": 6.1,
     "CVSS_Severity": "Medium",
     "CWE_ID": "CWE-1236",
     "MITRE_Mappings": [
-      "T1204",
-      "T1566"
+      "T1204"
     ],
     "Urgency_Score": 55,
     "References": [
@@ -234,13 +236,13 @@
   },
   {
     "CVE_ID": "CVE-2026-54242",
-    "Description": "Statamic CMS exhibits Server-Side Request Forgery (SSRF) vulnerabilities via the Glide image processing component due to improper handling of DNS rebinding. This allows attackers to probe internal network services inaccessible from the public internet.",
+    "Description": "Statamic is susceptible to server-side request forgery (SSRF) via the Glide image processing component using DNS rebinding. This allows an attacker to probe internal network services otherwise unreachable from the public internet.",
     "CVSS_Score": 4.9,
     "CVSS_Severity": "Medium",
     "CWE_ID": "CWE-367",
     "MITRE_Mappings": [
       "T1046",
-      "T1210"
+      "T1190"
     ],
     "Urgency_Score": 44,
     "References": [

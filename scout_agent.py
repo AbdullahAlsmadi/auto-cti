@@ -91,12 +91,12 @@ class NISTSearchTool(BaseTool):
         except Exception as e:
             print(f"DEBUG - NVD lastMod Error: {e}")
 
-        # GitHub Advisory Database — always fresh, no auth needed, real CVE IDs with scores
+        # GitHub Advisory Database — fetch 30 to guarantee 20 survive the CVE-ID filter
         try:
             print("DEBUG - Trying GitHub Advisory Database (GraphQL)...")
             query_body = """
             {
-              securityAdvisories(first: 20, orderBy: {field: PUBLISHED_AT, direction: DESC}) {
+              securityAdvisories(first: 30, orderBy: {field: PUBLISHED_AT, direction: DESC}) {
                 nodes {
                   ghsaId
                   summary
@@ -137,6 +137,7 @@ class NISTSearchTool(BaseTool):
                         if ident.get("type") == "CVE":
                             cve_id = ident.get("value")
                             break
+                    # Skip advisories that have no official CVE ID assigned yet
                     if not cve_id or not cve_id.startswith("CVE-"):
                         continue
 
@@ -154,8 +155,10 @@ class NISTSearchTool(BaseTool):
                     )
 
                 if verified_cves:
-                    print(f"DEBUG - GitHub Advisory returned {len(verified_cves)} CVEs")
-                    return "STRICT INSTRUCTION: USE EXACTLY THESE IDs AND SCORES:\n" + "\n".join(verified_cves)
+                    # Slice to exactly 20 after filtering out GHSA-only entries
+                    final_cves = verified_cves[:20]
+                    print(f"DEBUG - GitHub Advisory returned {len(verified_cves)} CVEs, using {len(final_cves)}")
+                    return "STRICT INSTRUCTION: USE EXACTLY THESE IDs AND SCORES:\n" + "\n".join(final_cves)
                 else:
                     print("DEBUG - GitHub Advisory: no CVE identifiers found in response")
 
@@ -332,7 +335,7 @@ if __name__ == "__main__":
 
     all_reports = {today_date: new_data}
 
-with open(report_filename, 'w', encoding='utf-8') as f:
-    json.dump(all_reports, f, indent=4, ensure_ascii=False)
+    with open(report_filename, 'w', encoding='utf-8') as f:
+        json.dump(all_reports, f, indent=4, ensure_ascii=False)
 
     print(f"\nReport saved to: {report_filename}")

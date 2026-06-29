@@ -1,28 +1,28 @@
 [
   {
     "CVE_ID": "CVE-2026-55700",
-    "Finding_Name": "Path Traversal in pnpm Stage Download",
-    "Description": "The pnpm package manager fails to properly sanitize manifest names during the stage download process. An attacker can craft a malicious package manifest containing path traversal sequences to write files outside of the intended target directory. This can lead to arbitrary file overwriting, potentially resulting in remote code execution or system compromise.",
+    "Finding_Name": "Arbitrary File Write via Path Traversal in pnpm",
+    "Description": "The pnpm package manager contains a path traversal vulnerability during the 'stage download' process. By manipulating the manifest name or version string, an attacker can force the application to write files outside of the intended destination directory, potentially overwriting sensitive system files.",
     "CVSS_Score": 7.1,
     "CVSS_Severity": "High",
-    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:L",
     "CVSS_Breakdown": {
       "Attack_Vector": "Network",
       "Attack_Complexity": "Low",
       "Privileges_Required": "None",
-      "User_Interaction": "None",
+      "User_Interaction": "Required",
       "Scope": "Unchanged",
       "Confidentiality": "None",
       "Integrity": "High",
-      "Availability": "None"
+      "Availability": "Low"
     },
     "CWE_ID": "CWE-22",
     "MITRE_Mappings": [
-      "T1083",
+      "T1059",
       "T1190"
     ],
     "Urgency_Score": 74,
-    "PoC": "An attacker creates a malicious package with a name containing '../' sequences. When a victim installs this package, pnpm writes files to arbitrary locations on the host filesystem instead of the package directory.",
+    "PoC": "An attacker creates a malicious package with a specially crafted version string containing path traversal characters. When a victim installs this dependency, pnpm interprets the malicious path and writes package components into unauthorized directories, such as the startup folder or configuration paths.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-55700",
       "https://www.cve.org/CVERecord?id=CVE-2026-55700"
@@ -30,27 +30,28 @@
   },
   {
     "CVE_ID": "CVE-2026-55699",
-    "Finding_Name": "PNPM_HOME Deletion via Reserved Bin Names",
-    "Description": "The global remove operation in pnpm is vulnerable to a flaw where reserved binary names are mishandled during deletion. If a specific package is designed to conflict with reserved paths, the uninstallation process may inadvertently delete the entire PNPM_HOME directory. This results in a persistent denial of service of the pnpm environment.",
+    "Finding_Name": "Unauthorized Deletion of PNPM_HOME Directory",
+    "Description": "A flaw exists in pnpm where a reserved binary name triggers an improper deletion routine during a global removal operation. This can lead to the unintended removal of the PNPM_HOME directory, resulting in a denial of service for the package management environment.",
     "CVSS_Score": 6.5,
     "CVSS_Severity": "Medium",
-    "CVSS_Vector": "CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:U/C:N/I:L/A:H",
+    "CVSS_Vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
     "CVSS_Breakdown": {
       "Attack_Vector": "Local",
       "Attack_Complexity": "Low",
-      "Privileges_Required": "High",
+      "Privileges_Required": "Low",
       "User_Interaction": "None",
       "Scope": "Unchanged",
       "Confidentiality": "None",
-      "Integrity": "Low",
+      "Integrity": "None",
       "Availability": "High"
     },
     "CWE_ID": "CWE-22",
     "MITRE_Mappings": [
+      "T1485",
       "T1562"
     ],
     "Urgency_Score": 69,
-    "PoC": "A user with high privileges removes a package with a crafted binary name that forces pnpm's removal logic to traverse up to the root home directory, deleting critical configuration and storage files.",
+    "PoC": "A local attacker invokes a global remove command targeting a specific malicious binary name. The package manager fails to sanitize the path, executing a recursive delete command on the parent PNPM_HOME directory instead of the specific package binary.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-55699",
       "https://www.cve.org/CVERecord?id=CVE-2026-55699"
@@ -58,16 +59,16 @@
   },
   {
     "CVE_ID": "CVE-2026-55698",
-    "Finding_Name": "Lockfile Resolution Bypass in pnpm",
-    "Description": "The pnpm project environment lockfile can be manipulated to short-circuit standard package manager resolution logic. An attacker can force the client to resolve and execute arbitrary bytes specified within the lockfile. This allows for the execution of unauthorized code during the build process, compromising the integrity of the project environment.",
+    "Finding_Name": "Lockfile Short-Circuit and Arbitrary Byte Execution in pnpm",
+    "Description": "The pnpm environment lockfile mechanism can be coerced into skipping standard package resolution steps. This allows an attacker to force the execution of arbitrary bytes provided in a malicious lockfile, leading to potential remote code execution.",
     "CVSS_Score": 8.8,
     "CVSS_Severity": "High",
-    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
     "CVSS_Breakdown": {
       "Attack_Vector": "Network",
       "Attack_Complexity": "Low",
       "Privileges_Required": "None",
-      "User_Interaction": "Required",
+      "User_Interaction": "None",
       "Scope": "Unchanged",
       "Confidentiality": "High",
       "Integrity": "High",
@@ -79,7 +80,7 @@
       "T1059"
     ],
     "Urgency_Score": 89,
-    "PoC": "An attacker distributes a modified pnpm-lock.yaml file. Upon running 'pnpm install', the package manager ignores legitimate registry sources and executes the malicious payload included in the lockfile entries.",
+    "PoC": "The attacker contributes a modified lockfile to a repository. When a user runs pnpm install, the installer ignores verified package sources and executes the attacker-defined payload embedded in the lockfile structure, granting immediate code execution.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-55698",
       "https://www.cve.org/CVERecord?id=CVE-2026-55698"
@@ -87,11 +88,11 @@
   },
   {
     "CVE_ID": "CVE-2026-49338",
-    "Finding_Name": "IDOR in Subsonic API Playlist Management",
-    "Description": "The Subsonic API suffers from an Insecure Direct Object Reference (IDOR) vulnerability that allows any authenticated user to access, read, or delete playlists belonging to other users. The system fails to validate user ownership before processing playlist identifiers. This enables unauthorized disclosure and modification of user data.",
+    "Finding_Name": "Insecure Direct Object Reference in Subsonic API",
+    "Description": "The Subsonic API fails to enforce proper authorization checks when users access playlists. An authenticated user can read or delete the playlists of other users by manipulating the playlist ID in API requests.",
     "CVSS_Score": 7.1,
     "CVSS_Severity": "High",
-    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:L",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N",
     "CVSS_Breakdown": {
       "Attack_Vector": "Network",
       "Attack_Complexity": "Low",
@@ -100,15 +101,15 @@
       "Scope": "Unchanged",
       "Confidentiality": "High",
       "Integrity": "High",
-      "Availability": "Low"
+      "Availability": "None"
     },
     "CWE_ID": "CWE-285",
     "MITRE_Mappings": [
-      "T1005",
-      "T1530"
+      "T1531",
+      "T1040"
     ],
     "Urgency_Score": 74,
-    "PoC": "An authenticated user logs in and sends an API request for a playlist ID known or guessed to belong to another user. The server returns the playlist contents or confirms deletion without checking authorization.",
+    "PoC": "An authenticated user intercepts an API call used to fetch playlist details. By incrementing or changing the playlist ID parameter to match another user's content, the server returns the requested private playlist information without validating ownership.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-49338",
       "https://www.cve.org/CVERecord?id=CVE-2026-49338"
@@ -116,8 +117,8 @@
   },
   {
     "CVE_ID": "CVE-2026-49339",
-    "Finding_Name": "Path Traversal in Gonic Playlist Handling",
-    "Description": "The Gonic media server implementation contains a path traversal vulnerability within its playlist processing logic. By manipulating the playlist 'id' parameter, an attacker can bypass ownership verification controls. This allows unprivileged users to read or delete private playlists belonging to other users or sensitive system data.",
+    "Finding_Name": "Path Traversal in Gonic Playlist Access",
+    "Description": "The Gonic music server implementation contains a path traversal vulnerability in the playlist ID handler. This bypasses ownership checks, allowing unauthorized users to read or delete arbitrary playlists stored within the host filesystem.",
     "CVSS_Score": 7.1,
     "CVSS_Severity": "High",
     "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N",
@@ -133,10 +134,11 @@
     },
     "CWE_ID": "CWE-22",
     "MITRE_Mappings": [
-      "T1083"
+      "T1083",
+      "T1565"
     ],
     "Urgency_Score": 74,
-    "PoC": "The attacker provides a 'id' parameter containing '../' sequences in a request to the playlist endpoint, tricking the backend into accessing restricted files outside the intended playlist directory.",
+    "PoC": "An authenticated user submits a request to the playlist endpoint with an ID parameter containing traversal sequences like '../'. The server resolves the path and grants access to files outside the intended playlist directory, enabling unauthorized deletion or disclosure.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-49339",
       "https://www.cve.org/CVERecord?id=CVE-2026-49339"
@@ -145,7 +147,7 @@
   {
     "CVE_ID": "CVE-2026-49340",
     "Finding_Name": "Arbitrary File Write in Gonic Playlist Creation",
-    "Description": "Gonic contains a critical vulnerability where the playlist creation endpoint does not adequately validate file paths. An authenticated attacker can supply M3U content and a target path to write files to arbitrary locations on the host system. This creates a high risk of system compromise through file system manipulation.",
+    "Description": "Gonic is susceptible to an arbitrary file write vulnerability during playlist creation. An authenticated user can craft M3U content and write it to an attacker-specified path on the underlying host filesystem.",
     "CVSS_Score": 8.1,
     "CVSS_Severity": "High",
     "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:H",
@@ -161,11 +163,11 @@
     },
     "CWE_ID": "CWE-22",
     "MITRE_Mappings": [
-      "T1083",
-      "T1059"
+      "T1059",
+      "T1083"
     ],
-    "Urgency_Score": 73,
-    "PoC": "The user submits a playlist creation request with an M3U payload and a path parameter such as '/tmp/evil.sh'. The application writes the content to that path, potentially enabling code execution.",
+    "Urgency_Score": 83,
+    "PoC": "The attacker sends a crafted playlist creation request where the playlist name includes directory traversal characters. The server saves the M3U content into a location specified by the attacker, allowing for potential overwriting of critical configuration files.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-49340",
       "https://www.cve.org/CVERecord?id=CVE-2026-49340"
@@ -173,14 +175,14 @@
   },
   {
     "CVE_ID": "CVE-2026-55697",
-    "Finding_Name": "Remote Configuration Manipulation in pnpm",
-    "Description": "pnpm allows repository-level configuration dependencies to influence the native install engine. An attacker can supply a malicious configuration that forces the installation of unauthorized code via the 'pacquet' engine. This can lead to arbitrary command execution during the installation phase.",
+    "Finding_Name": "Remote Code Execution via Malicious Pacquet Engine",
+    "Description": "pnpm allows repository-controlled configurations to select a native install engine through the pacquet library. This can be abused by a malicious package registry to force the execution of arbitrary commands on the victim's host during installation.",
     "CVSS_Score": 7.5,
     "CVSS_Severity": "High",
-    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
     "CVSS_Breakdown": {
       "Attack_Vector": "Network",
-      "Attack_Complexity": "Low",
+      "Attack_Complexity": "High",
       "Privileges_Required": "None",
       "User_Interaction": "None",
       "Scope": "Unchanged",
@@ -191,10 +193,10 @@
     "CWE_ID": "CWE-78",
     "MITRE_Mappings": [
       "T1195",
-      "T1059"
+      "T1203"
     ],
-    "Urgency_Score": 78,
-    "PoC": "An attacker publishes a repository with a maliciously crafted pnpm configuration file that triggers a native install of a malicious binary, achieving code execution upon dependency resolution.",
+    "Urgency_Score": 68,
+    "PoC": "A user installs a package from a compromised or malicious registry. The registry injects configuration directives that cause pnpm to switch to a malicious native install engine, which subsequently executes unauthorized shell commands on the developer's system.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-55697",
       "https://www.cve.org/CVERecord?id=CVE-2026-55697"
@@ -202,8 +204,8 @@
   },
   {
     "CVE_ID": "CVE-2026-55487",
-    "Finding_Name": "Manifest Identity Spoofing in pnpm",
-    "Description": "A flaw in how pnpm handles manifest identities allows an attacker to spoof package identity. This bypasses the 'allowBuilds' security policy, permitting the execution of arbitrary lifecycle scripts. Consequently, an attacker can execute unauthorized code on the build machine.",
+    "Finding_Name": "Lifecycle Execution via Manifest Identity Spoofing",
+    "Description": "pnpm fails to correctly validate manifest identities, allowing an attacker to spoof package metadata. This satisfies security checks for allowed builds and causes the package manager to execute malicious lifecycle scripts provided by the attacker.",
     "CVSS_Score": 7.5,
     "CVSS_Severity": "High",
     "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
@@ -219,10 +221,11 @@
     },
     "CWE_ID": "CWE-346",
     "MITRE_Mappings": [
-      "T1195"
+      "T1557",
+      "T1059"
     ],
-    "Urgency_Score": 78,
-    "PoC": "An attacker publishes a malicious package that presents itself as a trusted identity. pnpm accepts the spoofed manifest and permits the execution of arbitrary 'preinstall' or 'postinstall' scripts.",
+    "Urgency_Score": 68,
+    "PoC": "The attacker publishes a package with a forged manifest that masquerades as a trusted source. When a victim installs the package, the pnpm installer bypasses integrity checks and executes the attacker's script payload under the victim's privileges.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-55487",
       "https://www.cve.org/CVERecord?id=CVE-2026-55487"
@@ -230,15 +233,15 @@
   },
   {
     "CVE_ID": "CVE-2026-55180",
-    "Finding_Name": "Environment Secret Exposure in pnpm",
-    "Description": "The pnpm repository configuration can be used to expand local environment variables into registry requests. If an attacker controls the repository config, they can exfiltrate sensitive environment secrets during the build process. This leads to the compromise of confidential credentials stored in the build environment.",
+    "Finding_Name": "Environment Secret Exposure to Malicious Registry",
+    "Description": "pnpm's configuration handling allows for the expansion of sensitive environment variables into registry request headers. A malicious repository or proxy can trick the system into leaking these secrets before scripts are even executed.",
     "CVSS_Score": 6.5,
     "CVSS_Severity": "Medium",
-    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
     "CVSS_Breakdown": {
       "Attack_Vector": "Network",
       "Attack_Complexity": "Low",
-      "Privileges_Required": "None",
+      "Privileges_Required": "Low",
       "User_Interaction": "None",
       "Scope": "Unchanged",
       "Confidentiality": "High",
@@ -247,10 +250,11 @@
     },
     "CWE_ID": "CWE-200",
     "MITRE_Mappings": [
-      "T1552"
+      "T1552",
+      "T1040"
     ],
-    "Urgency_Score": 59,
-    "PoC": "A user clones a malicious repository. During 'pnpm install', the configuration forces a request to an attacker-controlled server, appending sensitive environment variables in the request URL.",
+    "Urgency_Score": 69,
+    "PoC": "A user connects to a malicious registry server. The registry returns a specific configuration that triggers pnpm to include sensitive environment variables (such as tokens or credentials) in the headers of outgoing requests back to the registry.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-55180",
       "https://www.cve.org/CVERecord?id=CVE-2026-55180"
@@ -258,14 +262,14 @@
   },
   {
     "CVE_ID": "CVE-2026-53465",
-    "Finding_Name": "Heap Overflow in ImageMagick SF3 Encoder",
-    "Description": "ImageMagick contains a heap buffer over-write vulnerability in the SF3 image encoder. This occurs when processing multi-frame images with malicious attributes. An attacker can trigger this condition by providing a specially crafted image file, leading to potential arbitrary code execution or process crashes.",
+    "Finding_Name": "Heap Buffer Over-Write in ImageMagick",
+    "Description": "A heap buffer overflow vulnerability exists in the ImageMagick SF3 encoder. Processing a multi-frame image with specific parameters can lead to a heap-based buffer over-write, potentially causing crashes or remote code execution.",
     "CVSS_Score": 6.2,
     "CVSS_Severity": "Medium",
-    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:H",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:L/A:H",
     "CVSS_Breakdown": {
       "Attack_Vector": "Network",
-      "Attack_Complexity": "Low",
+      "Attack_Complexity": "High",
       "Privileges_Required": "None",
       "User_Interaction": "Required",
       "Scope": "Unchanged",
@@ -276,10 +280,10 @@
     "CWE_ID": "CWE-122",
     "MITRE_Mappings": [
       "T1203",
-      "T1190"
+      "T1068"
     ],
     "Urgency_Score": 66,
-    "PoC": "An attacker uploads a crafted SF3 image file to a vulnerable application that uses ImageMagick for processing, triggering a heap overflow that leads to a crash or code execution.",
+    "PoC": "An attacker uploads a specially crafted multi-frame SF3 image file to a service that utilizes ImageMagick. When the server attempts to process or convert the file, the heap overflow triggers, potentially allowing the execution of arbitrary code.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-53465",
       "https://www.cve.org/CVERecord?id=CVE-2026-53465"
@@ -288,7 +292,7 @@
   {
     "CVE_ID": "CVE-2026-53464",
     "Finding_Name": "Memory Leak in ImageMagick Wand Parser",
-    "Description": "ImageMagick's wand option parser suffers from a memory leak when processing invalid or malformed arguments. Continuous exploitation of this flaw can lead to resource exhaustion of the host application, potentially causing service instability or denial of service.",
+    "Description": "The ImageMagick wand option parser suffers from a memory leak when processing malformed or invalid arguments. Attackers can exploit this to consume excessive system memory, potentially leading to resource exhaustion.",
     "CVSS_Score": 4.0,
     "CVSS_Severity": "Medium",
     "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
@@ -307,7 +311,7 @@
       "T1499"
     ],
     "Urgency_Score": 46,
-    "PoC": "The attacker sends a high volume of requests containing invalid wand options, causing the server to leak memory until the process runs out of RAM and crashes.",
+    "PoC": "An attacker repeatedly sends requests with malicious arguments to a service using the ImageMagick wand API. Each request leaks memory, eventually resulting in an out-of-memory state that crashes the service process.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-53464",
       "https://www.cve.org/CVERecord?id=CVE-2026-53464"
@@ -316,7 +320,7 @@
   {
     "CVE_ID": "CVE-2026-54244",
     "Finding_Name": "Unauthorized Content Submission in Statamic",
-    "Description": "Statamic CMS exhibits an authorization flaw where view-only users can submit Live Preview content intended only for editors. This leads to an improper access control scenario where unauthorized users can modify the state or content of the application's preview functionality.",
+    "Description": "Statamic CMS has a flaw in its authorization logic where users with read-only access can submit Live Preview content. This content is intended to be restricted to editors, allowing unauthorized content creation.",
     "CVSS_Score": 3.5,
     "CVSS_Severity": "Low",
     "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",
@@ -332,10 +336,11 @@
     },
     "CWE_ID": "CWE-863",
     "MITRE_Mappings": [
-      "T1068"
+      "T1068",
+      "T1078"
     ],
     "Urgency_Score": 27,
-    "PoC": "A low-privileged user authenticates and accesses the Live Preview URL, submitting payload content that is accepted by the backend despite the user lacking the required editing permissions.",
+    "PoC": "A low-privileged user authenticates and accesses the preview submission endpoint. The system incorrectly validates the permissions for this specific action, allowing the user to create or manipulate Live Preview content they should not have access to.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-54244",
       "https://www.cve.org/CVERecord?id=CVE-2026-54244"
@@ -343,17 +348,17 @@
   },
   {
     "CVE_ID": "CVE-2026-53523",
-    "Finding_Name": "Host Header Injection in Nezha OAuth",
-    "Description": "Nezha Monitoring is vulnerable to a Host Header Injection during OAuth2 redirect processing. An attacker can manipulate the redirect URL, potentially causing users to be redirected to malicious domains. This facilitates phishing attacks and potential credential theft.",
+    "Finding_Name": "Host Header Injection in Nezha Monitoring",
+    "Description": "Nezha Monitoring contains an OAuth2 redirect vulnerability due to improper handling of the Host header. This allows for open redirection, which an attacker can use for phishing campaigns.",
     "CVSS_Score": 6.8,
     "CVSS_Severity": "Medium",
-    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
     "CVSS_Breakdown": {
       "Attack_Vector": "Network",
       "Attack_Complexity": "Low",
       "Privileges_Required": "None",
       "User_Interaction": "Required",
-      "Scope": "Unchanged",
+      "Scope": "Changed",
       "Confidentiality": "Low",
       "Integrity": "Low",
       "Availability": "None"
@@ -361,10 +366,10 @@
     "CWE_ID": "CWE-601",
     "MITRE_Mappings": [
       "T1566",
-      "T1212"
+      "T1210"
     ],
     "Urgency_Score": 71,
-    "PoC": "An attacker intercepts an OAuth login request and modifies the 'Host' header to point to a malicious domain, tricking the service into redirecting the authenticated user to the malicious domain.",
+    "PoC": "The attacker crafts a malicious link that includes a fake Host header pointing to a domain they control. When the victim clicks the link, the server redirects them to the attacker's site, facilitating credential harvesting.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-53523",
       "https://www.cve.org/CVERecord?id=CVE-2026-53523"
@@ -372,15 +377,15 @@
   },
   {
     "CVE_ID": "CVE-2026-53522",
-    "Finding_Name": "Resource Exhaustion via WebSocket in Nezha",
-    "Description": "Nezha Monitoring suffers from a denial of service vulnerability due to unbounded WebSocket streams. An attacker can open multiple concurrent connections without proper resource limiting, exhausting system memory or file descriptors, which leads to total service unavailability.",
+    "Finding_Name": "WebSocket Resource Exhaustion in Nezha Monitoring",
+    "Description": "Nezha Monitoring fails to limit the number of open WebSocket streams. An attacker can initiate numerous connections to exhaust system resources, leading to a Denial of Service.",
     "CVSS_Score": 6.5,
     "CVSS_Severity": "Medium",
-    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
     "CVSS_Breakdown": {
       "Attack_Vector": "Network",
       "Attack_Complexity": "Low",
-      "Privileges_Required": "Low",
+      "Privileges_Required": "None",
       "User_Interaction": "None",
       "Scope": "Unchanged",
       "Confidentiality": "None",
@@ -391,8 +396,8 @@
     "MITRE_Mappings": [
       "T1499"
     ],
-    "Urgency_Score": 59,
-    "PoC": "An attacker opens thousands of WebSocket connections to the monitoring service simultaneously, causing the server to consume all available resources and crash.",
+    "Urgency_Score": 69,
+    "PoC": "The attacker runs a script that spawns thousands of WebSocket connections to the monitoring dashboard. The server consumes all available memory or file descriptors, causing legitimate users to be unable to access the dashboard.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-53522",
       "https://www.cve.org/CVERecord?id=CVE-2026-53522"
@@ -400,28 +405,28 @@
   },
   {
     "CVE_ID": "CVE-2026-54243",
-    "Finding_Name": "CSV Formula Injection in Statamic",
-    "Description": "Statamic forms are susceptible to CSV formula injection when exporting submissions. An attacker can include formulas in form fields that are executed when opened in spreadsheet software. This allows for potential information exfiltration or system command execution on the victim's local machine.",
+    "Finding_Name": "CSV Formula Injection in Statamic Exports",
+    "Description": "Statamic is vulnerable to CSV formula injection. When administrative users export form submissions to a CSV file, malicious formulas can be embedded in the content, leading to code execution if the file is opened in spreadsheet software.",
     "CVSS_Score": 6.1,
     "CVSS_Severity": "Medium",
-    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:L",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:L",
     "CVSS_Breakdown": {
       "Attack_Vector": "Network",
       "Attack_Complexity": "Low",
-      "Privileges_Required": "None",
+      "Privileges_Required": "Low",
       "User_Interaction": "Required",
-      "Scope": "Unchanged",
+      "Scope": "Changed",
       "Confidentiality": "Low",
       "Integrity": "Low",
       "Availability": "Low"
     },
     "CWE_ID": "CWE-1236",
     "MITRE_Mappings": [
-      "T1059",
-      "T1204"
+      "T1566",
+      "T1059"
     ],
     "Urgency_Score": 55,
-    "PoC": "An attacker submits a form entry containing '=cmd|/C calc.exe!A1'. When an administrator downloads and opens the CSV in Excel, the malicious formula is triggered.",
+    "PoC": "An attacker submits a form containing a string beginning with an '=' formula character. When an administrator downloads the export report and opens it in Excel, the software interprets the injected content as a command, potentially executing malicious system commands.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-54243",
       "https://www.cve.org/CVERecord?id=CVE-2026-54243"
@@ -429,11 +434,11 @@
   },
   {
     "CVE_ID": "CVE-2026-54242",
-    "Finding_Name": "SSRF via Glide DNS Rebinding in Statamic",
-    "Description": "Statamic's Glide component is vulnerable to Server-Side Request Forgery via DNS rebinding. An attacker can force the server to make requests to internal services by utilizing a domain that resolves to a public IP initially and then rebinds to an internal IP address during the processing request.",
+    "Finding_Name": "SSRF in Statamic Glide Image Processor",
+    "Description": "Statamic's Glide image processor is susceptible to Server-Side Request Forgery due to DNS rebinding. This allows an attacker to cause the server to make requests to internal network resources.",
     "CVSS_Score": 4.9,
-    "CVSS_Severity": "Medium",
     "CVSS_Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N",
+    "CVSS_Severity": "Medium",
     "CVSS_Breakdown": {
       "Attack_Vector": "Network",
       "Attack_Complexity": "High",
@@ -446,11 +451,11 @@
     },
     "CWE_ID": "CWE-367",
     "MITRE_Mappings": [
-      "T1557",
-      "T1046"
+      "T1040",
+      "T1082"
     ],
     "Urgency_Score": 44,
-    "PoC": "The attacker sets up a DNS server that rotates IPs, then sends a request to the Glide endpoint. The server validates the domain, but when it makes the actual fetch, the DNS rebinding points to internal metadata services.",
+    "PoC": "An attacker creates a malicious URL pointing to a domain that performs DNS rebinding. They submit this URL to the Glide image processor, which then attempts to fetch the resource, enabling the attacker to scan or probe internal network services.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-54242",
       "https://www.cve.org/CVERecord?id=CVE-2026-54242"
@@ -458,8 +463,8 @@
   },
   {
     "CVE_ID": "CVE-2026-53519",
-    "Finding_Name": "Pre-auth Path Traversal in Nezha Dashboard",
-    "Description": "Nezha Monitoring contains a critical pre-authentication path traversal vulnerability. By utilizing a specially crafted path prefix, an attacker can bypass authorization controls and access sensitive files, specifically leaking the JWT secret key. This enables complete takeover of the monitoring infrastructure.",
+    "Finding_Name": "Pre-auth Traversal and JWT Secret Exposure",
+    "Description": "Nezha Monitoring contains a path traversal vulnerability in the /dashboard.. endpoint. This allows an unauthenticated user to leak the server's JWT secret key, potentially leading to full account takeover.",
     "CVSS_Score": 9.1,
     "CVSS_Severity": "Critical",
     "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
@@ -478,8 +483,8 @@
       "T1083",
       "T1552"
     ],
-    "Urgency_Score": 92,
-    "PoC": "An attacker sends a request to '/dashboard..//config.yaml'. The server processes the traversal, bypassing authentication and returning the contents of the configuration file containing the JWT secret.",
+    "Urgency_Score": 100,
+    "PoC": "An unauthenticated attacker sends a request to '/dashboard../config_file_path'. The server interprets the traversal sequence and serves the content of the configuration file containing the JWT secret, which the attacker then uses to forge administrative sessions.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-53519",
       "https://www.cve.org/CVERecord?id=CVE-2026-53519"
@@ -488,26 +493,26 @@
   {
     "CVE_ID": "CVE-2026-53521",
     "Finding_Name": "Unauthorized DDNS Profile Usage in Nezha",
-    "Description": "Nezha Monitoring incorrectly stores DDNS profile identifiers, allowing an authenticated user to perform unauthorized actions by referencing another user's profile ID. This lack of authorization check allows for the hijacking or modification of DDNS settings across different user accounts.",
+    "Description": "Nezha Monitoring allows users to reference future DDNS profile IDs. This leads to an authorization bypass where a user can perform actions in the context of another user's DDNS profile.",
     "CVSS_Score": 6.4,
     "CVSS_Severity": "Medium",
-    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:L",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:L",
     "CVSS_Breakdown": {
       "Attack_Vector": "Network",
       "Attack_Complexity": "Low",
       "Privileges_Required": "Low",
       "User_Interaction": "None",
       "Scope": "Unchanged",
-      "Confidentiality": "Low",
+      "Confidentiality": "None",
       "Integrity": "Low",
       "Availability": "Low"
     },
     "CWE_ID": "CWE-863",
     "MITRE_Mappings": [
-      "T1562"
+      "T1078"
     ],
     "Urgency_Score": 68,
-    "PoC": "An authenticated user modifies their profile update request to include the profile ID of another user. The application processes the request, applying the attacker's settings to the target account.",
+    "PoC": "An attacker creates a DDNS profile request using a predicted future profile ID. The system validates the request incorrectly, allowing the attacker to link or manipulate another user's existing DDNS profile.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-53521",
       "https://www.cve.org/CVERecord?id=CVE-2026-53521"
@@ -515,28 +520,28 @@
   },
   {
     "CVE_ID": "CVE-2026-53520",
-    "Finding_Name": "Host Claiming and Routing Preemption in Nezha",
-    "Description": "Authenticated users in Nezha Monitoring can claim the main dashboard host, even through NAT configurations. This allows the attacker to preempt all dashboard routing and redirect traffic or intercept administrative requests, effectively hijacking the management interface of the monitoring instance.",
+    "Finding_Name": "Dashboard Host Preemption in Nezha Monitoring",
+    "Description": "Authenticated users in Nezha Monitoring can claim a dashboard Host even through NAT. This enables an attacker to preempt and take control of all dashboard routing for a targeted instance.",
     "CVSS_Score": 6.5,
     "CVSS_Severity": "Medium",
-    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:L/A:L",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:H/A:L",
     "CVSS_Breakdown": {
       "Attack_Vector": "Network",
       "Attack_Complexity": "Low",
       "Privileges_Required": "Low",
       "User_Interaction": "None",
-      "Scope": "Changed",
+      "Scope": "Unchanged",
       "Confidentiality": "Low",
-      "Integrity": "Low",
+      "Integrity": "High",
       "Availability": "Low"
     },
     "CWE_ID": "CWE-284",
     "MITRE_Mappings": [
-      "T1565",
-      "T1068"
+      "T1078",
+      "T1562"
     ],
-    "Urgency_Score": 69,
-    "PoC": "An attacker with valid user credentials sends a request to register as the primary host. Due to poor validation of NAT identifiers, the service updates its routing table, pointing traffic to the attacker's node.",
+    "Urgency_Score": 59,
+    "PoC": "An attacker registers a host name already in use by another dashboard. Due to weak claim validation, the server accepts the registration, rerouting all traffic to the attacker's controlled agent.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-53520",
       "https://www.cve.org/CVERecord?id=CVE-2026-53520"
@@ -544,11 +549,11 @@
   },
   {
     "CVE_ID": "CVE-2026-50015",
-    "Finding_Name": "Path Traversal in pnpm Patch Files",
-    "Description": "pnpm is vulnerable to an arbitrary file write/delete attack via malicious patch files. By including path traversal characters in the patch definition, an attacker can modify files outside the current project scope. This enables potential code injection and filesystem corruption on the build agent.",
+    "Finding_Name": "Arbitrary File Write via Malicious pnpm Patch",
+    "Description": "pnpm is vulnerable to path traversal within patch files. An attacker can craft a malicious patch that, when applied, writes or deletes files outside the intended project directory, compromising the host filesystem.",
     "CVSS_Score": 7.3,
     "CVSS_Severity": "High",
-    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:H",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:L",
     "CVSS_Breakdown": {
       "Attack_Vector": "Network",
       "Attack_Complexity": "Low",
@@ -557,15 +562,15 @@
       "Scope": "Unchanged",
       "Confidentiality": "None",
       "Integrity": "High",
-      "Availability": "High"
+      "Availability": "Low"
     },
     "CWE_ID": "CWE-22",
     "MITRE_Mappings": [
-      "T1083",
+      "T1485",
       "T1059"
     ],
     "Urgency_Score": 76,
-    "PoC": "An attacker adds a patch file with a path like '../../../../bin/bash' to their package. When a user runs 'pnpm install', the patcher overwrites the shell binary or other critical system files.",
+    "PoC": "A user applies a project patch from an untrusted source. The patch contains traversal sequences in the file path section. Upon application, pnpm writes the patched content to a location outside the directory, potentially overwriting system files.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-50015",
       "https://www.cve.org/CVERecord?id=CVE-2026-50015"

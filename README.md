@@ -29,8 +29,8 @@
 
 **Auto-CTI** is an autonomous, multi-agent Cyber Threat Intelligence (CTI) pipeline built with the [CrewAI](https://github.com/joaomdmoura/crewAI) framework. It is designed to simulate a real-world Security Operations Center (SOC) workflow by automatically:
 
-1. **Collecting** the latest CVEs from official sources (NIST NVD, AlienVault OTX).
-2. **Triaging** threats using real CVSS 3.1 scores, CWE classification, and MITRE ATT&CK mapping.
+1. **Collecting** the latest CVEs from official sources (NIST NVD, GitHub Advisory Database, AlienVault OTX).
+2. **Triaging** threats using real CVSS v3.1 scores, CWE classification, MITRE ATT&CK mapping, and proof-of-concept analysis.
 3. **Publishing** structured executive briefings as both JSON feeds and professional PDF reports.
 
 The system is fully automated — a single command runs the entire pipeline end-to-end. A Streamlit-based SOC dashboard provides live monitoring and report download capabilities.
@@ -48,14 +48,14 @@ The system is fully automated — a single command runs the entire pipeline end-
 │   │  Scout      │───▶│  Triage      │───▶│  Publisher   │  │
 │   │  Agent      │    │  Agent       │    │  Agent       │  │
 │   │             │    │              │    │              │  │
-│   │ Mistral 7B  │    │ Claude       │    │ Mistral 7B   │  │
-│   │ (Local)     │    │ (claude-     │    │ (Local)      │  │
-│   │             │    │  sonnet-4-5) │    │              │  │
+│   │  Gemini     │    │  Gemini      │    │  Gemini      │  │
+│   │  Flash Lite │    │  Flash Lite  │    │  Flash Lite  │  │
+│   │  (Cloud)    │    │  (Cloud)     │    │  (Cloud)     │  │
 │   └─────────────┘    └──────────────┘    └──────────────┘  │
 │          │                  │                   │           │
-│     NIST NVD           CVSS 3.1 +          JSON Feed +      │
-│   AlienVault OTX       CWE + MITRE         PDF Report       │
-│                        ATT&CK                               │
+│   NIST NVD +           CVSS v3.1 +         JSON Feed +      │
+│   GitHub Advisory      CWE + MITRE         PDF Report       │
+│   AlienVault OTX       ATT&CK + PoC                         │
 └─────────────────────────────────────────────────────────────┘
                               │
                     ┌─────────▼──────────┐
@@ -73,39 +73,43 @@ The pipeline is orchestrated by `main_system.py` using **CrewAI Flow**, which en
 
 ### 1. Scout Agent (`scout_agent.py`)
 **Role:** Data Collector  
-**LLM:** `mistral` via Ollama (local, cost-free)
+**LLM:** `gemini/gemini-3.1-flash-lite` via Google Gemini API (cloud)
 
-Fetches the most recent CVEs published in the last 7 days from the NIST National Vulnerability Database. For each CVE found, it extracts:
+Fetches the most recent CVEs from multiple authoritative sources with automatic fallback. For each CVE found, it extracts:
 - Official CVE ID and English description
-- Real **CVSS 3.1** base score and severity label (Critical / High / Medium / Low)
+- Real **CVSS v3.1** base score and severity label (Critical / High / Medium / Low)
 - **CWE** (Common Weakness Enumeration) ID — the root cause category of the vulnerability
 - Active threat pulse data from **AlienVault OTX**
 
 All data is saved to `JoFile/Scout_Agent_Results/cti_report.json`, keyed by date.
 
-**Data Sources:**
-- [NIST NVD CVE API v2.0](https://nvd.nist.gov/developers/vulnerabilities)
-- [AlienVault OTX Pulse API](https://otx.alienvault.com/api)
+**Data Sources (with automatic fallback):**
+1. [NIST NVD CVE API v2.0](https://nvd.nist.gov/developers/vulnerabilities) — primary source
+2. [GitHub Advisory Database (GraphQL)](https://github.com/advisories) — primary fallback
+3. [OSV.dev API](https://osv.dev/) — secondary fallback
 
 ---
 
 ### 2. Triage Agent (`triage_agent.py`)
 **Role:** Threat Analyst  
-**LLM:** `claude-sonnet-4-5` via Anthropic API (cloud, high-reasoning)
+**LLM:** `gemini/gemini-3.1-flash-lite` via Google Gemini API (cloud)
 
 The most intelligence-intensive agent in the pipeline. It processes the Scout's raw data and produces a structured, actionable threat assessment for each CVE:
 
 | Field | Description |
 |---|---|
 | `CVE_ID` | Official CVE identifier |
-| `Description` | Concise, analyst-grade description |
-| `CVSS_Score` | Numeric base score from CVSS 3.1 (e.g., 9.8) |
+| `Finding_Name` | Short human-readable title (3–8 words) |
+| `Description` | Concise, analyst-grade 2–3 sentence description |
+| `CVSS_Score` | Numeric base score from CVSS v3.1 (e.g., 9.8) |
 | `CVSS_Severity` | Severity label (Critical / High / Medium / Low) |
+| `CVSS_Vector` | Full CVSS v3.1 vector string (e.g., CVSS:3.1/AV:N/AC:L/...) |
+| `CVSS_Breakdown` | Human-readable values for all 8 base metrics |
 | `CWE_ID` | Root cause weakness (e.g., CWE-79, CWE-89) |
 | `MITRE_Mappings` | Relevant ATT&CK technique codes (e.g., T1190) |
 | `Urgency_Score` | Custom 1–100 score based on CVSS + active exploitation signals |
-
-Claude is used here specifically because MITRE ATT&CK mapping requires deep contextual reasoning that smaller local models cannot perform reliably.
+| `PoC` | 2–4 sentence proof-of-concept describing realistic exploitation |
+| `References` | Verifiable NVD and CVE.org URLs for the CVE |
 
 **Standards Used:**
 - [CVSS v3.1 Specification](https://www.first.org/cvss/v3.1/specification-document)
@@ -116,12 +120,12 @@ Claude is used here specifically because MITRE ATT&CK mapping requires deep cont
 
 ### 3. Publisher Agent (`publisher_agent.py`)
 **Role:** Reporter  
-**LLM:** `mistral` via Ollama (local, cost-free)
+**LLM:** `gemini/gemini-3.1-flash-lite` via Google Gemini API (cloud)
 
 Compiles the triaged data into two professional outputs:
 
 - **JSON Feed** — Structured machine-readable report suitable for SIEM ingestion (`JoFile/publisher_agent_result/`)
-- **PDF Briefing** — Executive-ready PDF with TLP:AMBER classification, severity statistics, executive summary, critical action list, CVE table, and detailed findings (`JoFile/Reports/`)
+- **PDF Briefing** — Executive-ready PDF with TLP:AMBER classification, severity statistics, executive summary, critical action list, CVE quick-reference table, and detailed findings per CVE including CVSS v3.1 scoring criteria tables and proof-of-concept blocks (`JoFile/Reports/`)
 
 PDF generation is handled directly in Python using [`fpdf2`](https://py-pdf.github.io/fpdf2/) without relying on the LLM for data enumeration, ensuring accuracy and completeness.
 
@@ -133,9 +137,9 @@ PDF generation is handled directly in Python using [`fpdf2`](https://py-pdf.gith
 |---|---|---|
 | Agent Framework | [CrewAI](https://github.com/joaomdmoura/crewAI) | Multi-agent orchestration |
 | Pipeline Orchestration | CrewAI Flow | Sequential stage control |
-| Scout & Publisher LLM | [Mistral 7B](https://mistral.ai/) via [Ollama](https://ollama.com/) | Local, cost-free inference |
-| Triage LLM | [Claude (claude-sonnet-4-5)](https://www.anthropic.com/claude) | High-reasoning threat analysis |
-| CVE Data Source | [NIST NVD API v2.0](https://nvd.nist.gov/developers/vulnerabilities) | Official vulnerability database |
+| LLM (All Agents) | `gemini/gemini-3.1-flash-lite` via [Google Gemini API](https://ai.google.dev/) | Cloud inference for all three agents |
+| CVE Data Source (Primary) | [NIST NVD API v2.0](https://nvd.nist.gov/developers/vulnerabilities) | Official vulnerability database |
+| CVE Data Source (Fallback) | [GitHub Advisory Database](https://github.com/advisories) | GraphQL API, always available |
 | Threat Intel Source | [AlienVault OTX API](https://otx.alienvault.com/api) | Active threat pulse data |
 | PDF Generation | [fpdf2](https://py-pdf.github.io/fpdf2/) | Professional report rendering |
 | Dashboard | [Streamlit](https://streamlit.io/) | SOC monitoring interface |
@@ -148,8 +152,8 @@ PDF generation is handled directly in Python using [`fpdf2`](https://py-pdf.gith
 ```
 Auto-CTI/
 │
-├── scout_agent.py          # Stage 1: CVE collection from NIST + AlienVault
-├── triage_agent.py         # Stage 2: CVSS/CWE/MITRE analysis via Claude
+├── scout_agent.py          # Stage 1: CVE collection from NIST / GitHub Advisory / OTX
+├── triage_agent.py         # Stage 2: CVSS/CWE/MITRE/PoC analysis via Gemini
 ├── publisher_agent.py      # Stage 3: JSON + PDF report generation
 ├── main_system.py          # Pipeline orchestrator (CrewAI Flow)
 ├── dashboard.py            # Streamlit SOC dashboard
@@ -160,9 +164,9 @@ Auto-CTI/
 │
 └── JoFile/                 # Runtime output directory (auto-created)
     ├── Scout_Agent_Results/
-    │   └── cti_report.json             # Raw CVE data keyed by date
+    │   └── cti_report.json                 # Raw CVE data keyed by date
     ├── triage_agent_result/
-    │   └── Triaged_Report_<date>.json  # Analyzed CVE list
+    │   └── Triaged_Report_<date>.json      # Analyzed CVE list
     ├── publisher_agent_result/
     │   └── Executive_Briefing_<date>.json  # Full briefing with stats
     └── Reports/
@@ -173,16 +177,14 @@ Auto-CTI/
 
 ## Prerequisites
 
-Before running Auto-CTI, ensure the following are installed on your system:
+Before running Auto-CTI, ensure the following are available:
 
 - **Python 3.10+** — [python.org](https://www.python.org/downloads/)
-- **Ollama** — Local LLM runtime — [ollama.com](https://ollama.com/)
-- **Mistral model** pulled in Ollama:
-  ```bash
-  ollama pull mistral
-  ```
-- **An Anthropic API key** for the Triage Agent — [console.anthropic.com](https://console.anthropic.com/)
+- **A Google Gemini API key** — [aistudio.google.com](https://aistudio.google.com/) (free tier available)
 - **An AlienVault OTX API key** — [otx.alienvault.com](https://otx.alienvault.com/) (free registration)
+- **An NVD API key** (optional but recommended to avoid rate limits) — [nvd.nist.gov/developers/request-an-api-key](https://nvd.nist.gov/developers/request-an-api-key)
+
+> No local model or GPU is required. All inference runs via the Gemini cloud API.
 
 ---
 
@@ -216,12 +218,6 @@ cp .env.example .env
 # Then edit .env and fill in your API keys (see Configuration section)
 ```
 
-**5. Verify Ollama is running with Mistral**
-```bash
-ollama serve          # Start Ollama if not already running
-ollama run mistral    # Verify the model is available
-```
-
 ---
 
 ## Configuration
@@ -231,13 +227,17 @@ Copy `.env.example` to `.env` and fill in your credentials:
 ```env
 # .env
 
-# Anthropic API Key — used by the Triage Agent (Claude)
-# Get yours at: https://console.anthropic.com/
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
+# Google Gemini API Key — used by all three agents (Scout, Triage, Publisher)
+# Get yours at: https://aistudio.google.com/
+GEMINI_API_KEY=your_gemini_api_key_here
 
-# AlienVault OTX API Key — used by the Scout Agent
+# AlienVault OTX API Key — used by the Scout Agent for active threat pulses
 # Get yours at: https://otx.alienvault.com/ (free account)
 OTX_API_KEY=your_otx_api_key_here
+
+# NIST NVD API Key — optional, but reduces rate limiting on the primary CVE source
+# Get yours at: https://nvd.nist.gov/developers/request-an-api-key
+NVD_API_KEY=your_nvd_api_key_here
 ```
 
 > ⚠️ **Never commit your `.env` file to version control.** It is already listed in `.gitignore`.
@@ -282,19 +282,36 @@ After a successful pipeline run, two report files are generated:
 Machine-readable structured data suitable for SIEM integration:
 ```json
 {
-  "report_date": "June 23, 2026",
+  "report_date": "June 29, 2026",
   "executive_summary": "...",
   "critical_actions": ["..."],
   "severity_stats": { "Critical": 2, "High": 4, "Medium": 3, "Total": 9 },
   "cve_summary": [
     {
       "cve_id": "CVE-2026-XXXX",
+      "finding_name": "Remote Code Execution in Example Component",
       "description": "...",
       "cvss_score": 9.8,
       "severity": "Critical",
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "cvss_breakdown": {
+        "Attack_Vector": "Network",
+        "Attack_Complexity": "Low",
+        "Privileges_Required": "None",
+        "User_Interaction": "None",
+        "Scope": "Unchanged",
+        "Confidentiality": "High",
+        "Integrity": "High",
+        "Availability": "High"
+      },
       "cwe_id": "CWE-89",
       "mitre_mappings": ["T1190"],
-      "urgency_score": 97
+      "urgency_score": 97,
+      "poc": "An unauthenticated attacker can exploit this by...",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-XXXX",
+        "https://www.cve.org/CVERecord?id=CVE-2026-XXXX"
+      ]
     }
   ]
 }
@@ -302,11 +319,15 @@ Machine-readable structured data suitable for SIEM integration:
 
 ### PDF Briefing (`JoFile/Reports/`)
 A TLP:AMBER classified PDF containing:
-- Risk statistics summary table
-- Executive summary (CISO/board level)
-- Critical action list (ordered by urgency)
-- Quick reference CVE table
-- Detailed vulnerability findings with MITRE mappings
+- **Section 1** — Risk statistics summary table (Critical / High / Medium / Low / Total)
+- **Section 2** — Executive summary (CISO/board level)
+- **Section 3** — Critical action list (ordered by urgency score)
+- **Section 4** — Quick reference CVE table with Finding Name column
+- **Section 5** — Detailed vulnerability findings per CVE, including:
+  - CVSS v3.1 Scoring Criteria two-column table with color-coded metric values
+  - CVSS vector string
+  - Description, Proof of Concept block, MITRE ATT&CK mappings, and verifiable references
+- **Section 6** — Methodology and data sources
 
 ---
 
@@ -314,11 +335,12 @@ A TLP:AMBER classified PDF containing:
 
 | Standard / Source | Description | Reference |
 |---|---|---|
-| NIST NVD | Official U.S. government CVE database | https://nvd.nist.gov/ |
+| NIST NVD | Official U.S. government CVE database (primary) | https://nvd.nist.gov/ |
+| GitHub Advisory Database | Google-backed advisory DB, GraphQL API (fallback) | https://github.com/advisories |
+| AlienVault OTX | Open Threat Exchange — active threat pulses | https://otx.alienvault.com/ |
 | CVSS v3.1 | Common Vulnerability Scoring System | https://www.first.org/cvss/ |
 | CWE | Common Weakness Enumeration | https://cwe.mitre.org/ |
 | MITRE ATT&CK | Adversary tactics & techniques framework | https://attack.mitre.org/ |
-| AlienVault OTX | Open Threat Exchange (active threat pulses) | https://otx.alienvault.com/ |
 | TLP | Traffic Light Protocol (data sharing classification) | https://www.cisa.gov/tlp |
 
 ---
@@ -326,20 +348,20 @@ A TLP:AMBER classified PDF containing:
 ## References
 
 - CrewAI Documentation — https://docs.crewai.com/
-- Anthropic Claude API — https://docs.anthropic.com/
+- Google Gemini API — https://ai.google.dev/
 - NIST NVD API v2.0 Documentation — https://nvd.nist.gov/developers/vulnerabilities
+- GitHub Advisory Database GraphQL API — https://docs.github.com/en/graphql
 - MITRE ATT&CK Navigator — https://mitre-attack.github.io/attack-navigator/
 - CVSS v3.1 Calculator — https://www.first.org/cvss/calculator/3.1
 - fpdf2 Documentation — https://py-pdf.github.io/fpdf2/
 - Streamlit Documentation — https://docs.streamlit.io/
-- Ollama Model Library — https://ollama.com/library
 
 ---
 
 <div align="center">
 
 **Auto-CTI** · Autonomous Cyber Threat Intelligence Pipeline  
-Built with CrewAI · Claude · Mistral · NIST NVD · MITRE ATT&CK
+Built with CrewAI · Google Gemini · NIST NVD · MITRE ATT&CK
 
 ---
 

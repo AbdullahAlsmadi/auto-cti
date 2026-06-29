@@ -77,7 +77,7 @@ class NISTSearchTool(BaseTool):
             end_dt   = datetime.datetime.utcnow()
             start_dt = end_dt - datetime.timedelta(days=7)
             params   = {
-                "resultsPerPage":   20,
+                "resultsPerPage":   10,
                 "lastModStartDate": start_dt.strftime("%Y-%m-%dT%H:%M:%S"),
                 "lastModEndDate":   end_dt.strftime("%Y-%m-%dT%H:%M:%S"),
             }

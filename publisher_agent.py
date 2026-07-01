@@ -69,6 +69,7 @@ def build_cve_summary(data: list) -> list:
             "finding_name":    entry.get("Finding_Name", "N/A"),
             "description":     entry.get("Description", "No description available."),
             "cvss_score":      entry.get("CVSS_Score", "N/A"),
+            "score_source":    entry.get("Score_Source", "verified"),
             "severity":        entry.get("CVSS_Severity", "Unknown"),
             "cvss_vector":     entry.get("CVSS_Vector", "N/A"),
             "cvss_breakdown":  entry.get("CVSS_Breakdown", {}),
@@ -198,10 +199,11 @@ def clean_for_pdf(text: str) -> str:
 
 def severity_color(severity: str):
     s = (severity or "").strip().lower()
-    if s == "critical": return (185, 28, 28)
-    if s == "high":     return (217, 119, 6)
-    if s == "medium":   return (8, 145, 178)
-    if s == "low":      return (75, 85, 99)
+    if s == "critical": return (128, 0, 128)
+    if s == "high":     return (220, 38, 38)
+    if s == "medium":   return (255, 165, 0)
+    if s == "low":      return (22, 163, 74)
+    if s == "info":     return (56, 189, 248)
     return (100, 116, 139)
 
 

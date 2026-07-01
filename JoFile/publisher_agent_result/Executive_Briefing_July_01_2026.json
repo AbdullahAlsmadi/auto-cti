@@ -1,0 +1,601 @@
+{
+    "report_date": "July 01, 2026",
+    "executive_summary": "As of July 01, 2026, the security operations center has concluded analysis on 20 distinct vulnerabilities, categorized by severity as 3 Critical, 5 High, 10 Medium, and 2 Low. The organizational risk posture is currently elevated, characterized by high-complexity threats that threaten integrity and availability under the CVSS v3.1 framework. The most critical risk is CVE-2026-50566, 'Privileged Pod Creation in Fission,' which necessitates immediate prioritization due to its potential for unrestricted container breakout and host system compromise. To mitigate these exposures, the security team is adopting an aggressive remediation posture, requiring the immediate isolation of affected infrastructure and the deployment of patches for all critical-severity findings. Proactive monitoring and strict adherence to the defined remediation timeline are mandatory to ensure the continued security of our production environments.",
+    "critical_actions": [
+        "Immediately remediate CVE-2026-50566 by disabling the vulnerable Fission runtime environment and patching to the current secure version within 24 hours.",
+        "Apply the vendor-provided security patches for CVE-2026-48795 regarding AdonisJS prototype pollution within 48 hours to prevent remote code execution.",
+        "Implement network-level egress filtering and update OIDC discovery configurations for CVE-2026-49478 in Fulcio within 48 hours to neutralize SSRF vectors.",
+        "Restrict access to the Oban_web 'save-job' event handler and enforce granular authorization controls for CVE-2026-48592 within 72 hours.",
+        "Update the SMILES parser components to address the heap-based buffer overflow identified in CVE-2025-10996 within 72 hours to prevent memory corruption exploitation."
+    ],
+    "cve_summary": [
+        {
+            "cve_id": "CVE-2026-50566",
+            "finding_name": "Privileged Pod Creation in Fission",
+            "description": "Fission's runtime environment allows a security context bypass, enabling the creation of privileged pods. The failure to restrict container configuration allows attackers to escalate privileges by spawning pods with host-level access. This leads to complete cluster compromise.",
+            "cvss_score": 9.1,
+            "score_source": "verified_recalculated",
+            "severity": "Critical",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "High",
+                "User_Interaction": "None",
+                "Scope": "Changed",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-250",
+            "mitre_mappings": [
+                "T1611"
+            ],
+            "urgency_score": 99,
+            "poc": "An attacker with restricted access to the Fission API modifies the SecurityContext of a runtime container builder configuration. By explicitly injecting `privileged: true` in the spec, the attacker bypasses standard admission controllers. The resulting pod is deployed with host-level capabilities, allowing the attacker to escape the container. This provides total control over the underlying Kubernetes nodes.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-50566",
+                "https://www.cve.org/CVERecord?id=CVE-2026-50566"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-48795",
+            "finding_name": "Incomplete Fix for Prototype Pollution in AdonisJS",
+            "description": "@adonisjs/bodyparser contains an incomplete fix for a prototype pollution vulnerability originally addressed in CVE-2026-25754. The validation logic fails to cover all possible nested JSON input patterns, allowing attackers to inject malicious properties into the global object. This can lead to application-wide state compromise or RCE.",
+            "cvss_score": 9.4,
+            "score_source": "verified_recalculated",
+            "severity": "Critical",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "Low",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-1321",
+            "mitre_mappings": [
+                "T1190"
+            ],
+            "urgency_score": 87,
+            "poc": "An attacker sends a POST request with a specially crafted JSON body containing `__proto__` fields to an endpoint using @adonisjs/bodyparser. The body parser fails to filter these fields effectively, allowing them to merge into the global Object prototype. The injected properties override existing functionality or default settings. This enables an attacker to manipulate server-side execution logic.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-48795",
+                "https://www.cve.org/CVERecord?id=CVE-2026-48795"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-49478",
+            "finding_name": "SSRF and Token Leakage in Fulcio",
+            "description": "Fulcio's OIDC discovery redirect logic is vulnerable to Server-Side Request Forgery (SSRF) and JWKS substitution. The failure to properly validate redirect targets allows attackers to manipulate identity provider paths. This can facilitate the leakage of Kubernetes service-account tokens.",
+            "cvss_score": 9.1,
+            "score_source": "verified_recalculated",
+            "severity": "Critical",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-918",
+            "mitre_mappings": [
+                "T1190"
+            ],
+            "urgency_score": 78,
+            "poc": "An attacker submits a crafted OIDC discovery request to the Fulcio service with an arbitrary redirect URL. The service follows the malicious redirect to an attacker-controlled endpoint that mimics a JWKS meta-issuer. By poisoning the cache, the attacker forces the service to validate tokens against the attacker's key. This results in the compromise of Kubernetes tokens and privilege escalation.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-49478",
+                "https://www.cve.org/CVERecord?id=CVE-2026-49478"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-48592",
+            "finding_name": "Missing Authorization in Oban_web",
+            "description": "The oban_web application lacks sufficient authorization checks for the `save-job` event handler. The absence of a verification step allows unauthenticated or unauthorized users to perform sensitive job management actions. This results in unauthorized control over scheduled system background processes.",
+            "cvss_score": 7.5,
+            "score_source": "estimated_recalculated",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "None",
+                "Integrity": "High",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-862",
+            "mitre_mappings": [
+                "T1562"
+            ],
+            "urgency_score": 78,
+            "poc": "An unauthenticated attacker sends a direct POST request to the application's `save-job` API endpoint. The backend handles the request without verifying the requester's identity or ownership permissions. The attacker can force the system to save malicious job definitions. This effectively leads to persistent task execution and potential system compromise.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-48592",
+                "https://www.cve.org/CVERecord?id=CVE-2026-48592"
+            ]
+        },
+        {
+            "cve_id": "CVE-2025-10996",
+            "finding_name": "Heap Buffer Overflow in SMILES Parser",
+            "description": "Open Babel's OBSmilesParser::ParseSmiles function is susceptible to a heap-based buffer overflow. The vulnerability is caused by improper bounds checking during the parsing of SMILES string inputs, allowing data to be written beyond the allocated buffer boundaries. This leads to potential memory corruption, which may result in arbitrary code execution or a denial-of-service condition depending on attacker-supplied input.",
+            "cvss_score": 7.8,
+            "score_source": "verified_recalculated",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Local",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "Required",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-119",
+            "mitre_mappings": [
+                "T1210"
+            ],
+            "urgency_score": 70,
+            "poc": "A local attacker provides a malformed chemical SMILES file to the Open Babel parser. The OBSmilesParser::ParseSmiles function fails to validate the size of the input string against the stack allocation, leading to a heap overflow. The memory corruption allows an attacker to overwrite sensitive function pointers. The final impact is the potential execution of malicious code within the context of the user running the application.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2025-10996",
+                "https://www.cve.org/CVERecord?id=CVE-2025-10996"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-48593",
+            "finding_name": "Memory Exhaustion in Oban_web Cron",
+            "description": "Oban_web's cron description feature is vulnerable to memory exhaustion due to unbounded range expansion. The application fails to limit the expansion of cron ranges before computing task schedules, leading to massive memory allocation. This facilitates a remote Denial of Service attack.",
+            "cvss_score": 7.5,
+            "score_source": "estimated_recalculated",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "None",
+                "Integrity": "None",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-400",
+            "mitre_mappings": [
+                "T1499"
+            ],
+            "urgency_score": 68,
+            "poc": "An attacker provides a long, complex cron string with extensive range definitions to the Oban_web cron interface. The system attempts to expand this range fully into memory in a single pass. This leads to a spike in memory usage and eventually triggers an out-of-memory crash. The service becomes unresponsive to legitimate background task requests.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-48593",
+                "https://www.cve.org/CVERecord?id=CVE-2026-48593"
+            ]
+        },
+        {
+            "cve_id": "CVE-2025-10995",
+            "finding_name": "Out-of-Bounds Write in Zipstream Unzipper",
+            "description": "The zipstream basic_unzip_streambuf::underflow function in Open Babel performs an unsafe overlapping memory copy operation. The root cause is a failure to properly calculate source and destination boundaries when processing compressed streams, leading to an out-of-bounds write. This vulnerability may lead to data integrity compromise or potential system instability when processing crafted ZIP files.",
+            "cvss_score": 7.8,
+            "score_source": "verified_recalculated",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Local",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "Required",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-787",
+            "mitre_mappings": [
+                "T1210"
+            ],
+            "urgency_score": 65,
+            "poc": "A user is induced to open a malicious ZIP file using the Open Babel toolkit. The basic_unzip_streambuf::underflow method attempts to process the stream, triggering a memcpy where memory ranges overlap incorrectly. This results in the overwriting of heap objects. Successful exploitation results in unintended system behavior or state manipulation.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2025-10995",
+                "https://www.cve.org/CVERecord?id=CVE-2025-10995"
+            ]
+        },
+        {
+            "cve_id": "CVE-2025-10994",
+            "finding_name": "Use-After-Free in GAMESS Molecule Reader",
+            "description": "The GAMESSOutputFormat::ReadMolecule function in Open Babel suffers from a Use-After-Free vulnerability. The root cause is the improper management of memory pointers during the parsing of GAMESS output files, where objects are referenced after being freed. This flaw allows an attacker to corrupt memory and potentially influence control flow.",
+            "cvss_score": 7.8,
+            "score_source": "verified_recalculated",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Local",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "Required",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-119",
+            "mitre_mappings": [
+                "T1210"
+            ],
+            "urgency_score": 65,
+            "poc": "An attacker crafts a malicious GAMESS molecule file and triggers the import feature. The GAMESSOutputFormat::ReadMolecule function processes the file, freeing a memory block and subsequently attempting a second access. The attacker leverages the dangling pointer to gain arbitrary control over the process memory. This leads to potential remote code execution.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2025-10994",
+                "https://www.cve.org/CVERecord?id=CVE-2025-10994"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-3408",
+            "finding_name": "NULL Pointer Dereference in CDXML Parser",
+            "description": "Open Babel's OBAtom::GetExplicitValence function exhibits a NULL pointer dereference when processing CDXML files. The application fails to verify the existence of an atom object before accessing its properties, resulting in a system crash. This vulnerability can lead to a local denial-of-service attack.",
+            "cvss_score": 5.5,
+            "score_source": "verified_recalculated",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Local",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "Required",
+                "Scope": "Unchanged",
+                "Confidentiality": "None",
+                "Integrity": "None",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-476",
+            "mitre_mappings": [
+                "T1499"
+            ],
+            "urgency_score": 60,
+            "poc": "An attacker provides a malformed CDXML input file that lacks required atom node attributes. During processing, OBAtom::GetExplicitValence is called on an uninitialized atom pointer. The program crashes immediately due to the dereference attempt, terminating the service. This allows for simple resource exhaustion through file input.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-3408",
+                "https://www.cve.org/CVERecord?id=CVE-2026-3408"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-2705",
+            "finding_name": "NULL Pointer Dereference in MOL2 Parser",
+            "description": "The OBAtom::SetFormalCharge function within the Open Babel MOL2 reader is susceptible to a NULL pointer dereference. The flaw occurs because the input reader fails to ensure that the atomic object has been successfully instantiated before calling the charge assignment method. This condition causes an application exception and potential crash when processing crafted MOL2 data.",
+            "cvss_score": 5.5,
+            "score_source": "verified_recalculated",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Local",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "Required",
+                "Scope": "Unchanged",
+                "Confidentiality": "None",
+                "Integrity": "None",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-119",
+            "mitre_mappings": [
+                "T1499"
+            ],
+            "urgency_score": 60,
+            "poc": "A user attempts to parse a malformed MOL2 file containing an undefined atom record. The parser initiates a call to OBAtom::SetFormalCharge on a null pointer destination. The process faults and shuts down, denying service to other valid tasks. The attacker gains the ability to interrupt chemistry processing workflows.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-2705",
+                "https://www.cve.org/CVERecord?id=CVE-2026-2705"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-48808",
+            "finding_name": "Sandbox Property Allowlist Bypass in Twig",
+            "description": "Twig's Sandbox implementation contains a bypass vulnerability in the SourcePolicyInterface when handling the `column` filter. The root cause is insufficient verification of filter inputs against the configured allowlist, permitting unauthorized access to restricted object properties. This allows an attacker to access sensitive internal data or bypass template restrictions.",
+            "cvss_score": 6.5,
+            "score_source": "estimated_recalculated",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "Low",
+                "Integrity": "Low",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-693",
+            "mitre_mappings": [
+                "T1212"
+            ],
+            "urgency_score": 59,
+            "poc": "An attacker submits a specially crafted template string utilizing the `column` filter. The Twig Sandbox fails to validate the filter usage against the strict property allowlist defined in SourcePolicyInterface. As a result, the engine evaluates properties that should be hidden. The attacker successfully extracts internal application data normally restricted by the sandbox.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-48808",
+                "https://www.cve.org/CVERecord?id=CVE-2026-48808"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-48807",
+            "finding_name": "Sandbox Policy Bypass via Traversable Filters",
+            "description": "The Twig sandbox fails to enforce `__toString()` policies when using `Traversable` objects within `join` and `replace` filters. The root cause is a failure in the internal security validator to traverse the object's interface and detect insecure method calls. An attacker can use this flaw to invoke restricted methods or access unauthorized data.",
+            "cvss_score": 6.5,
+            "score_source": "estimated_recalculated",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "Low",
+                "Integrity": "Low",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-693",
+            "mitre_mappings": [
+                "T1212"
+            ],
+            "urgency_score": 59,
+            "poc": "An attacker creates a template that passes a `Traversable` object into the `join` filter. The sandbox engine fails to apply the security policy before the `__toString()` method is implicitly triggered. This allows the attacker to execute arbitrary string conversions on objects. This results in the leakage of restricted object states to the rendered page.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-48807",
+                "https://www.cve.org/CVERecord?id=CVE-2026-48807"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-48806",
+            "finding_name": "Sandbox Policy Bypass via Dynamic Mapping",
+            "description": "Twig's sandbox mechanism is susceptible to a `__toString()` policy bypass through dynamic mapping keys. The vulnerability arises from improper validation of keys used within object mappings, allowing access to methods that are nominally blocked by the security sandbox. An attacker can leverage this to bypass restricted runtime constraints.",
+            "cvss_score": 6.5,
+            "score_source": "estimated_recalculated",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "Low",
+                "Integrity": "Low",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-693",
+            "mitre_mappings": [
+                "T1212"
+            ],
+            "urgency_score": 59,
+            "poc": "The attacker provides a template containing dynamically mapped array keys targeting restricted methods. The Twig engine fails to inspect the object access correctly during the dynamic resolution phase. The attacker successfully invokes prohibited `__toString()` methods. The final impact is the unauthorized access to sensitive object representations.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-48806",
+                "https://www.cve.org/CVERecord?id=CVE-2026-48806"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-50565",
+            "finding_name": "Insecure ServiceAccount Token Mounting in Fission",
+            "description": "Fission builder pods incorrectly auto-mount the `fission-builder` ServiceAccount token into user-supplied builder containers. This design flaw permits unauthorized access to sensitive service-level resources if the container is compromised. The exposure of this token provides attackers with excess privileges within the cluster.",
+            "cvss_score": 4.9,
+            "score_source": "verified_recalculated",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "High",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "None",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-250",
+            "mitre_mappings": [
+                "T1528"
+            ],
+            "urgency_score": 54,
+            "poc": "The user supplies a build container specification to Fission that is executed on the builder pod. The pod automatically mounts the system's `fission-builder` ServiceAccount token as a secret in the builder container's filesystem. An attacker who has achieved code execution in the builder container can read this token. The attacker can then use the token to query the Kubernetes API.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-50565",
+                "https://www.cve.org/CVERecord?id=CVE-2026-50565"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-49835",
+            "finding_name": "Memory Exhaustion in Sigstore Metric Cardinality",
+            "description": "The Sigstore Timestamp Authority is vulnerable to OOM (Out of Memory) conditions caused by unbounded metric label cardinality. The system fails to sanitize incoming labels before processing, leading to the rapid consumption of system memory. An attacker can exploit this to perform a Denial of Service attack against the authority service.",
+            "cvss_score": 5.9,
+            "score_source": "verified_recalculated",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "High",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "None",
+                "Integrity": "None",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-770",
+            "mitre_mappings": [
+                "T1499"
+            ],
+            "urgency_score": 53,
+            "poc": "An unauthenticated attacker sends a flood of requests with randomly generated high-cardinality metric labels to the Sigstore service. The monitoring component attempts to store these unique labels in memory, triggering excessive resource usage. The service eventually exhausts available RAM and crashes. This prevents legitimate timestamping operations.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-49835",
+                "https://www.cve.org/CVERecord?id=CVE-2026-49835"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-49820",
+            "finding_name": "Open Redirect via Path Normalization",
+            "description": "Probo is vulnerable to an open redirect attack resulting from improper path normalization. The application fails to validate the destination URL properly after normalization, allowing attackers to redirect users to arbitrary external domains. This facilitates phishing and credential harvesting attacks.",
+            "cvss_score": 6.1,
+            "score_source": "verified_recalculated",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "Required",
+                "Scope": "Changed",
+                "Confidentiality": "Low",
+                "Integrity": "Low",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-601",
+            "mitre_mappings": [
+                "T1204"
+            ],
+            "urgency_score": 52,
+            "poc": "An attacker crafts a URL containing a target path and an arbitrary external URL parameter, using normalization tricks to bypass current redirect filters. When a user clicks the URL, the Probo application fails to detect the redirection to an external domain. The user is redirected to an attacker-controlled phishing page. This results in the compromise of user-sensitive data.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-49820",
+                "https://www.cve.org/CVERecord?id=CVE-2026-49820"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-48796",
+            "finding_name": "Path Traversal in CefSharp FolderSchemeHandler",
+            "description": "CefSharp.Common's FolderSchemeHandlerFactory contains a path boundary check flaw, exposing files outside the configured root folder. The code fails to properly normalize paths before file access, allowing access to unauthorized system areas via path traversal techniques. This results in an increased risk of sensitive information disclosure.",
+            "cvss_score": 5.3,
+            "score_source": "verified_recalculated",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "Low",
+                "Integrity": "None",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-22",
+            "mitre_mappings": [
+                "T1083"
+            ],
+            "urgency_score": 48,
+            "poc": "An attacker constructs a URI using dot-dot-slash notation relative to the folder scheme handler. The FolderSchemeHandlerFactory fails to strip these sequences and resolves the path to system-level directories. The service then serves files from the unauthorized directory to the requester. This leads to the exposure of local system files.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-48796",
+                "https://www.cve.org/CVERecord?id=CVE-2026-48796"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-2704",
+            "finding_name": "Out-of-Bounds Read in CIF Parser",
+            "description": "Open Babel's transform3d::DescribeAsString function allows for an out-of-bounds read when processing CIF files. The root cause is a failure to properly handle string termination during the conversion of 3D transformation matrices. This could allow an attacker to potentially leak sensitive memory contents.",
+            "cvss_score": 3.3,
+            "score_source": "verified_recalculated",
+            "severity": "Low",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Local",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "Required",
+                "Scope": "Unchanged",
+                "Confidentiality": "Low",
+                "Integrity": "None",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-119",
+            "mitre_mappings": [
+                "T1592"
+            ],
+            "urgency_score": 45,
+            "poc": "An attacker creates a malicious CIF file that defines invalid 3D coordinate strings. When loaded, transform3d::DescribeAsString attempts to read past the end of the string buffer. The function exposes adjacent memory bits in the application output, leaking data. This allows for information gathering by the attacker.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-2704",
+                "https://www.cve.org/CVERecord?id=CVE-2026-2704"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-55219",
+            "finding_name": "Race Condition in Paymenter Credit Handler",
+            "description": "Paymenter's payWithCredit() function is vulnerable to a race condition that enables credit double-spending. The lack of atomic locking mechanisms ensures that concurrent requests can manipulate account balances before the transaction completes. This results in the compromise of financial integrity for the affected platform.",
+            "cvss_score": 5.3,
+            "score_source": "verified_recalculated",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:H/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "High",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "None",
+                "Integrity": "High",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-362",
+            "mitre_mappings": [
+                "T1558"
+            ],
+            "urgency_score": 43,
+            "poc": "An authenticated user sends multiple rapid, concurrent requests to the payment endpoint calling payWithCredit(). Because the application lacks row-level locking on the user's credit balance, both transactions validate the balance simultaneously. The system commits both requests, effectively spending the same credit multiple times. This leads to the duplication of digital assets.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-55219",
+                "https://www.cve.org/CVERecord?id=CVE-2026-55219"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-48805",
+            "finding_name": "Sandbox State Regression in Internal Wrappers",
+            "description": "A regression in Twig's internal wrappers found in `src/Resources/core.php` weakens the sandbox security state. The issue stems from deprecated code paths that bypass new security checks, leaving older configurations vulnerable to property access violations. An attacker can utilize these paths to read internal data.",
+            "cvss_score": 2.7,
+            "score_source": "estimated_recalculated",
+            "severity": "Low",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:L/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "High",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "Low",
+                "Integrity": "None",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-693",
+            "mitre_mappings": [
+                "T1212"
+            ],
+            "urgency_score": 27,
+            "poc": "A user with administrative privileges accesses a template path that hits the deprecated wrapper code in core.php. Because the old code path does not enforce current sandbox rules, the user can access restricted object metadata. This vulnerability allows the user to inspect system internals that should remain protected. It lowers the overall security baseline of the template environment.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-48805",
+                "https://www.cve.org/CVERecord?id=CVE-2026-48805"
+            ]
+        }
+    ],
+    "severity_stats": {
+        "Critical": 3,
+        "High": 5,
+        "Medium": 10,
+        "Low": 2,
+        "Unknown": 0,
+        "Total": 20
+    }
+}

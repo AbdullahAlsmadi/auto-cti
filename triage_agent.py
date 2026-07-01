@@ -2,9 +2,10 @@ import os
 import json
 import re
 import datetime
+import sys
 from crewai import Agent, Task, Crew, LLM
 from dotenv import load_dotenv
-import sys
+from cvss import CVSS3
 
 sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
 
@@ -37,6 +38,22 @@ triage_llm = LLM(
     api_key=os.getenv("GEMINI_API_KEY"),
     max_retries=5  # type: ignore
 )
+
+
+def recalculate_score_from_vector(entry: dict) -> dict:
+    vector = entry.get("CVSS_Vector", "")
+    if not vector or vector == "N/A":
+        return entry
+    try:
+        c = CVSS3(vector)
+        calculated_score = float(c.base_score)  # type: ignore
+        entry["CVSS_Score"] = calculated_score
+        entry["CVSS_Severity"] = c.severities()[0]
+        entry["Score_Source"] = entry.get("Score_Source", "verified") + "_recalculated"
+    except Exception:
+        pass
+    return entry
+
 
 triage_agent = Agent(
     role='Senior Cyber Threat Intelligence Analyst',
@@ -76,18 +93,46 @@ For EACH CVE entry, produce a complete professional triage record following thes
    Examples: "Remote Code Execution in Apache HTTP Server", "SQL Injection in Login Handler",
    "Privilege Escalation via Buffer Overflow in Linux Kernel".
 
-3. Description: Write 2-3 professional sentences explaining:
-   - What the vulnerability is and which component is affected
-   - How it can be exploited (the attack concept)
-   - What the potential impact is on confidentiality, integrity, or availability
+3. Description: Write exactly 3 professional sentences:
+   - Sentence 1: Name the exact vulnerable component and function/method
+     (e.g., OBSmilesParser::ParseSmiles, payWithCredit(), save-job handler),
+     and identify the vulnerability class (heap buffer overflow, race condition,
+     sandbox escape, IDOR, prototype pollution, NULL pointer dereference, etc.).
+   - Sentence 2: Explain the technical root cause — what fails and why
+     (e.g., missing bounds check, lack of atomic locking, insufficient
+     authorization verification, improper memory deallocation).
+   - Sentence 3: State the concrete security impact using CIA triad terminology
+     and specify exploitation prerequisites (authenticated/unauthenticated,
+     local/remote access required).
 
-4. CVSS_Score: Copy the numeric score exactly as given. Do NOT estimate or change it.
+4. CVSS_Score: Copy the numeric score exactly as given, UNLESS the rule in step 4a applies.
+
+4a. MISSING/INCOMPLETE SCORE HANDLING (IMPORTANT):
+   If the input CVSS_Score is 0.0, null, "N/A", or absent, you MUST check whether the
+   vulnerability description and Confidentiality/Integrity/Availability impact indicate
+   real severity (e.g. RCE, authentication bypass, privilege escalation, token forgery,
+   sandbox escape). If so, a score of 0.0 is INVALID and must NOT be reported as-is.
+   In that case, DERIVE an estimated CVSS_Score and CVSS_Vector yourself based on the
+   vulnerability type and impact described, following standard CVSS v3.1 scoring logic.
+   Mark this entry by setting "Score_Source": "estimated" (vs "Score_Source": "verified"
+   for scores copied directly from input). Never leave a clearly severe vulnerability
+   classified as CVSS 0.0 / Severity "None".
 
 5. CVSS_Severity: Map the score to the correct CVSS v3.1 label:
    - 0.0 = None | 0.1-3.9 = Low | 4.0-6.9 = Medium | 7.0-8.9 = High | 9.0-10.0 = Critical
-   Do NOT use "Moderate" or "Important".
+   Do NOT use "Moderate" or "Important". Do NOT output "None" for a vulnerability that
+   has high confidentiality/integrity/availability impact — that combination is invalid
+   and indicates you must apply rule 4a instead.
 
-6. CVSS_Vector: The CVSS v3.1 vector string. Use data if available, otherwise derive from vulnerability type.
+6. CVSS_Vector:
+   PRIORITY ORDER:
+   a) If the input data contains a CVSS vector string, copy it EXACTLY — do not modify.
+   b) If no vector is provided but a CVSS_Score exists, derive a vector that mathematically
+      produces that exact score using the CVSS v3.1 formula.
+   c) If both are missing (Score=0.0), derive vector based on vulnerability type and impact.
+
+   IMPORTANT: The vector you provide MUST be mathematically consistent with the score.
+   Use https://www.first.org/cvss/calculator/3.1 logic to verify before outputting.
    Format: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
    Must include all 8 base metrics: AV, AC, PR, UI, S, C, I, A.
 
@@ -113,13 +158,27 @@ For EACH CVE entry, produce a complete professional triage record following thes
     - Subtract 5 if severity is Low or None
     Round to nearest integer.
 
-11. PoC: Write 2-4 sentences describing HOW an attacker would realistically exploit this vulnerability.
-    Be specific about: attack vector and prerequisites, the specific action taken, and the outcome.
-    Technical enough for a security engineer. Do NOT include actual exploit code.
-    Example format: "An unauthenticated remote attacker can send a specially crafted HTTP POST request
-    to the vulnerable endpoint. The server processes the malicious payload without input validation,
-    resulting in arbitrary code execution under the web server process context. This grants the attacker
-    full system access and the ability to pivot to internal network resources."
+11. PoC: Write a technical proof-of-concept in exactly 4 sentences:
+   - Sentence 1: State the exact prerequisites (e.g., "An unauthenticated remote
+     attacker", "An authenticated user with low privileges", "A local user with
+     read access to the filesystem").
+   - Sentence 2: Describe the specific attack action with technical precision —
+     include the exact endpoint, function, parameter name, or file type involved.
+     Example: "The attacker sends a POST request to /api/jobs/save with body
+     {{"job_id": "<victim_id>"}} without an ownership check."
+     Example: "The attacker submits a MOL2 file with a missing atom definition
+     block, causing OBAtom::SetFormalCharge to dereference a null pointer."
+   - Sentence 3: Describe what happens server-side — which code path is triggered
+     and why it fails (e.g., "The server processes the request without verifying
+     that the requesting user owns the target resource.").
+   - Sentence 4: State the final impact — what the attacker gains or what system
+     state is compromised (e.g., "This results in full cluster compromise and
+     lateral movement across all Kubernetes nodes.").
+
+   IMPORTANT:
+   - Use specific function names, endpoints, or file types from the description.
+   - Do NOT write generic text like "the attacker exploits the vulnerability".
+   - Do NOT include actual working exploit code or shellcode.
 
 12. References: Exactly 2 URLs:
     - https://nvd.nist.gov/vuln/detail/{{CVE_ID}}
@@ -135,10 +194,11 @@ CRITICAL OUTPUT RULES:
   {{
     "CVE_ID": "CVE-2026-XXXXX",
     "Finding_Name": "Remote Code Execution in Example Component",
-    "Description": "Professional 2-3 sentence explanation.",
+    "Description": "Professional 3-sentence explanation.",
     "CVSS_Score": 9.8,
     "CVSS_Severity": "Critical",
     "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    "Score_Source": "verified",
     "CVSS_Breakdown": {{
       "Attack_Vector": "Network",
       "Attack_Complexity": "Low",
@@ -152,14 +212,16 @@ CRITICAL OUTPUT RULES:
     "CWE_ID": "CWE-89",
     "MITRE_Mappings": ["T1190", "T1059"],
     "Urgency_Score": 95,
-    "PoC": "An unauthenticated attacker can exploit this by...",
+    "PoC": "An unauthenticated remote attacker targets the vulnerable endpoint. The attacker sends a POST request to /api/example with a crafted payload containing injected DQL syntax. The server passes the input directly to the query engine without sanitization, executing the attacker-controlled query. This results in unauthorized extraction of all stored user credentials from the database.",
     "References": [
       "https://nvd.nist.gov/vuln/detail/CVE-2026-XXXXX",
       "https://www.cve.org/CVERecord?id=CVE-2026-XXXXX"
     ]
   }}
 ]
-The array MUST contain {cve_count} entries.''',
+The array MUST contain {cve_count} entries. "Score_Source" must be either "verified"
+(CVSS_Score copied directly from input data) or "estimated" (CVSS_Score derived by you
+because the input score was missing/zero on a clearly impactful vulnerability, per rule 4a).''',
 
     agent=triage_agent,
     output_file=output_file_path
@@ -193,6 +255,7 @@ if __name__ == "__main__":
 
     try:
         parsed = json.loads(raw_result)
+        parsed = [recalculate_score_from_vector(e) for e in parsed]
         with open(output_file_path, 'w', encoding='utf-8') as f:
             json.dump(parsed, f, indent=2, ensure_ascii=False)
         print(f"Triage report saved: {output_file_path}")

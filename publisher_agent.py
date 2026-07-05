@@ -47,6 +47,10 @@ if not isinstance(triage_data, list):
 
 output_dir = os.path.join("JoFile", "publisher_agent_result")
 os.makedirs(output_dir, exist_ok=True)
+if os.path.exists(output_dir):
+    for f in os.listdir(output_dir):
+        os.remove(os.path.join(output_dir, f))
+    print(f"Removed old report before regenerating: {output_dir}")
 
 reports_dir = os.path.join("JoFile", "Reports")
 os.makedirs(reports_dir, exist_ok=True)
@@ -195,6 +199,31 @@ def clean_for_pdf(text: str) -> str:
     for bad, good in replacements.items():
         text = text.replace(bad, good)
     return text.encode('latin-1', 'replace').decode('latin-1')
+
+
+def score_source_label(source: str) -> str:
+    base = source.replace("_recalculated", "")
+    labels = {
+        "nvd_verified":           "NVD Verified",
+        "cna_official":           "CNA Official",
+        "tenable_verified":       "Tenable Verified",
+        "estimated_no_cna_score": "Estimated (No Official CVSS)",
+        "estimated_unverified":   "Estimated (Unverified)",
+        "verified":               "Verified",
+        "estimated":              "Estimated",
+    }
+    label = labels.get(base, "Unverified")
+    if source.endswith("_recalculated"):
+        label += " - Vector Recalculated"
+    return label
+
+
+def reference_label(url: str) -> str:
+    if "github.com/advisories?query=" in url:
+        return "Fallback Search"
+    if "tenable.com" in url:
+        return "Third-Party Verified (Tenable)"
+    return "Official"
 
 
 def severity_color(severity: str):
@@ -372,7 +401,6 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
     pdf.line(10, pdf.get_y(), 200, pdf.get_y())
     pdf.ln(6)
 
-    # ── Section 1: Risk Statistics ────────────────────────────────────────────
     section_header(pdf, "1", "Risk Statistics Summary")
     pdf.set_font("Helvetica", 'B', 10)
     col_w  = 38
@@ -393,7 +421,6 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
                  new_x=XPos.RIGHT, new_y=YPos.TOP)
     pdf.ln(14)
 
-    # ── Section 2: Executive Summary ─────────────────────────────────────────
     section_header(pdf, "2", "Executive Summary")
     pdf.set_font("Helvetica", '', 11)
     pdf.set_text_color(30, 30, 30)
@@ -401,7 +428,6 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
     pdf.multi_cell(0, 6.5, text=summary, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(6)
 
-    # ── Section 3: Critical Action List ──────────────────────────────────────
     section_header(pdf, "3", "Critical Action List")
     pdf.set_font("Helvetica", '', 11)
     pdf.set_text_color(30, 30, 30)
@@ -421,13 +447,11 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
                  new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(4)
 
-    # ── Section 4: Quick Reference Table ─────────────────────────────────────
     section_header(pdf, "4", "Quick Reference: All Identified Vulnerabilities")
 
     pdf.set_font("Helvetica", 'B', 8)
     pdf.set_fill_color(15, 23, 42)
     pdf.set_text_color(255, 255, 255)
-    # Column widths: CVE ID=42, Finding Name=58, CVSS=20, Severity=25, Urgency=20, CWE=25
     pdf.cell(42, 8, text="CVE ID",       border=1, fill=True, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
     pdf.cell(58, 8, text="Finding Name", border=1, fill=True, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
     pdf.cell(20, 8, text="CVSS",         border=1, fill=True, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
@@ -456,27 +480,23 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
         pdf.cell(0, 8, text="No CVE entries found.", border=1, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(8)
 
-    # ── Section 5: Detailed Vulnerability Findings ────────────────────────────
     section_header(pdf, "5", "Detailed Vulnerability Findings")
     pdf.ln(2)
 
     for entry in cve_list:
         r, g, b = severity_color(entry["severity"])
 
-        # CVE ID header
         pdf.set_font("Helvetica", 'B', 12)
         pdf.set_text_color(15, 23, 42)
         pdf.cell(0, 7, text=clean_for_pdf(entry["cve_id"]),
                  new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
-        # Finding name subtitle
         finding_name = entry.get("finding_name", "N/A")
         pdf.set_font("Helvetica", 'B', 10)
         pdf.set_text_color(50, 80, 140)
         pdf.cell(0, 6, text=clean_for_pdf(f"Finding: {finding_name}"),
                  new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
-        # CVSS score line
         pdf.set_font("Helvetica", 'B', 9)
         pdf.set_text_color(r, g, b)
         pdf.cell(0, 6, text=clean_for_pdf(
@@ -486,7 +506,12 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
             f"CWE: {entry.get('cwe_id', 'N/A')}"
         ), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
-        # MITRE ATT&CK
+        pdf.set_font("Helvetica", 'I', 8)
+        pdf.set_text_color(100, 116, 139)
+        pdf.cell(0, 5, text=clean_for_pdf(
+            f"Score Provenance: {score_source_label(entry.get('score_source', 'estimated_unverified'))}"
+        ), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
         mitre = entry.get("mitre_mappings", [])
         if mitre:
             pdf.set_font("Helvetica", 'I', 9)
@@ -496,7 +521,6 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
 
         pdf.ln(2)
 
-        # CVSS v3.1 Scoring Criteria table
         breakdown = entry.get("cvss_breakdown", {})
         vector    = entry.get("cvss_vector", "N/A")
         if breakdown:
@@ -506,7 +530,6 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
                      new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             render_cvss_breakdown_table(pdf, breakdown, vector)
 
-        # Description
         pdf.set_font("Helvetica", 'B', 9)
         pdf.set_text_color(15, 23, 42)
         pdf.cell(0, 6, text="Description:", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
@@ -516,7 +539,6 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
                        new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.ln(2)
 
-        # Proof of Concept
         poc = entry.get("poc", "No proof of concept available.")
         pdf.set_font("Helvetica", 'B', 9)
         pdf.set_text_color(185, 28, 28)
@@ -528,13 +550,13 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
                        new_x=XPos.LMARGIN, new_y=YPos.NEXT, fill=True)
         pdf.ln(2)
 
-        # References
         refs = entry.get("references", [])
         if refs:
             pdf.set_font("Helvetica", 'I', 8)
             pdf.set_text_color(100, 116, 139)
             for ref in refs:
-                pdf.multi_cell(0, 5, text=clean_for_pdf(f"  Ref: {ref}"),
+                ref_label = reference_label(ref)
+                pdf.multi_cell(0, 5, text=clean_for_pdf(f"  Ref ({ref_label}): {ref}"),
                                new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
         pdf.set_draw_color(210, 218, 230)
@@ -542,7 +564,6 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
         pdf.line(10, pdf.get_y(), 200, pdf.get_y())
         pdf.ln(5)
 
-    # ── Section 6: Methodology ────────────────────────────────────────────────
     section_header(pdf, "6", "Methodology & Data Sources")
     pdf.set_font("Helvetica", '', 10)
     pdf.set_text_color(30, 30, 30)
@@ -550,12 +571,15 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
         "This report was generated by the Auto-CTI Autonomous Cyber Threat Intelligence Pipeline, "
         "an automated multi-agent system designed to simulate a real-world Security Operations Center (SOC) workflow. "
         "The pipeline operates in three sequential stages: (1) the Scout Agent collects the latest CVE disclosures "
-        "from the GitHub Advisory Database and cross-references active threat pulses via AlienVault OTX; "
+        "from NVD, the GitHub Advisory Database, and OSV.dev, cross-referencing active threat pulses via AlienVault OTX; "
         "(2) the Triage Agent performs structured analysis using the CVSS v3.1 scoring standard, assigns CWE root-cause "
         "classifications, maps each vulnerability to relevant MITRE ATT&CK techniques, and computes a composite "
         "Urgency Score; (3) the Publisher Agent synthesizes the triaged data into this executive briefing. "
-        "All CVE identifiers, CVSS scores, and CWE mappings are sourced directly from official databases and "
-        "are verifiable via the references provided in Section 5. "
+        "Every CVSS score is tagged with a Score Provenance label indicating whether it was confirmed against an "
+        "official database (NVD or CNA record) or estimated by the analysis model when no official score existed. "
+        "All CVE identifiers, CVSS scores, and CWE mappings are independently verifiable via the references provided "
+        "in Section 5. References marked 'Fallback Search' indicate the specific CVE record was not found live at "
+        "NVD or CVE.org at generation time; a source-database search link is provided instead. "
         "Severity classification follows the CVSS v3.1 standard: Critical (9.0-10.0), High (7.0-8.9), "
         "Medium (4.0-6.9), Low (0.1-3.9)."
     )
@@ -568,8 +592,11 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
     pdf.set_font("Helvetica", '', 9)
     pdf.set_text_color(30, 30, 30)
     sources = [
-        "GitHub Advisory Database  --  https://github.com/advisories",
         "NIST National Vulnerability Database (NVD)  --  https://nvd.nist.gov/",
+        "GitHub Advisory Database  --  https://github.com/advisories",
+        "OSV.dev Open Source Vulnerabilities  --  https://osv.dev/",
+        "CVE Services API (MITRE CNA Records)  --  https://cveawg.mitre.org/",
+        "OpenCVE  --  https://www.opencve.io/",
         "AlienVault Open Threat Exchange (OTX)  --  https://otx.alienvault.com/",
         "MITRE ATT&CK Framework  --  https://attack.mitre.org/",
         "CVSS v3.1 Specification  --  https://www.first.org/cvss/v3.1/specification-document",

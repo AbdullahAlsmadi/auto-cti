@@ -1,0 +1,603 @@
+[
+  {
+    "CVE_ID": "CVE-2026-49360",
+    "Finding_Name": "Unauthorized SQL Execution in Recce Server",
+    "Description": "The Recce server fails to validate authentication before allowing SQL execution commands via DuckDB interactions. This flaw exists because the backend handler trusts unauthenticated user input when interfacing with the database engine. Attackers can leverage this to gain local file read and write access, compromising system-level data.",
+    "CVSS_Score": 9.1,
+    "CVSS_Severity": "Critical",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "High",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-73",
+    "MITRE_Mappings": [
+      "T1190",
+      "T1505"
+    ],
+    "Urgency_Score": 73,
+    "PoC": "An unauthenticated remote attacker sends a specifically crafted SQL query string to the Recce server management endpoint. The server interface interprets the command through DuckDB without verifying the origin of the request. This allows the attacker to execute arbitrary file operations on the host filesystem. The attacker successfully gains read/write capabilities for sensitive system files.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-49360",
+      "https://www.cve.org/CVERecord?id=CVE-2026-49360",
+      "https://www.tenable.com/cve/CVE-2026-49360"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-49353",
+    "Finding_Name": "Local Access Gate Bypass via Header Spoofing",
+    "Description": "The 9router appliance implements an incomplete fix for local-only access controls, permitting bypasses via Host header manipulation. This vulnerability arises because the authentication middleware trusts the Host header to verify internal routing origin. Remote attackers can spoof these headers to access restricted management interfaces reserved for local loopback connections.",
+    "CVSS_Score": 7.5,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "None",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-290",
+    "MITRE_Mappings": [
+      "T1133"
+    ],
+    "Urgency_Score": 68,
+    "PoC": "An unauthenticated remote attacker initiates an HTTP request to the target 9router appliance. The attacker modifies the Host header to '127.0.0.1' while sending the request to the external interface. The routing engine erroneously identifies the connection as local, bypassing authorization logic for the internal gateway. This grants the attacker full access to restricted administrative configuration pages.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-49353",
+      "https://www.cve.org/CVERecord?id=CVE-2026-49353",
+      "https://www.tenable.com/cve/CVE-2026-49353"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-46599",
+    "Finding_Name": "Denial of Service in TIFF Decompression",
+    "Description": "The golang.org/x/image/tiff package experiences excessive resource consumption during the PackBits decompression routine. This occurs because the decompressor fails to impose strict bounds on memory allocation for variable-length encoded input streams. Attackers can provide a malicious TIFF file to exhaust system memory and trigger a service-wide crash.",
+    "CVSS_Score": 7.5,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "None",
+      "Integrity": "None",
+      "Availability": "High"
+    },
+    "CWE_ID": "CWE-770",
+    "MITRE_Mappings": [
+      "T1499"
+    ],
+    "Urgency_Score": 68,
+    "PoC": "An unauthenticated attacker uploads a maliciously crafted TIFF file to an endpoint that processes image metadata. The application calls the PackBits decompression function to parse the image structure. The function triggers a large memory allocation request that exceeds available heap capacity during processing. The system becomes unresponsive or terminates due to out-of-memory errors.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-46599",
+      "https://www.cve.org/CVERecord?id=CVE-2026-46599",
+      "https://www.tenable.com/cve/CVE-2026-46599"
+    ],
+    "Score_Source": "estimated_no_cna_score_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-49352",
+    "Finding_Name": "Authentication Bypass via Default JWT Secret",
+    "Description": "The 9router software utilizes a hardcoded, default fallback secret for JWT validation, which allows for total authentication bypass. This security oversight occurs because the application fails to enforce the configuration of a unique production secret key upon deployment. Unauthorized actors can forge valid authentication tokens to impersonate any user, including administrative accounts.",
+    "CVSS_Score": 9.8,
+    "CVSS_Severity": "Critical",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "High",
+      "Availability": "High"
+    },
+    "CWE_ID": "CWE-798",
+    "MITRE_Mappings": [
+      "T1552"
+    ],
+    "Urgency_Score": 88,
+    "PoC": "An unauthenticated remote attacker identifies the default JWT secret through public documentation or reverse engineering. The attacker generates a signed JWT token using this key, specifying administrator privileges in the payload claims. The attacker then sends this token in the Authorization header to the application's protected API endpoints. The server accepts the forged token as legitimate, granting the attacker full administrative access.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-49352",
+      "https://www.cve.org/CVERecord?id=CVE-2026-49352",
+      "https://www.tenable.com/cve/CVE-2026-49352"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-49292",
+    "Finding_Name": "Post-Initialization Exposure of Setup Page",
+    "Description": "Kiwi TCMS continues to render and respond to requests via the /init-db/ page after the initial database setup is complete. The failure to disable this diagnostic endpoint allows any user to reach state-changing operations intended for one-time initialization. This exposure risks unauthorized database manipulation if the endpoint remains accessible in production environments.",
+    "CVSS_Score": 6.5,
+    "CVSS_Severity": "Medium",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "None",
+      "Integrity": "Low",
+      "Availability": "Low"
+    },
+    "CWE_ID": "CWE-862",
+    "MITRE_Mappings": [
+      "T1190"
+    ],
+    "Urgency_Score": 39,
+    "PoC": "An unauthenticated remote attacker navigates to the /init-db/ endpoint on an already configured Kiwi TCMS instance. The application logic fails to check for an existing installation flag before responding to the GET request. The attacker is presented with an initialization form that interacts with the live database. This allows the attacker to trigger unexpected database state modifications.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-49292",
+      "https://www.cve.org/CVERecord?id=CVE-2026-49292",
+      "https://www.tenable.com/cve/CVE-2026-49292"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-54617",
+    "Finding_Name": "Path Traversal in LaunchServer File Handler",
+    "Description": "The LaunchServer FileServerHandler contains a path traversal vulnerability due to insufficient sanitization of input directory parameters. By submitting crafted file paths containing sequence modifiers, an attacker can escape the intended root directory. This vulnerability grants the attacker unauthorized access to sensitive files residing outside the intended file server scope.",
+    "CVSS_Score": 9.8,
+    "CVSS_Severity": "Critical",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "High",
+      "Availability": "High"
+    },
+    "CWE_ID": "CWE-22",
+    "MITRE_Mappings": [
+      "T1210"
+    ],
+    "Urgency_Score": 88,
+    "PoC": "An unauthenticated remote attacker sends a request to the FileServerHandler endpoint using directory traversal sequences (e.g., ../../../etc/passwd). The application fails to resolve or filter these sequences before passing the path to the underlying OS file handler. The system serves the contents of the requested sensitive file to the attacker's client. This allows for unauthorized disclosure of critical system data.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-54617",
+      "https://www.cve.org/CVERecord?id=CVE-2026-54617",
+      "https://www.tenable.com/cve/CVE-2026-54617"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-49284",
+    "Finding_Name": "Insecure SAML Response Validation in SimpleSAMLphp",
+    "Description": "The SimpleSAMLphp Service Provider incorrectly validates SAML responses when an unsigned Response/InResponseTo is paired with a signed assertion lacking specific SubjectConfirmationData checks. This logic flaw permits an attacker to inject responses from an unexpected Identity Provider. Successful exploitation allows for unauthorized account assertion and session hijacking.",
+    "CVSS_Score": 6.8,
+    "CVSS_Severity": "Medium",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "High",
+      "Privileges_Required": "None",
+      "User_Interaction": "Required",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "High",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-345",
+    "MITRE_Mappings": [
+      "T1550"
+    ],
+    "Urgency_Score": 64,
+    "PoC": "An attacker creates a malicious SAML response from an unauthorized IdP and redirects a victim user to the SimpleSAMLphp SP endpoint. The SP logic validates the signed assertion but fails to verify the binding between the `InResponseTo` fields in the response and the assertion. The application treats the forged assertion as valid for the victim's session. The attacker successfully hijacks the victim's authenticated session.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-49284",
+      "https://www.cve.org/CVERecord?id=CVE-2026-49284",
+      "https://www.tenable.com/cve/CVE-2026-49284"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-52792",
+    "Finding_Name": "Source Code Disclosure in Algernon via NTFS",
+    "Description": "The Algernon server allows server-side script source disclosure on Windows operating systems by exploiting specific NTFS filename handling. The root cause is a failure to properly canonicalize file paths, allowing direct access to script files that should be executed rather than served. This exposure reveals proprietary code and sensitive configuration details to remote visitors.",
+    "CVSS_Score": 7.5,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "None",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-69",
+    "MITRE_Mappings": [
+      "T1046"
+    ],
+    "Urgency_Score": 68,
+    "PoC": "An unauthenticated remote attacker identifies a script file location within the Algernon web root on a Windows host. The attacker submits a specially formatted request utilizing NTFS stream or short filename syntax that the server fails to interpret as an executable script. The server bypasses the execution logic and treats the file as static content, returning the raw source code. The attacker now has full read access to the application's business logic.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52792",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52792",
+      "https://www.tenable.com/cve/CVE-2026-52792"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-52834",
+    "Finding_Name": "Integer Overflow in jxl-grid on 32-bit",
+    "Description": "The jxl-grid library contains an integer overflow flaw on 32-bit architectures during grid calculation routines. This occurs because the library does not validate the result of arithmetic operations against the maximum pointer size before performing heap allocation. Attackers can exploit this to perform an out-of-bounds write to heap memory, potentially leading to arbitrary code execution.",
+    "CVSS_Score": 7.3,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "Low",
+      "Integrity": "Low",
+      "Availability": "Low"
+    },
+    "CWE_ID": "CWE-122",
+    "MITRE_Mappings": [
+      "T1203"
+    ],
+    "Urgency_Score": 66,
+    "PoC": "An unauthenticated remote attacker provides a malformed image input to a system using the jxl-grid library. The library performs a multiplication of grid dimensions that overflows a 32-bit integer, resulting in a tiny allocation for a massive dataset. The application writes subsequent data outside the allocated heap boundary. This corruption disrupts service and provides a potential vector for code injection.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52834",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52834",
+      "https://www.tenable.com/cve/CVE-2026-52834"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-2092",
+    "Finding_Name": "Improper Validation of Encrypted SAML Assertions",
+    "Description": "Keycloak fails to correctly validate encrypted SAML assertions, leading to unauthorized access. The root cause is a lack of stringent integrity verification on the decrypted content before it is parsed by the application security context. This allows an attacker to bypass authentication mechanisms by submitting manipulated or improperly decrypted assertion payloads.",
+    "CVSS_Score": 7.7,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:H/I:L/A:L",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "High",
+      "Privileges_Required": "Low",
+      "User_Interaction": "None",
+      "Scope": "Changed",
+      "Confidentiality": "High",
+      "Integrity": "Low",
+      "Availability": "Low"
+    },
+    "CWE_ID": "CWE-1287",
+    "MITRE_Mappings": [
+      "T1550"
+    ],
+    "Urgency_Score": 69,
+    "PoC": "An authenticated user with low privileges captures their own encrypted SAML assertion. The attacker modifies the content and re-encrypts it to match expected parameters, then presents it to the Keycloak authentication endpoint. The server decrypts the assertion and trusts the underlying malicious claims without verifying the integrity of the original source. This results in unauthorized escalation of privileges within the Keycloak instance.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-2092",
+      "https://www.cve.org/CVERecord?id=CVE-2026-2092",
+      "https://www.tenable.com/cve/CVE-2026-2092"
+    ],
+    "Score_Source": "cna_official"
+  },
+  {
+    "CVE_ID": "CVE-2026-52830",
+    "Finding_Name": "Telegram Session Protection Bypass via Path Traversal",
+    "Description": "The fast-mcp-telegram component suffers from a path traversal vulnerability within its bearer token handling mechanism. This flaw occurs because the library fails to sanitize token inputs that are used to generate session storage paths. An attacker can manipulate these inputs to access or overwrite reserved Telegram session files, bypassing authorization protections.",
+    "CVSS_Score": 9.4,
+    "CVSS_Severity": "Critical",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:L",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "High",
+      "Availability": "Low"
+    },
+    "CWE_ID": "CWE-22",
+    "MITRE_Mappings": [
+      "T1190"
+    ],
+    "Urgency_Score": 85,
+    "PoC": "An unauthenticated remote attacker sends a request to the Telegram gateway API using a maliciously formatted Bearer token string containing path traversal characters. The backend application uses this token as a direct file system identifier for session lookups. The server resolves the path outside the intended scope, accessing or corrupting sensitive session files. This leads to complete takeover of existing Telegram sessions and administrative system compromise.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52830",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52830",
+      "https://www.tenable.com/cve/CVE-2026-52830"
+    ],
+    "Score_Source": "cna_official"
+  },
+  {
+    "CVE_ID": "CVE-2026-50268",
+    "Finding_Name": "Insecure Padding Selection in Steeltoe OAEP",
+    "Description": "The Steeltoe framework incorrectly defaults to PKCS#1 v1.5 padding even when OAEP (Optimal Asymmetric Encryption Padding) is requested. This silent downgrade occurs because the internal security configuration mapping improperly prioritizes older legacy standards. This renders cryptographic operations vulnerable to padding oracle attacks if an attacker intercepts sensitive data.",
+    "CVSS_Score": 1.9,
+    "CVSS_Severity": "Low",
+    "CVSS_Vector": "CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:L/I:N/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Local",
+      "Attack_Complexity": "High",
+      "Privileges_Required": "High",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "Low",
+      "Integrity": "None",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-256",
+    "MITRE_Mappings": [
+      "T1552"
+    ],
+    "Urgency_Score": 12,
+    "PoC": "A local attacker with high privileges identifies that Steeltoe uses legacy padding despite configuration. The attacker intercepts a series of encrypted application messages and monitors responses for potential padding oracle errors. By analyzing the timing differences in error responses, the attacker decrypts targeted ciphertexts bit by bit. This enables the eventual extraction of sensitive secrets stored within the application's configuration.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-50268",
+      "https://www.cve.org/CVERecord?id=CVE-2026-50268",
+      "https://www.tenable.com/cve/CVE-2026-50268"
+    ],
+    "Score_Source": "cna_official"
+  },
+  {
+    "CVE_ID": "CVE-2026-50267",
+    "Finding_Name": "Unprotected Private Key Storage in Steeltoe",
+    "Description": "Steeltoe writes TLS private keys to the /tmp directory with world-readable default permissions and fails to perform cleanup. This occurs due to inadequate management of temporary file lifecycle and missing umask restrictions on sensitive key artifacts. Any local user on the host system can read these keys, leading to potential traffic decryption.",
+    "CVSS_Score": 4.7,
+    "CVSS_Severity": "Medium",
+    "CVSS_Vector": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:N/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Local",
+      "Attack_Complexity": "High",
+      "Privileges_Required": "Low",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "None",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-312",
+    "MITRE_Mappings": [
+      "T1552"
+    ],
+    "Urgency_Score": 42,
+    "PoC": "A local attacker with low privileges probes the /tmp directory during the Steeltoe application startup process. The attacker locates a freshly written TLS private key file before the application can delete it. The file permissions allow the attacker to read the contents of the key file directly. With this key, the attacker can decrypt historical and ongoing network traffic associated with the server.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-50267",
+      "https://www.cve.org/CVERecord?id=CVE-2026-50267",
+      "https://www.tenable.com/cve/CVE-2026-50267"
+    ],
+    "Score_Source": "cna_official"
+  },
+  {
+    "CVE_ID": "CVE-2026-50202",
+    "Finding_Name": "Insecure JWKS Cache Sharing in Steeltoe",
+    "Description": "Steeltoe's static JSON Web Key Set (JWKS) cache is shared across different security schemes and fails to implement proper invalidation. This vulnerability stems from the application's failure to isolate cryptographic key sets according to their specific trust domains. An attacker can exploit this to reuse or pollute the cache, potentially causing authorization failures or session bypasses.",
+    "CVSS_Score": 5.9,
+    "CVSS_Severity": "Medium",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:H/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "High",
+      "Privileges_Required": "High",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "High",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-668",
+    "MITRE_Mappings": [
+      "T1550"
+    ],
+    "Urgency_Score": 53,
+    "PoC": "An administrative user who has compromised one application scheme targets the shared JWKS cache used by Steeltoe. The attacker forces the cache to load a malicious key set meant for a different security domain. The application subsequently trusts the attacker's key set when verifying requests for the entire system. This leads to the cross-scheme authentication bypass and systemic trust compromise.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-50202",
+      "https://www.cve.org/CVERecord?id=CVE-2026-50202",
+      "https://www.tenable.com/cve/CVE-2026-50202"
+    ],
+    "Score_Source": "cna_official"
+  },
+  {
+    "CVE_ID": "CVE-2026-50201",
+    "Finding_Name": "Insecure Permission Requirement for Steeltoe Actuators",
+    "Description": "Steeltoe exposes sensitive management actuators, such as heapdump and env, requiring only low-level 'Restricted' permissions. This configuration oversight fails to implement the principle of least privilege, leaving internal state data accessible to low-level accounts. Unauthorized actors can exploit these endpoints to extract internal runtime secrets or memory contents.",
+    "CVSS_Score": 6.5,
+    "CVSS_Severity": "Medium",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "Low",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "None",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-269",
+    "MITRE_Mappings": [
+      "T1068"
+    ],
+    "Urgency_Score": 59,
+    "PoC": "An attacker logs into the application using a legitimate, low-privilege 'Restricted' account. The attacker browses to the management actuator endpoint (/actuator/heapdump) and initiates a download request. The application verifies the user's role, finds it sufficient, and serves a full snapshot of the server's heap memory. The attacker analyzes this snapshot to recover embedded database credentials and private configuration keys.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-50201",
+      "https://www.cve.org/CVERecord?id=CVE-2026-50201",
+      "https://www.tenable.com/cve/CVE-2026-50201"
+    ],
+    "Score_Source": "cna_official"
+  },
+  {
+    "CVE_ID": "CVE-2026-50200",
+    "Finding_Name": "Exposure of Database Passwords in Steeltoe Logs",
+    "Description": "The Steeltoe environment sanitizer fails to filter embedded database passwords within connection strings before they are logged or exposed. This occurs because the sanitizer logic does not account for the diverse formats in which sensitive connection information can be presented. This vulnerability allows any attacker with access to the logs to capture administrative credentials.",
+    "CVSS_Score": 7.5,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "None",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-200",
+    "MITRE_Mappings": [
+      "T1552"
+    ],
+    "Urgency_Score": 68,
+    "PoC": "An attacker gains access to the log aggregation interface for a Steeltoe-based application. By querying the logs for string patterns related to connection strings, the attacker locates plaintext passwords previously output by the env actuator. The sanitizer routine failed to identify the specific key-value structure of the database URL. The attacker uses these credentials to establish a direct connection to the backend database.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-50200",
+      "https://www.cve.org/CVERecord?id=CVE-2026-50200",
+      "https://www.tenable.com/cve/CVE-2026-50200"
+    ],
+    "Score_Source": "cna_official"
+  },
+  {
+    "CVE_ID": "CVE-2026-50196",
+    "Finding_Name": "Registry Poisoning in Steeltoe Eureka Discovery",
+    "Description": "Steeltoe.Discovery.Eureka is vulnerable to registry poisoning when an unrecognized DataCenterInfo.Name is provided by a malicious service instance. The server fails to safely ignore or sanitize the malformed data before merging it into the global service registry. An attacker can exploit this to trigger a Denial of Service across the entire discovery fabric.",
+    "CVSS_Score": 7.5,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "None",
+      "Integrity": "None",
+      "Availability": "High"
+    },
+    "CWE_ID": "CWE-20",
+    "MITRE_Mappings": [
+      "T1499"
+    ],
+    "Urgency_Score": 68,
+    "PoC": "An attacker stands up a rogue microservice and registers it with the Eureka server using a crafted DataCenterInfo.Name string designed to break parsing logic. The Eureka server receives the registration request and attempts to merge this metadata into the global state. The parser fails, causing the service discovery process to crash or enter an invalid state. All downstream services fail to discover their dependencies, resulting in a systemic outage.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-50196",
+      "https://www.cve.org/CVERecord?id=CVE-2026-50196",
+      "https://www.tenable.com/cve/CVE-2026-50196"
+    ],
+    "Score_Source": "cna_official"
+  },
+  {
+    "CVE_ID": "CVE-2026-50194",
+    "Finding_Name": "Management Port Isolation Bypass in Steeltoe",
+    "Description": "Steeltoe is vulnerable to management-port isolation bypass via spoofed Host headers. The internal routing logic erroneously trusts the Host header provided by incoming traffic to determine whether a request is destined for the management port. This allows an external attacker to interact with internal-only management endpoints from the public network.",
+    "CVSS_Score": 8.2,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "Low",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-288",
+    "MITRE_Mappings": [
+      "T1133"
+    ],
+    "Urgency_Score": 74,
+    "PoC": "An attacker sends a request to the application's primary port with a Host header set to the address of the internal management network. The Steeltoe routing logic processes the header and erroneously directs the request to the management interface. The attacker then interacts with sensitive actuators typically hidden from public traffic. This results in unauthorized access to restricted application data and system status.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-50194",
+      "https://www.cve.org/CVERecord?id=CVE-2026-50194",
+      "https://www.tenable.com/cve/CVE-2026-50194"
+    ],
+    "Score_Source": "cna_official"
+  },
+  {
+    "CVE_ID": "CVE-2026-49289",
+    "Finding_Name": "Denial of Service via XPath Transform",
+    "Description": "SimpleSAMLphp is susceptible to Denial of Service (DoS) attacks via complex XPath transformations in incoming SAML messages. The underlying parser does not impose recursive limits on XPath query evaluation, allowing an attacker to exhaust CPU resources. This vulnerability can be triggered remotely with a relatively small, specially crafted payload.",
+    "CVSS_Score": 7.5,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "None",
+      "Integrity": "None",
+      "Availability": "High"
+    },
+    "CWE_ID": "CWE-400",
+    "MITRE_Mappings": [
+      "T1499"
+    ],
+    "Urgency_Score": 68,
+    "PoC": "An unauthenticated remote attacker sends an XML document containing a highly nested and repetitive XPath expression to the SAML consumption endpoint. The server attempts to evaluate the path using the vulnerable transformation engine. The computation consumes 100% of the allocated worker process CPU for an extended period. Repeated requests lead to resource exhaustion and complete service unavailability.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-49289",
+      "https://www.cve.org/CVERecord?id=CVE-2026-49289",
+      "https://www.tenable.com/cve/CVE-2026-49289"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-52829",
+    "Finding_Name": "Mempool Misbehavior in Zebra Address Book",
+    "Description": "The Zebra Address Book is prone to application failure due to improper memory handling when processing IPv4-mapped addresses within its mempool. The logic fails to differentiate between address types during block allocation, leading to inconsistent state and assertion failures. This condition crashes the service whenever an attacker triggers specific address parsing flows.",
+    "CVSS_Score": 7.5,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "None",
+      "Integrity": "None",
+      "Availability": "High"
+    },
+    "CWE_ID": "CWE-617",
+    "MITRE_Mappings": [
+      "T1499"
+    ],
+    "Urgency_Score": 68,
+    "PoC": "An unauthenticated remote attacker sends a network request containing a specially formatted IPv4-mapped IPv6 address to the address book service. The service attempts to normalize the address within the mempool, triggering a violation of an internal consistency assertion. The application immediately aborts processing to prevent corruption, effectively crashing the service. This attack can be repeated to maintain persistent denial of service.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52829",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52829",
+      "https://www.tenable.com/cve/CVE-2026-52829"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  }
+]

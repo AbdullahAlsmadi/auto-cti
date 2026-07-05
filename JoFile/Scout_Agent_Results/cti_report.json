@@ -1,164 +1,204 @@
 {
-    "July 01, 2026": [
+    "July 05, 2026": [
         {
-            "cve_id": "CVE-2025-10996",
-            "description": "Open Babel has heap buffer overflow in SMILES OBSmilesParser::ParseSmiles",
-            "cvss_score": 7.8,
+            "cve_id": "CVE-2026-49360",
+            "description": "Recce server has unauthenticated SQL execution that allows local file read/write through DuckDB",
+            "cvss_score": 0.0,
             "cvss_severity": "High",
-            "cwe_id": "CWE-119",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-73",
             "alienvault_pulses": "No active threat pulses found"
         },
         {
-            "cve_id": "CVE-2025-10995",
-            "description": "Open Babel has out-of-bounds write (overlapping memcpy) in zipstream basic_unzip_streambuf::underflow",
-            "cvss_score": 7.8,
-            "cvss_severity": "Low",
-            "cwe_id": "CWE-787",
+            "cve_id": "CVE-2026-49353",
+            "description": "9router has an Incomplete Fix: Local-Only Access Gate Bypass in 9router via Host Header SpoofING",
+            "cvss_score": 7.5,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-290",
             "alienvault_pulses": "No active threat pulses found"
         },
         {
-            "cve_id": "CVE-2026-55219",
-            "description": "Paymenter has race condition in payWithCredit() that enables credit double-spend",
-            "cvss_score": 5.3,
-            "cvss_severity": "Moderate",
-            "cwe_id": "CWE-362",
-            "alienvault_pulses": "No active threat pulses found"
-        },
-        {
-            "cve_id": "CVE-2025-10994",
-            "description": "Open Babel has Use-after-free in GAMESS GAMESSOutputFormat::ReadMolecule",
-            "cvss_score": 7.8,
-            "cvss_severity": "Low",
-            "cwe_id": "CWE-119",
-            "alienvault_pulses": "No active threat pulses found"
-        },
-        {
-            "cve_id": "CVE-2026-3408",
-            "description": "Open Babel has a NULL pointer dereference in CDXML OBAtom::GetExplicitValence",
-            "cvss_score": 5.5,
-            "cvss_severity": "Low",
-            "cwe_id": "CWE-476",
-            "alienvault_pulses": "Pulse: Known_Cve | Mar 3, 2026 | Part 1/2 | Tags: ... Pulse: Known_Cve | Mar 30, 2026 | Part 1/2 | Tags:"
-        },
-        {
-            "cve_id": "CVE-2026-2705",
-            "description": "Open Babel has NULL pointer dereference in MOL2 OBAtom::SetFormalCharge",
-            "cvss_score": 5.5,
-            "cvss_severity": "Low",
-            "cwe_id": "CWE-119",
-            "alienvault_pulses": "Pulse: Known_Cve | Feb 20, 2026 | Tags: ... Pulse: Known_Cve | Jun 17, 2026 | Part 1/2 | Tags:"
-        },
-        {
-            "cve_id": "CVE-2026-2704",
-            "description": "Open Babel has an out-of-bounds read in CIF transform3d::DescribeAsString",
-            "cvss_score": 4.4,
-            "cvss_severity": "Low",
-            "cwe_id": "CWE-119",
-            "alienvault_pulses": "Pulse: Known_Cve | Feb 20, 2026 | Tags: ... Pulse: Known_Cve | Mar 30, 2026 | Part 1/2 | Tags:"
-        },
-        {
-            "cve_id": "CVE-2026-48808",
-            "description": "Twig: Sandbox property allowlist bypass via the `column` filter under `SourcePolicyInterface`",
-            "cvss_score": 0.0,
-            "cvss_severity": "Moderate",
-            "cwe_id": "CWE-693",
-            "alienvault_pulses": "No active threat pulses found"
-        },
-        {
-            "cve_id": "CVE-2026-48807",
-            "description": "Twig: Sandbox `__toString()` policy bypass via `Traversable` in `join` and `replace` filters",
-            "cvss_score": 0.0,
-            "cvss_severity": "Moderate",
-            "cwe_id": "CWE-693",
-            "alienvault_pulses": "No active threat pulses found"
-        },
-        {
-            "cve_id": "CVE-2026-48806",
-            "description": "Twig: Sandbox `__toString()` policy bypass via dynamic mapping keys",
-            "cvss_score": 0.0,
-            "cvss_severity": "Moderate",
-            "cwe_id": "CWE-693",
-            "alienvault_pulses": "No active threat pulses found"
-        },
-        {
-            "cve_id": "CVE-2026-48805",
-            "description": "Twig: Sandbox state regression in deprecated internal wrappers in `src/Resources/core.php`",
-            "cvss_score": 0.0,
-            "cvss_severity": "Low",
-            "cwe_id": "CWE-693",
-            "alienvault_pulses": "No active threat pulses found"
-        },
-        {
-            "cve_id": "CVE-2026-49835",
-            "description": "Sigstore Timestamp Authority has OOM due to unbounded metric label cardinality",
-            "cvss_score": 5.9,
-            "cvss_severity": "Moderate",
+            "cve_id": "CVE-2026-46599",
+            "description": "golang.org/x/image/tiff has excessive resource consumption in PackBits decompression",
+            "cvss_score": 7.5,
+            "cvss_severity": "High",
+            "cvss_source": "cna_no_cvss",
+            "cvss_vector": "N/A",
             "cwe_id": "CWE-770",
             "alienvault_pulses": "No active threat pulses found"
         },
         {
-            "cve_id": "CVE-2026-49478",
-            "description": "Fulcio has OIDC Discovery Redirect Following Allows SSRF and JWKS Substitution for Meta-Issuer Paths, with Kubernetes Service-Account Token Leakage",
-            "cvss_score": 8.7,
-            "cvss_severity": "High",
-            "cwe_id": "CWE-918",
+            "cve_id": "CVE-2026-49352",
+            "description": "9router's Hardcoded Default fallback JWT Secret  Allows Authentication Bypass",
+            "cvss_score": 9.8,
+            "cvss_severity": "Critical",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-798",
             "alienvault_pulses": "No active threat pulses found"
         },
         {
-            "cve_id": "CVE-2026-48796",
-            "description": "CefSharp.Common: `FolderSchemeHandlerFactory` path boundary check can expose files outside the configured root folder",
-            "cvss_score": 5.3,
-            "cvss_severity": "Moderate",
+            "cve_id": "CVE-2026-49292",
+            "description": "Kiwi TCMS's /init-db/ page renders and responds to requests after first use",
+            "cvss_score": 0.0,
+            "cvss_severity": "Low",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-862",
+            "alienvault_pulses": "No active threat pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-54617",
+            "description": "LaunchServer FileServerHandler has an unauthenticated path traversal issue",
+            "cvss_score": 9.8,
+            "cvss_severity": "Critical",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
             "cwe_id": "CWE-22",
             "alienvault_pulses": "No active threat pulses found"
         },
         {
-            "cve_id": "CVE-2026-48795",
-            "description": "@adonisjs/bodyparser has an incomplete fix for CVE-2026-25754",
-            "cvss_score": 8.6,
+            "cve_id": "CVE-2026-49284",
+            "description": "SimpleSAMLphp SP accepts a response from an unexpected IdP when unsigned `Response/InResponseTo` is combined with a signed assertion lacking `SubjectConfirmationData/InResponseTo`",
+            "cvss_score": 7.1,
             "cvss_severity": "High",
-            "cwe_id": "CWE-1321",
-            "alienvault_pulses": "Pulse: Known_Cve | May 28, 2026 | Tags: ... Pulse: Known_Cve | Jun 4, 2026 | Part 1/2 | Tags:"
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-345",
+            "alienvault_pulses": "No active threat pulses found"
         },
         {
-            "cve_id": "CVE-2026-48592",
-            "description": "oban_web missing authorization check on `save-job` event handler",
+            "cve_id": "CVE-2026-52792",
+            "description": "Algernon vulnerable to server-side script source disclosure on Windows via NTFS filename",
             "cvss_score": 0.0,
-            "cvss_severity": "Moderate",
-            "cwe_id": "CWE-862",
-            "alienvault_pulses": "Pulse: Known_Cve | May 28, 2026 | Tags: ... Pulse: Known_Cve | Jun 4, 2026 | Part 1/2 | Tags:"
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-69",
+            "alienvault_pulses": "No active threat pulses found"
         },
         {
-            "cve_id": "CVE-2026-48593",
-            "description": "oban_web: Unbounded range expansion in cron describe causes memory exhaustion",
-            "cvss_score": 0.0,
-            "cvss_severity": "Moderate",
+            "cve_id": "CVE-2026-52834",
+            "description": "jxl-grid on 32-bit platforms has an out-of-bounds writes due to integer overflow",
+            "cvss_score": 7.3,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-122",
+            "alienvault_pulses": "No active threat pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-2092",
+            "description": "Keycloak: Unauthorized access via improper validation of encrypted SAML assertions",
+            "cvss_score": 7.7,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:H/I:L/A:L",
+            "cwe_id": "CWE-1287",
+            "alienvault_pulses": "No active threat pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-52830",
+            "description": "fast-mcp-telegram: Bearer token path traversal bypasses reserved Telegram session protection",
+            "cvss_score": 9.4,
+            "cvss_severity": "CRITICAL",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:L",
+            "cwe_id": "CWE-22",
+            "alienvault_pulses": "No active threat pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-50268",
+            "description": "Steeltoe: OAEP setting silently selects PKCS#1 v1.5 padding",
+            "cvss_score": 1.9,
+            "cvss_severity": "LOW",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:L/I:N/A:N",
+            "cwe_id": "CWE-256",
+            "alienvault_pulses": "No active threat pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-50267",
+            "description": "Steeltoe: TLS private keys written to /tmp with default permissions, never deleted",
+            "cvss_score": 4.7,
+            "cvss_severity": "MEDIUM",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:N/A:N",
+            "cwe_id": "CWE-312",
+            "alienvault_pulses": "No active threat pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-50202",
+            "description": "Steeltoe's static JWKS cache shared across schemes and never invalidated",
+            "cvss_score": 5.9,
+            "cvss_severity": "MEDIUM",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:H/A:N",
+            "cwe_id": "CWE-668",
+            "alienvault_pulses": "No active threat pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-50201",
+            "description": "Steeltoe's sensitive actuators (heapdump/env) only require Restricted permission",
+            "cvss_score": 6.5,
+            "cvss_severity": "MEDIUM",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+            "cwe_id": "CWE-269",
+            "alienvault_pulses": "No active threat pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-50200",
+            "description": "Steeltoe's env sanitizer misses connection strings — leaks embedded DB passwords",
+            "cvss_score": 7.5,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+            "cwe_id": "CWE-200",
+            "alienvault_pulses": "No active threat pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-50196",
+            "description": "Steeltoe.Discovery.Eureka: Unrecognized DataCenterInfo.Name poisons entire registry fetch",
+            "cvss_score": 7.5,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+            "cwe_id": "CWE-20",
+            "alienvault_pulses": "No active threat pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-50194",
+            "description": "Steeltoe vulnerable to management-port isolation bypass via spoofed Host header",
+            "cvss_score": 8.2,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:N",
+            "cwe_id": "CWE-288",
+            "alienvault_pulses": "No active threat pulses found"
+        },
+        {
+            "cve_id": "CVE-2026-49289",
+            "description": "SimpleSAMLphp has Possible DoS via XPath Transform",
+            "cvss_score": 7.5,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
             "cwe_id": "CWE-400",
             "alienvault_pulses": "No active threat pulses found"
         },
         {
-            "cve_id": "CVE-2026-49820",
-            "description": "Probo has an open redirect bypass via path normalization",
-            "cvss_score": 4.7,
-            "cvss_severity": "Moderate",
-            "cwe_id": "CWE-601",
-            "alienvault_pulses": "Pulse: Known_Cve | Jun 14, 2026 | Tags: ... Pulse: Known_Cve | Jun 19, 2026 | Part 1/2 | Tags:"
-        },
-        {
-            "cve_id": "CVE-2026-50566",
-            "description": "Fission: Environment Runtime.Container and Builder.Container SecurityContext bypass allows privileged pod creation",
-            "cvss_score": 9.9,
-            "cvss_severity": "Critical",
-            "cwe_id": "CWE-250",
-            "alienvault_pulses": "Pulse: Known_Cve | Jun 17, 2026 | Part 1/2 | Tags: ... Pulse: Known_Cve | Jun 19, 2026 | Part 1/2 | Tags:"
-        },
-        {
-            "cve_id": "CVE-2026-50565",
-            "description": "Fission builder pods auto-mount the fission-builder ServiceAccount token in the user-supplied builder container",
-            "cvss_score": 4.9,
-            "cvss_severity": "Moderate",
-            "cwe_id": "CWE-250",
-            "alienvault_pulses": "Pulse: Known_Cve | Jun 17, 2026 | Part 1/2 | Tags: ... Pulse: Known_Cve | Jun 19, 2026 | Part 1/2 | Tags:"
+            "cve_id": "CVE-2026-52829",
+            "description": "Zebra Address Book Aborted by IPv4-Mapped Mempool Misbehavior Update",
+            "cvss_score": 7.5,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-617",
+            "alienvault_pulses": "No active threat pulses found"
         }
     ]
 }

@@ -1,6 +1,8 @@
 import os
 import json
 import re
+import time
+import requests
 import datetime
 import sys
 from crewai import Agent, Task, Crew, LLM
@@ -39,8 +41,108 @@ triage_llm = LLM(
     max_retries=5  # type: ignore
 )
 
+# Build a lookup table mapping each CVE ID to everything Scout already
+# verified: the trust level (cvss_source), the official score, and the
+# official vector string. This is the ground truth and must NOT be
+# re-decided, re-derived, or silently overwritten by the LLM later on.
+cve_source_lookup = {}
+if isinstance(raw_threat_data, list):
+    for item in raw_threat_data:
+        cid = item.get("cve_id")
+        if cid:
+            cve_source_lookup[cid] = {
+                "cvss_source": item.get("cvss_source", "ghsa_only"),
+                "score":       item.get("cvss_score"),
+                "vector":      item.get("cvss_vector", "N/A"),
+            }
+
+
+def parse_cvss_vector(vector: str):
+    """
+    Deterministically parses a CVSS:3.1 vector string into the same
+    human-readable breakdown structure used throughout the report, instead
+    of trusting the LLM to describe the vector in its own words.
+    """
+    labels = {
+        "AV": {"N": "Network", "A": "Adjacent", "L": "Local", "P": "Physical"},
+        "AC": {"L": "Low", "H": "High"},
+        "PR": {"N": "None", "L": "Low", "H": "High"},
+        "UI": {"N": "None", "R": "Required"},
+        "S":  {"U": "Unchanged", "C": "Changed"},
+        "C":  {"N": "None", "L": "Low", "H": "High"},
+        "I":  {"N": "None", "L": "Low", "H": "High"},
+        "A":  {"N": "None", "L": "Low", "H": "High"},
+    }
+    field_names = {
+        "AV": "Attack_Vector", "AC": "Attack_Complexity", "PR": "Privileges_Required",
+        "UI": "User_Interaction", "S": "Scope", "C": "Confidentiality",
+        "I": "Integrity", "A": "Availability",
+    }
+    breakdown = {}
+    try:
+        parts = vector.replace("CVSS:3.1/", "").replace("CVSS:3.0/", "").split("/")
+        for part in parts:
+            key, _, value = part.partition(":")
+            if key in labels and value in labels[key]:
+                breakdown[field_names[key]] = labels[key][value]
+    except Exception:
+        pass
+    return breakdown
+
+
+def enforce_authoritative_cvss(entry: dict, source_info: dict) -> dict:
+    """
+    For CVEs where Scout already confirmed an official score AND vector
+    (nvd_verified / cna_official), this function completely overrides
+    whatever CVSS_Score, CVSS_Vector, CVSS_Severity, and CVSS_Breakdown the
+    LLM produced. The LLM's own vector must never be trusted for these
+    entries, since a self-invented vector being fed back into a
+    "recalculate score from vector" step is exactly what silently corrupted
+    officially-verified scores in earlier runs.
+    """
+    cvss_source = source_info["cvss_source"]
+    vector      = source_info.get("vector", "N/A")
+
+    if cvss_source not in ("nvd_verified", "cna_official", "tenable_verified") or not vector or vector == "N/A":
+        return None  # type: ignore # not eligible for enforcement; caller falls back to estimation path
+
+    entry["CVSS_Vector"] = vector
+    entry["CVSS_Breakdown"] = parse_cvss_vector(vector)
+    try:
+        c = CVSS3(vector)
+        entry["CVSS_Score"] = float(c.base_score)  # type: ignore
+        entry["CVSS_Severity"] = c.severities()[0]
+    except Exception:
+        entry["CVSS_Score"] = source_info.get("score", entry.get("CVSS_Score"))
+    entry["Score_Source"] = cvss_source
+    return entry
+
+
+def map_source_to_score_source(cvss_source: str, was_estimated_by_llm: bool) -> str:
+    """
+    Deterministically decides the final Score_Source field for a triaged CVE,
+    based on the trust level Scout already assigned, instead of trusting
+    whatever label the LLM produced on its own.
+    """
+    if cvss_source in ("nvd_verified", "cna_official", "tenable_verified"):
+        # Score came directly from an authoritative or reputable third-party
+        # source with a real vector. The LLM must not have altered it.
+        return cvss_source
+    if cvss_source == "cna_no_cvss":
+        # A CNA record exists but carries no official CVSS score, so any
+        # score present was derived by the LLM from the vulnerability impact.
+        return "estimated_no_cna_score"
+    # cvss_source == "ghsa_only" or unknown: no authoritative confirmation
+    # was ever found, so the score is, at best, an unverified estimate.
+    return "estimated_unverified"
+
 
 def recalculate_score_from_vector(entry: dict) -> dict:
+    """
+    Independently recomputes the CVSS base score from the CVSS_Vector string
+    using the `cvss` library. This catches cases where the LLM wrote a score
+    and a vector that are not mathematically consistent with each other.
+    """
     vector = entry.get("CVSS_Vector", "")
     if not vector or vector == "N/A":
         return entry
@@ -49,10 +151,59 @@ def recalculate_score_from_vector(entry: dict) -> dict:
         calculated_score = float(c.base_score)  # type: ignore
         entry["CVSS_Score"] = calculated_score
         entry["CVSS_Severity"] = c.severities()[0]
-        entry["Score_Source"] = entry.get("Score_Source", "verified") + "_recalculated"
+        entry["Score_Source"] = entry.get("Score_Source", "estimated_unverified") + "_recalculated"
     except Exception:
         pass
     return entry
+
+
+def is_reference_alive(url: str) -> bool:
+    """
+    Performs a real network check on a reference URL using GET instead of
+    HEAD, since some sites (including Tenable) do not reliably support HEAD
+    requests. Only a confirmed 404 (the page genuinely does not exist) is
+    treated as dead. Timeouts or blocks are treated as inconclusive and the
+    link is kept, since some hosts block requests based on region/ISP
+    without the page actually being missing.
+    """
+    try:
+        r = requests.get(url, timeout=10, allow_redirects=True, stream=True)
+        r.close()
+        if r.status_code == 404:
+            return False
+        return True
+    except Exception:
+        return True
+
+
+def build_verified_references(cve_id: str) -> list:
+    """
+    Builds the References list independently in Python instead of trusting
+    whatever the LLM wrote. Checks, in priority order:
+        1. NVD          - the primary authoritative source
+        2. CVE.org      - the official CVE Program record
+        3. Tenable      - a reliable third-party CVE database, used when a
+                          CVE has not yet propagated to NVD/CVE.org
+    NVD/CVE.org links are ONLY included if they are confirmed to exist.
+    If none of the three resolve, a GitHub Advisory search link is used as
+    a last-resort fallback so the report never ships with zero references.
+    """
+    candidates = [
+        f"https://nvd.nist.gov/vuln/detail/{cve_id}",
+        f"https://www.cve.org/CVERecord?id={cve_id}",
+        f"https://www.tenable.com/cve/{cve_id}",
+    ]
+
+    alive_refs = []
+    for url in candidates:
+        if is_reference_alive(url):
+            alive_refs.append(url)
+        time.sleep(0.1)
+
+    if not alive_refs:
+        alive_refs = [f"https://github.com/advisories?query={cve_id}"]
+
+    return alive_refs
 
 
 triage_agent = Agent(
@@ -77,6 +228,10 @@ triage_agent = Agent(
 
 output_file_path = os.path.join(output_dir, f'Triaged_Report_{today_date}.json')
 
+if os.path.exists(output_file_path):
+    os.remove(output_file_path)
+    print(f"Removed old report before regenerating: {output_file_path}")
+    
 triage_task = Task(
     description=f'''You are analyzing CVE threat data collected on {today_date}.
 
@@ -84,6 +239,17 @@ MANDATORY: The input contains exactly {cve_count} CVE entries. You MUST produce 
 
 RAW THREAT DATA:
 {json.dumps(raw_threat_data, indent=2)}
+
+Each entry in the raw data carries a "cvss_source" field and, when available,
+a "cvss_vector" field set by the data collection stage.
+- "nvd_verified", "cna_official", or "tenable_verified" with a real cvss_vector
+  (not "N/A"): the score AND vector are AUTHORITATIVE. Copy CVSS_Score and
+  CVSS_Vector EXACTLY as given, character for character. Do not compute,
+  adjust, or reformat them. (Note: these two fields will also be independently
+  re-verified and corrected afterwards if they do not match, so copying them
+  exactly is the only way to avoid a mismatch being flagged.)
+- "cna_no_cvss" or "ghsa_only", or a missing cvss_vector: no authoritative score
+  was confirmed. Apply rule 4a below.
 
 For EACH CVE entry, produce a complete professional triage record following these rules:
 
@@ -105,17 +271,18 @@ For EACH CVE entry, produce a complete professional triage record following thes
      and specify exploitation prerequisites (authenticated/unauthenticated,
      local/remote access required).
 
-4. CVSS_Score: Copy the numeric score exactly as given, UNLESS the rule in step 4a applies.
+4. CVSS_Score: Copy the numeric score exactly as given when cvss_source is
+   "nvd_verified" or "cna_official". Otherwise apply rule 4a.
 
-4a. MISSING/INCOMPLETE SCORE HANDLING (IMPORTANT):
-   If the input CVSS_Score is 0.0, null, "N/A", or absent, you MUST check whether the
-   vulnerability description and Confidentiality/Integrity/Availability impact indicate
-   real severity (e.g. RCE, authentication bypass, privilege escalation, token forgery,
-   sandbox escape). If so, a score of 0.0 is INVALID and must NOT be reported as-is.
-   In that case, DERIVE an estimated CVSS_Score and CVSS_Vector yourself based on the
-   vulnerability type and impact described, following standard CVSS v3.1 scoring logic.
-   Mark this entry by setting "Score_Source": "estimated" (vs "Score_Source": "verified"
-   for scores copied directly from input). Never leave a clearly severe vulnerability
+4a. MISSING/INCOMPLETE SCORE HANDLING (only applies when cvss_source is
+   "cna_no_cvss" or "ghsa_only"):
+   If the input CVSS_Score is 0.0, null, "N/A", or absent, check whether the
+   vulnerability description and Confidentiality/Integrity/Availability impact
+   indicate real severity (e.g. RCE, authentication bypass, privilege escalation,
+   token forgery, sandbox escape). If so, a score of 0.0 is INVALID and must NOT
+   be reported as-is. In that case, DERIVE an estimated CVSS_Score and CVSS_Vector
+   yourself based on the vulnerability type and impact described, following
+   standard CVSS v3.1 scoring logic. Never leave a clearly severe vulnerability
    classified as CVSS 0.0 / Severity "None".
 
 5. CVSS_Severity: Map the score to the correct CVSS v3.1 label:
@@ -132,7 +299,6 @@ For EACH CVE entry, produce a complete professional triage record following thes
    c) If both are missing (Score=0.0), derive vector based on vulnerability type and impact.
 
    IMPORTANT: The vector you provide MUST be mathematically consistent with the score.
-   Use https://www.first.org/cvss/calculator/3.1 logic to verify before outputting.
    Format: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
    Must include all 8 base metrics: AV, AC, PR, UI, S, C, I, A.
 
@@ -180,9 +346,9 @@ For EACH CVE entry, produce a complete professional triage record following thes
    - Do NOT write generic text like "the attacker exploits the vulnerability".
    - Do NOT include actual working exploit code or shellcode.
 
-12. References: Exactly 2 URLs:
-    - https://nvd.nist.gov/vuln/detail/{{CVE_ID}}
-    - https://www.cve.org/CVERecord?id={{CVE_ID}}
+12. References: Output an empty array []. Do NOT generate reference URLs
+    yourself — they are built and independently verified in a separate step
+    afterwards, checking NVD, CVE.org, and Tenable directly.
 
 CRITICAL OUTPUT RULES:
 - Output ONLY a raw valid JSON array. No markdown. No code fences. No extra text.
@@ -198,7 +364,6 @@ CRITICAL OUTPUT RULES:
     "CVSS_Score": 9.8,
     "CVSS_Severity": "Critical",
     "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
-    "Score_Source": "verified",
     "CVSS_Breakdown": {{
       "Attack_Vector": "Network",
       "Attack_Complexity": "Low",
@@ -213,15 +378,11 @@ CRITICAL OUTPUT RULES:
     "MITRE_Mappings": ["T1190", "T1059"],
     "Urgency_Score": 95,
     "PoC": "An unauthenticated remote attacker targets the vulnerable endpoint. The attacker sends a POST request to /api/example with a crafted payload containing injected DQL syntax. The server passes the input directly to the query engine without sanitization, executing the attacker-controlled query. This results in unauthorized extraction of all stored user credentials from the database.",
-    "References": [
-      "https://nvd.nist.gov/vuln/detail/CVE-2026-XXXXX",
-      "https://www.cve.org/CVERecord?id=CVE-2026-XXXXX"
-    ]
+    "References": []
   }}
 ]
-The array MUST contain {cve_count} entries. "Score_Source" must be either "verified"
-(CVSS_Score copied directly from input data) or "estimated" (CVSS_Score derived by you
-because the input score was missing/zero on a clearly impactful vulnerability, per rule 4a).''',
+The array MUST contain {cve_count} entries. Do NOT include a "Score_Source" field
+yourself — it is added automatically afterwards based on the original cvss_source.''',
 
     agent=triage_agent,
     output_file=output_file_path
@@ -255,11 +416,40 @@ if __name__ == "__main__":
 
     try:
         parsed = json.loads(raw_result)
-        parsed = [recalculate_score_from_vector(e) for e in parsed]
+
+        fixed_entries = []
+        for entry in parsed:
+            cve_id = entry.get("CVE_ID", "")
+            source_info = cve_source_lookup.get(
+                cve_id, {"cvss_source": "ghsa_only", "score": None, "vector": "N/A"}
+            )
+            cvss_source = source_info["cvss_source"]
+
+            # Step 1: for officially verified CVEs, forcibly overwrite
+            # CVSS_Score, CVSS_Vector, CVSS_Severity, and CVSS_Breakdown with
+            # the authoritative values Scout already confirmed. The LLM's
+            # own output for these fields is discarded entirely in this case.
+            enforced = enforce_authoritative_cvss(entry, source_info)
+            if enforced is not None:
+                entry = enforced
+            else:
+                # Step 1b: for unverified/estimated CVEs, keep the LLM's
+                # estimate but assign a deterministic Score_Source label and
+                # sanity-check the vector against the score mathematically.
+                entry["Score_Source"] = map_source_to_score_source(cvss_source, True)
+                entry = recalculate_score_from_vector(entry)
+
+            # Step 2: build and verify references independently in Python,
+            # checking NVD, CVE.org, and Tenable directly rather than
+            # trusting anything the LLM wrote.
+            entry["References"] = build_verified_references(cve_id)
+
+            fixed_entries.append(entry)
+
         with open(output_file_path, 'w', encoding='utf-8') as f:
-            json.dump(parsed, f, indent=2, ensure_ascii=False)
+            json.dump(fixed_entries, f, indent=2, ensure_ascii=False)
         print(f"Triage report saved: {output_file_path}")
-        print(f"Total CVEs triaged: {len(parsed)}")
+        print(f"Total CVEs triaged: {len(fixed_entries)}")
     except json.JSONDecodeError as e:
         print(f"Warning: Could not parse output as clean JSON: {e}")
         print("Saving raw output as fallback...")

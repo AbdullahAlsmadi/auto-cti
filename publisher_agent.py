@@ -29,14 +29,18 @@ try:
         if not file_content.strip():
             print(f"Error: The file {latest_file} is empty. Please run triage_agent.py again.")
             exit()
+        
         triage_data = json.loads(file_content)
-        if isinstance(triage_data, list):
-            report_date = today_date
-        else:
+        
+        # دعم قراءة البيانات المهيكلة سواء كانت مصفوفة مباشرة أو داخل قاموس مفتاح محدد
+        if isinstance(triage_data, dict):
             report_date = triage_data.get("date", today_date)
-            triage_data = triage_data.get("report", [])
+            triage_data = triage_data.get("report", triage_data.get("vulnerabilities", []))
             if isinstance(triage_data, str):
                 triage_data = json.loads(triage_data)
+        else:
+            report_date = today_date
+            
 except json.JSONDecodeError:
     print(f"Error: The file {latest_file} contains invalid JSON. Please run triage_agent.py again.")
     exit()
@@ -47,10 +51,14 @@ if not isinstance(triage_data, list):
 
 output_dir = os.path.join("JoFile", "publisher_agent_result")
 os.makedirs(output_dir, exist_ok=True)
+
+# تنظيف الملفات القديمة لضمان نقاء بيئة إصدار التقارير التنفيذية
 if os.path.exists(output_dir):
-    for f in os.listdir(output_dir):
-        os.remove(os.path.join(output_dir, f))
-    print(f"Removed old report before regenerating: {output_dir}")
+    for filename in os.listdir(output_dir):
+        file_pos = os.path.join(output_dir, filename)
+        if os.path.isfile(file_pos):
+            os.remove(file_pos)
+    print(f"Removed old reports before regenerating: {output_dir}")
 
 reports_dir = os.path.join("JoFile", "Reports")
 os.makedirs(reports_dir, exist_ok=True)

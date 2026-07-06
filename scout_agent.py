@@ -7,9 +7,11 @@ import datetime
 from crewai import Agent, Task, Crew, LLM
 from crewai.tools import BaseTool
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field
+from typing import List
 import sys
 
-sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
+sys.stdout.reconfigure(encoding='utf-8') # type: ignore
 
 load_dotenv()
 
@@ -70,14 +72,6 @@ def fetch_opencve_cvss(cve_id: str):
 
 
 def fetch_tenable_cvss(cve_id: str):
-    """
-    Tenable's CVE page structure separates the section header ("CVSS v3")
-    from the actual "Base Score:" and "Vector:" lines, with HTML markup and
-    other text in between. This strips HTML tags, isolates the CVSS v3
-    section specifically (bounded by the next "CVSS v4" or "EPSS" heading
-    so the v2 or v4 vector is never picked up by mistake), then extracts
-    the score and vector independently within that section.
-    """
     try:
         url = f"https://www.tenable.com/cve/{cve_id}"
         r = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
@@ -96,7 +90,7 @@ def fetch_tenable_cvss(cve_id: str):
         section_end = section_start + (boundary.start() if boundary else 600)
         section = clean_text[section_start:section_end]
 
-        score_match  = re.search(r'Base\s*Score[\s:*]*([0-9]{1,2}\.[0-9])', section, re.IGNORECASE)
+        score_match = re.search(r'Base\s*Score[\s:*]*([0-9]{1,2}\.[0-9])', section, re.IGNORECASE)
         vector_match = re.search(r'(CVSS:3\.[01]/[A-Za-z0-9:/]+)', section)
         severity_match = re.search(r'Severity[\s:*]*(Critical|High|Medium|Low|None)', section, re.IGNORECASE)
 
@@ -114,15 +108,6 @@ def fetch_tenable_cvss(cve_id: str):
 
 
 def verify_cvss(cve_id: str, fallback_score, fallback_severity):
-    """
-    Returns (score, severity, cvss_source, vector).
-    Tries three independent sources in priority order before falling back
-    to the GHSA-reported (unverified) score:
-        1. CVE Services API (cveawg.mitre.org) - the official CNA record
-        2. OpenCVE                             - CVSS fallback aggregator
-        3. Tenable                             - third-party CVE database,
-           often covers CVEs the two sources above have no CVSS for yet
-    """
     result = fetch_cve_services_cvss(cve_id)
     if result == "not_found" or result is None:
         result = fetch_opencve_cvss(cve_id)
@@ -145,10 +130,24 @@ def verify_cvss(cve_id: str, fallback_score, fallback_severity):
         )
 
     if result is not None:
-        # A CNA record exists but genuinely carries no CVSS score.
         return fallback_score, fallback_severity, "cna_no_cvss", "N/A"
 
     return fallback_score, fallback_severity, "ghsa_only", "N/A"
+
+
+class CVEEntry(BaseModel):
+    cve_id: str = Field(..., description="The official CVE ID starting with CVE-")
+    description: str = Field(..., description="Vulnerability description or summary")
+    cvss_score: float = Field(..., description="The numeric CVSS score")
+    cvss_severity: str = Field(..., description="The calculated or verified severity")
+    cvss_source: str = Field(..., description="The source database of the CVSS score")
+    cvss_vector: str = Field(..., description="The standard CVSS vector string or N/A")
+    cwe_id: str = Field(..., description="The associated CWE ID")
+    alienvault_pulses: str = Field(..., description="Threat intelligence pulse findings from AlienVault")
+
+
+class ScoutReport(BaseModel):
+    vulnerabilities: List[CVEEntry]
 
 
 class NISTSearchTool(BaseTool):
@@ -166,7 +165,7 @@ class NISTSearchTool(BaseTool):
         def parse_nvd_response(data):
             verified_cves = []
             for item in data.get("vulnerabilities", []):
-                cve    = item.get("cve", {})
+                cve = item.get("cve", {})
                 cve_id = cve.get("id")
                 if not cve_id:
                     continue
@@ -175,22 +174,24 @@ class NISTSearchTool(BaseTool):
                     if d.get("lang") == "en":
                         desc = d.get("value", desc)
                         break
-                cvss_score    = "N/A"
+                cvss_score = "N/A"
                 cvss_severity = "N/A"
-                cvss_vector   = "N/A"
-                cwe_id        = "N/A"
-                metrics   = cve.get("metrics", {})
+                cvss_vector = "N/A"
+                cwe_id = "N/A"
+                metrics = cve.get("metrics", {})
                 cvss_list = metrics.get("cvssMetricV31", metrics.get("cvssMetricV30", []))
                 if cvss_list:
-                    cvss_data     = cvss_list[0].get("cvssData", {})
-                    cvss_score    = cvss_data.get("baseScore", "N/A")
+                    cvss_data = cvss_list[0].get("cvssData", {})
+                    cvss_score = cvss_data.get("baseScore", "N/A")
                     cvss_severity = cvss_data.get("baseSeverity", "N/A")
-                    cvss_vector   = cvss_data.get("vectorString", "N/A")
+                    cvss_vector = cvss_data.get("vectorString", "N/A")
                 for weakness in cve.get("weaknesses", []):
                     for wd in weakness.get("description", []):
                         if wd.get("lang") == "en":
                             cwe_id = wd.get("value", "N/A")
                             break
+                if cvss_vector == "N/A":
+                    continue
                 verified_cves.append(
                     f"SOURCE: NVD | VERIFIED_CVE_ID: {cve_id} | "
                     f"CVSS: {cvss_score} | SEVERITY: {cvss_severity} | "
@@ -200,7 +201,7 @@ class NISTSearchTool(BaseTool):
             return verified_cves
 
         try:
-            print("DEBUG - Trying NVD (no date filter)...")
+            print("DEBUG - Trying NVD (no date filter, resultsPerPage=20)...")
             r = requests.get(nvd_url, headers=headers, params={"resultsPerPage": 20}, timeout=30)
             print(f"DEBUG - NVD Status: {r.status_code}")
             if r.status_code == 200:
@@ -211,82 +212,105 @@ class NISTSearchTool(BaseTool):
             print(f"DEBUG - NVD Error: {e}")
 
         try:
-            end_dt   = datetime.datetime.utcnow()
+            end_dt = datetime.datetime.utcnow()
             start_dt = end_dt - datetime.timedelta(days=7)
-            params   = {
-                "resultsPerPage":   10,
-                "lastModStartDate": start_dt.strftime("%Y-%m-%dT%H:%M:%S"),
-                "lastModEndDate":   end_dt.strftime("%Y-%m-%dT%H:%M:%S"),
+            start_str = start_dt.strftime("%Y-%m-%dT%H:%M:%S.000") + "Z"
+            end_str = end_dt.strftime("%Y-%m-%dT%H:%M:%S.000") + "Z"
+            params = {
+                "resultsPerPage": 20,
+                "pubStartDate": start_str,
+                "pubEndDate": end_str,
             }
-            print("DEBUG - Trying NVD (lastModified 7 days)...")
+            print("DEBUG - Trying NVD (Strict 7-day Publication Range)...")
             r = requests.get(nvd_url, headers=headers, params=params, timeout=30)
-            print(f"DEBUG - NVD lastMod Status: {r.status_code}")
+            print(f"DEBUG - NVD pubDate Status: {r.status_code}")
             if r.status_code == 200:
                 cves = parse_nvd_response(r.json())
                 if cves:
                     return "STRICT INSTRUCTION: USE EXACTLY THESE IDs AND SCORES:\n" + "\n".join(cves)
         except Exception as e:
-            print(f"DEBUG - NVD lastMod Error: {e}")
+            print(f"DEBUG - NVD pubDate Error: {e}")
 
         try:
-            print("DEBUG - Trying GitHub Advisory Database (GraphQL)...")
-            query_body = """
-            {
-              securityAdvisories(first: 30, orderBy: {field: PUBLISHED_AT, direction: DESC}) {
-                nodes {
-                  ghsaId
-                  summary
-                  severity
-                  publishedAt
-                  cvss { score vectorString }
-                  cwes(first: 1) { nodes { cweId name } }
-                  identifiers { type value }
-                  vulnerabilities(first: 1) { nodes { package { name ecosystem } } }
-                }
-              }
-            }
-            """
+            print("DEBUG - Trying GitHub Advisory Database (GraphQL, paginated)...")
+
+            TARGET_COUNT = 20
+            MAX_PAGES = 6
+
+            verified_cves = []
+            seen_cve_ids = set()
+            cursor = None
+
             gh_headers = {"Content-Type": "application/json"}
-            gh_token   = os.getenv("GITHUB_TOKEN")
+            gh_token = os.getenv("GITHUB_TOKEN")
             if gh_token:
                 gh_headers["Authorization"] = f"Bearer {gh_token}"
 
-            r = requests.post(
-                "https://api.github.com/graphql",
-                json={"query": query_body},
-                headers=gh_headers,
-                timeout=30
-            )
-            print(f"DEBUG - GitHub Advisory Status: {r.status_code}")
+            for page in range(MAX_PAGES):
+                if len(verified_cves) >= TARGET_COUNT:
+                    break
 
-            if r.status_code == 200:
-                advisories = (
-                    r.json()
-                     .get("data", {})
-                     .get("securityAdvisories", {})
-                     .get("nodes", [])
+                after_clause = f', after: "{cursor}"' if cursor else ""
+                query_body = f"""
+                {{
+                  securityAdvisories(first: 30, orderBy: {{field: PUBLISHED_AT, direction: DESC}}{after_clause}) {{
+                    pageInfo {{ hasNextPage endCursor }}
+                    nodes {{
+                      ghsaId
+                      summary
+                      severity
+                      publishedAt
+                      cvss {{ score vectorString }}
+                      cwes(first: 1) {{ nodes {{ cweId name }} }}
+                      identifiers {{ type value }}
+                    }}
+                  }}
+                }}
+                """
+
+                r = requests.post(
+                    "https://api.github.com/graphql",
+                    json={"query": query_body},
+                    headers=gh_headers,
+                    timeout=30
                 )
-                verified_cves = []
+                print(f"DEBUG - GitHub Advisory Status (page {page + 1}): {r.status_code}")
+
+                if r.status_code != 200:
+                    break
+
+                payload = r.json().get("data", {}).get("securityAdvisories", {})
+                advisories = payload.get("nodes", [])
+                page_info = payload.get("pageInfo", {})
+
                 for adv in advisories:
+                    if len(verified_cves) >= TARGET_COUNT:
+                        break
+
                     cve_id = None
                     for ident in adv.get("identifiers", []):
                         if ident.get("type") == "CVE":
                             cve_id = ident.get("value")
                             break
-                    if not cve_id or not cve_id.startswith("CVE-"):
+                    if not cve_id or not cve_id.startswith("CVE-") or cve_id in seen_cve_ids:
                         continue
+                    seen_cve_ids.add(cve_id)
 
-                    summary       = adv.get("summary", "No description available.")
-                    cvss_score    = adv.get("cvss", {}).get("score", "N/A")
+                    summary = adv.get("summary", "No description available.")
+                    cvss_score = adv.get("cvss", {}).get("score", "N/A")
                     cvss_severity = adv.get("severity", "N/A").capitalize()
-                    cwe_nodes     = adv.get("cwes", {}).get("nodes", [])
-                    cwe_id        = cwe_nodes[0].get("cweId", "N/A") if cwe_nodes else "N/A"
-                    published     = adv.get("publishedAt", "")[:20]
+                    cwe_nodes = adv.get("cwes", {}).get("nodes", [])
+                    cwe_id = cwe_nodes[0].get("cweId", "N/A") if cwe_nodes else "N/A"
+                    published = adv.get("publishedAt", "")[:20]
 
                     verified_score, verified_severity, cvss_source, verified_vector = verify_cvss(
                         cve_id, cvss_score, cvss_severity
                     )
                     time.sleep(0.3)
+
+                    if cvss_source not in ("cna_official", "tenable_verified") or verified_vector in (None, "N/A"):
+                        print(f" --> [DROPPED] {cve_id}: no verifiable CVSS vector (source={cvss_source})")
+                        continue
 
                     verified_cves.append(
                         f"SOURCE: GHSA | VERIFIED_CVE_ID: {cve_id} | "
@@ -295,13 +319,18 @@ class NISTSearchTool(BaseTool):
                         f"CVSS_SOURCE: {cvss_source} | CVSS_VECTOR: {verified_vector} | "
                         f"DESC: {summary[:500]}"
                     )
+                    print(f" --> [KEPT] {cve_id} ({len(verified_cves)}/{TARGET_COUNT})")
 
-                if verified_cves:
-                    final_cves = verified_cves[:20]
-                    print(f"DEBUG - GitHub Advisory returned {len(verified_cves)} CVEs, using {len(final_cves)}")
-                    return "STRICT INSTRUCTION: USE EXACTLY THESE IDs AND SCORES:\n" + "\n".join(final_cves)
-                else:
-                    print("DEBUG - GitHub Advisory: no CVE identifiers found in response")
+                if not page_info.get("hasNextPage"):
+                    break
+                cursor = page_info.get("endCursor")
+
+            if verified_cves:
+                final_cves = verified_cves[:TARGET_COUNT]
+                print(f"DEBUG - GitHub Advisory: collected {len(final_cves)} VERIFIED CVEs")
+                return "STRICT INSTRUCTION: USE EXACTLY THESE IDs AND SCORES:\n" + "\n".join(final_cves)
+            else:
+                print("DEBUG - GitHub Advisory: no verified CVEs found after filtering")
 
         except Exception as e:
             print(f"DEBUG - GitHub Advisory Error: {e}")
@@ -329,12 +358,15 @@ class NISTSearchTool(BaseTool):
                             if not vuln_id:
                                 continue
                             published = vuln.get("published", "")[:20]
-                            summary   = vuln.get("summary", vuln.get("details", "No description."))
+                            summary = vuln.get("summary", vuln.get("details", "No description."))
 
                             verified_score, verified_severity, cvss_source, verified_vector = verify_cvss(
                                 vuln_id, "N/A", "N/A"
                             )
                             time.sleep(0.3)
+
+                            if cvss_source not in ("cna_official", "tenable_verified") or verified_vector in (None, "N/A"):
+                                continue
 
                             osv_cves.append(
                                 f"SOURCE: OSV | VERIFIED_CVE_ID: {vuln_id} | "
@@ -346,7 +378,7 @@ class NISTSearchTool(BaseTool):
                     continue
 
             if osv_cves:
-                print(f"DEBUG - OSV returned {len(osv_cves)} CVEs")
+                print(f"DEBUG - OSV returned {len(osv_cves)} verified CVEs")
                 return "STRICT INSTRUCTION: USE EXACTLY THESE IDs:\n" + "\n".join(osv_cves[:20])
 
         except Exception as e:
@@ -368,8 +400,8 @@ class AlienVaultOTXTool(BaseTool):
             if not api_key:
                 return "No active threat pulses found."
 
-            url      = f"https://otx.alienvault.com/api/v1/search/pulses?q={query}&limit=10"
-            headers  = {"X-OTX-API-KEY": api_key}
+            url = f"https://otx.alienvault.com/api/v1/search/pulses?q={query}&limit=10"
+            headers = {"X-OTX-API-KEY": api_key}
             response = requests.get(url, headers=headers, timeout=20)
 
             if response.status_code != 200:
@@ -378,25 +410,74 @@ class AlienVaultOTXTool(BaseTool):
             results = []
             for pulse in response.json().get("results", []):
                 pulse_name = pulse.get("name", "N/A")
-                tags       = ", ".join(pulse.get("tags", []))
+                tags = ", ".join(pulse.get("tags", []))
                 results.append(f"Pulse: {pulse_name} | Tags: {tags}")
 
             return "\n".join(results) if results else "No active threat pulses found."
 
         except Exception:
-            # A network hiccup on this enrichment call must NEVER cause the
-            # CVE itself to look invalid. Always return a benign, neutral
-            # result instead of an alarming error string.
             return "No active threat pulses found."
 
 
-nist_tool       = NISTSearchTool()
+class TenableSearchTool(BaseTool):
+    name: str = "Tenable CVE Search Tool"
+    description: str = (
+        "Parses and cross-references NIST data with Tenable's database. "
+        "It updates or overrides missing/incomplete CVSS scores and vectors. "
+        "Pass a JSON string containing 'cve_id', 'nist_score', and 'nist_vector'."
+    )
+
+    def _run(self, query: str) -> str: # type: ignore
+        try:
+            try:
+                params = json.loads(query)
+                cve_id = params.get("cve_id")
+                nist_score = params.get("nist_score")
+                nist_vector = params.get("nist_vector")
+            except json.JSONDecodeError:
+                cve_id = query.strip()
+                nist_score = "N/A"
+                nist_vector = "N/A"
+
+                tenable_data = fetch_tenable_cvss(cve_id)
+                if not tenable_data:
+                    return f"No alternative data found on Tenable. Retaining NIST values."
+
+                t_score = tenable_data.get("score")
+                t_vector = tenable_data.get("vector")
+                t_severity = tenable_data.get("severity") or "N/A"
+
+                if nist_score in ["N/A", "0.0", 0.0, None] or nist_vector in ["N/A", "", None]:
+                    if t_score is not None and t_vector != "N/A":
+                        return json.dumps({
+                            "status": "OVERRIDDEN",
+                            "reason": "NIST data was missing or incomplete. Successfully updated from Tenable.",
+                            "cvss_score": t_score,
+                            "cvss_vector": t_vector,
+                            "cvss_severity": t_severity,
+                            "cvss_source": "tenable_verified"
+                        })
+
+                return json.dumps({
+                    "status": "VERIFIED",
+                    "reason": "NIST data is already accurate and complete.",
+                    "cvss_score": nist_score,
+                    "cvss_vector": nist_vector,
+                    "cvss_source": "nvd_verified"
+                })
+
+        except Exception as e:
+            return f"Error during Tenable verification: {str(e)}"
+
+
+nist_tool = NISTSearchTool()
 alienvault_tool = AlienVaultOTXTool()
+tenable_tool = TenableSearchTool()
 
 scout_llm = LLM(
-    model="gemini/gemini-3.1-flash-lite",
+    model="gemini/gemini-2.5-flash",
     api_key=os.getenv("GEMINI_API_KEY"),
-    max_retries=5  # type: ignore
+    max_retries=5 # type: ignore
 )
 
 scout_agent = Agent(
@@ -413,7 +494,7 @@ scout_agent = Agent(
     ),
     verbose=True,
     llm=scout_llm,
-    tools=[nist_tool, alienvault_tool],
+    tools=[nist_tool, alienvault_tool, tenable_tool],
     allow_delegation=False
 )
 
@@ -421,35 +502,18 @@ live_task = Task(
     description=f'''Follow these exact steps for {today_date}:
 
     STEP 1: Call the NIST NVD tool with query "recent".
-            It will return real CVEs with CVSS scores, CWE IDs, a CVSS_SOURCE tag,
-            and a CVSS_VECTOR string (which may be "N/A" if no official vector exists).
+            It will return recent CVEs with their scores and vectors.
 
     STEP 2: For EACH CVE ID returned, call AlienVault OTX to check for active pulses.
 
-    STEP 3: Compile the final JSON using ONLY data from the tools.
-            Do NOT modify CVE IDs, scores, descriptions, the CVSS_SOURCE tag, or the
-            CVSS_VECTOR string. Copy CVSS_VECTOR exactly, character for character,
-            including when it is "N/A".
+    STEP 3: For EACH CVE ID, run the Tenable CVE Verification Tool by passing the CVE ID, current score, and vector.
+            If Tenable returns a status of "OVERRIDDEN", you MUST update the fields with the trusted score, vector, and severity provided by Tenable.
 
-    RULES:
-    - Use ONLY CVE IDs that start with "CVE-" from the tool output. Never invent IDs.
-    - Copy CVSS scores, CWE IDs, CVSS_SOURCE, and CVSS_VECTOR exactly as returned by the tool.
-    - Output ONLY a valid JSON array. No markdown, no extra text.
-    - If all returned IDs are "N/A" or invalid, output exactly: "No real data found."''',
+    STEP 4: Populate the required data structures strictly according to the Pydantic schema provided.''',
 
-    expected_output='''[
-        {
-            "cve_id": "CVE-YYYY-NNNNN",
-            "description": "Description...",
-            "cvss_score": 9.8,
-            "cvss_severity": "Critical",
-            "cvss_source": "nvd_verified",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H or N/A",
-            "cwe_id": "CWE-89",
-            "alienvault_pulses": "Pulse info or No active threat pulses found"
-        }
-    ]''',
-    agent=scout_agent
+    expected_output='A structured object containing verified and cross-referenced CVE threat records.',
+    agent=scout_agent,
+    output_pydantic=ScoutReport
 )
 
 cyber_crew = Crew(
@@ -465,33 +529,40 @@ if __name__ == "__main__":
 
     result = cyber_crew.kickoff()
 
-    print("\n" + "="*60)
-    print("Scout Agent Output:")
-    print("="*60)
-    print(result)
-
-    results_dir     = os.path.join("JoFile", "Scout_Agent_Results")
+    results_dir = os.path.join("JoFile", "Scout_Agent_Results")
     os.makedirs(results_dir, exist_ok=True)
     report_filename = os.path.join(results_dir, 'cti_report.json')
 
-    raw_result = str(result).strip()
-    if raw_result.startswith("```json"):
-        raw_result = raw_result[7:]
-    if raw_result.startswith("```"):
-        raw_result = raw_result[3:]
-    if raw_result.endswith("```"):
-        raw_result = raw_result[:-3]
-    raw_result = raw_result.strip()
-
     try:
-        new_data = json.loads(raw_result)
-    except json.JSONDecodeError:
-        print("Warning: Could not parse output as JSON. Saving raw text.")
-        new_data = {"error": "Invalid JSON returned", "raw_text": raw_result}
+        pydantic_output = result.pydantic # type: ignore
+        if pydantic_output:
+            final_data = pydantic_output.model_dump()
+            new_data = final_data.get("vulnerabilities", [])
+        else:
+            raise ValueError("Pydantic conversion failed")
+
+        print("\n================================================")
+        print("Success! Clean Structured Output Received.")
+        print("================================================")
+
+    except Exception as e:
+        print(f"Warning: Falling back to string parsing due to: {e}")
+        raw_result = str(result).strip()
+        if raw_result.startswith("```json"):
+            raw_result = raw_result[7:]
+        if raw_result.startswith("```"):
+            raw_result = raw_result[3:]
+        if raw_result.endswith("```"):
+            raw_result = raw_result[:-3]
+        raw_result = raw_result.strip()
+        try:
+            new_data = json.loads(raw_result)
+        except json.JSONDecodeError:
+            new_data = {"error": "Invalid JSON returned", "raw_text": raw_result}
 
     all_reports = {today_date: new_data}
 
     with open(report_filename, 'w', encoding='utf-8') as f:
         json.dump(all_reports, f, indent=4, ensure_ascii=False)
 
-    print(f"\nReport saved to: {report_filename}")
+    print(f"\nReport saved safely to: {report_filename}")

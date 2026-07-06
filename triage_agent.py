@@ -20,7 +20,12 @@ scout_file_path = os.path.join("JoFile", "Scout_Agent_Results", "cti_report.json
 try:
     with open(scout_file_path, 'r', encoding='utf-8') as f:
         all_reports = json.load(f)
-        raw_threat_data = all_reports.get(today_date, {})
+        # القراءة الذكية المحدثة المتوافقة مع الـ Pydantic schema لملف Scout المطور
+        day_data = all_reports.get(today_date, {})
+        if isinstance(day_data, dict) and "vulnerabilities" in day_data:
+            raw_threat_data = day_data["vulnerabilities"]
+        else:
+            raw_threat_data = day_data
 except FileNotFoundError:
     print(f"Error: Could not find {scout_file_path}. Please run scout_agent.py first.")
     exit()
@@ -29,16 +34,16 @@ if not raw_threat_data:
     print(f"No data found for today ({today_date}) in the JSON file.")
     exit()
 
-cve_count = len(raw_threat_data) if isinstance(raw_threat_data, list) else len(raw_threat_data.get("vulnerabilities", raw_threat_data))
+cve_count = len(raw_threat_data)
 print(f"DEBUG - CVEs received from Scout: {cve_count}")
 
 output_dir = os.path.join("JoFile", "triage_agent_result")
 os.makedirs(output_dir, exist_ok=True)
 
 triage_llm = LLM(
-    model="gemini/gemini-3.1-flash-lite",
+   model="gemini/gemini-2.5-flash",
     api_key=os.getenv("GEMINI_API_KEY"),
-    max_retries=5  # type: ignore
+    max_retries=5 # type: ignore
 )
 
 # Build a lookup table mapping each CVE ID to everything Scout already
@@ -56,6 +61,48 @@ if isinstance(raw_threat_data, list):
                 "vector":      item.get("cvss_vector", "N/A"),
             }
 
+def fetch_tenable_live_cvss(cve_id: str):
+    try:
+        url = f"https://www.tenable.com/cve/{cve_id}"
+        r = requests.get(url, timeout=12, headers={"User-Agent": "Mozilla/5.0"})
+        if r.status_code != 200: return None
+        clean_text = re.sub(r'<[^>]+>', ' ', r.text)
+        clean_text = re.sub(r'\s+', ' ', clean_text)
+        v3_header = re.search(r'CVSS\s*v3\b', clean_text)
+        if not v3_header: return None
+        section_start = v3_header.end()
+        boundary = re.search(r'CVSS\s*v4\b|EPSS\b', clean_text[section_start:])
+        section_end = section_start + (boundary.start() if boundary else 600)
+        section = clean_text[section_start:section_end]
+        score_match  = re.search(r'Base\s*Score[\s:*]*([0-9]{1,2}\.[0-9])', section, re.IGNORECASE)
+        vector_match = re.search(r'(CVSS:3\.[01]/[A-Za-z0-9:/]+)', section)
+        severity_match = re.search(r'Severity[\s:*]*(Critical|High|Medium|Low|None)', section, re.IGNORECASE)
+        if not score_match or not vector_match: return None
+        return {
+            "score": float(score_match.group(1)),
+            "vector": vector_match.group(1),
+            "severity": severity_match.group(1).capitalize() if severity_match else "Unknown",
+        }
+    except Exception as e:
+        return None
+print("\nDEBUG - Performing Pre-Triage Tenable Enrichment for missing vectors...")
+if isinstance(raw_threat_data, list):
+    for item in raw_threat_data:
+        cid = item.get("cve_id")
+        source = item.get("cvss_source", "")
+        vector = item.get("cvss_vector", "N/A")
+        
+        if source in ("ghsa_only", "cna_no_cvss") or vector == "N/A":
+            if cid:
+                tenable_data = fetch_tenable_live_cvss(cid)
+                if tenable_data and tenable_data.get("vector") and tenable_data.get("vector") != "N/A":
+                    item["cvss_score"] = tenable_data["score"]
+                    item["cvss_vector"] = tenable_data["vector"]
+                    item["cvss_severity"] = tenable_data["severity"]
+                    item["cvss_source"] = "tenable_verified"
+                    print(f" --> [SUCCESS] Pre-enriched {cid} directly from Tenable.")
+            time.sleep(0.3)
+print("DEBUG - Pre-Enrichment Complete.\n")
 
 def parse_cvss_vector(vector: str):
     """
@@ -174,6 +221,7 @@ def is_reference_alive(url: str) -> bool:
         return True
     except Exception:
         return True
+
 
 
 def build_verified_references(cve_id: str) -> list:
@@ -419,29 +467,23 @@ if __name__ == "__main__":
 
         fixed_entries = []
         for entry in parsed:
-            cve_id = entry.get("CVE_ID", "")
+            # قراءة ذكية لا تتأثر بتلاعب الذكاء الاصطناعي بأسماء الحقول
+            cve_id = entry.get("CVE_ID") or entry.get("cve_id") or ""
+            entry["CVE_ID"] = cve_id  
+            
             source_info = cve_source_lookup.get(
                 cve_id, {"cvss_source": "ghsa_only", "score": None, "vector": "N/A"}
             )
             cvss_source = source_info["cvss_source"]
 
-            # Step 1: for officially verified CVEs, forcibly overwrite
-            # CVSS_Score, CVSS_Vector, CVSS_Severity, and CVSS_Breakdown with
-            # the authoritative values Scout already confirmed. The LLM's
-            # own output for these fields is discarded entirely in this case.
+            # الفرض الإلزامي للقيم المؤكدة (تدمير مخرجات الذكاء الاصطناعي الخاطئة)
             enforced = enforce_authoritative_cvss(entry, source_info)
             if enforced is not None:
                 entry = enforced
             else:
-                # Step 1b: for unverified/estimated CVEs, keep the LLM's
-                # estimate but assign a deterministic Score_Source label and
-                # sanity-check the vector against the score mathematically.
                 entry["Score_Source"] = map_source_to_score_source(cvss_source, True)
                 entry = recalculate_score_from_vector(entry)
 
-            # Step 2: build and verify references independently in Python,
-            # checking NVD, CVE.org, and Tenable directly rather than
-            # trusting anything the LLM wrote.
             entry["References"] = build_verified_references(cve_id)
 
             fixed_entries.append(entry)

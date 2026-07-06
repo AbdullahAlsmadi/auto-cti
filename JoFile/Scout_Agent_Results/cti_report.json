@@ -1,95 +1,5 @@
 {
-    "July 05, 2026": [
-        {
-            "cve_id": "CVE-2026-49360",
-            "description": "Recce server has unauthenticated SQL execution that allows local file read/write through DuckDB",
-            "cvss_score": 0.0,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-73",
-            "alienvault_pulses": "No active threat pulses found"
-        },
-        {
-            "cve_id": "CVE-2026-49353",
-            "description": "9router has an Incomplete Fix: Local-Only Access Gate Bypass in 9router via Host Header SpoofING",
-            "cvss_score": 7.5,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-290",
-            "alienvault_pulses": "No active threat pulses found"
-        },
-        {
-            "cve_id": "CVE-2026-46599",
-            "description": "golang.org/x/image/tiff has excessive resource consumption in PackBits decompression",
-            "cvss_score": 7.5,
-            "cvss_severity": "High",
-            "cvss_source": "cna_no_cvss",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-770",
-            "alienvault_pulses": "No active threat pulses found"
-        },
-        {
-            "cve_id": "CVE-2026-49352",
-            "description": "9router's Hardcoded Default fallback JWT Secret  Allows Authentication Bypass",
-            "cvss_score": 9.8,
-            "cvss_severity": "Critical",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-798",
-            "alienvault_pulses": "No active threat pulses found"
-        },
-        {
-            "cve_id": "CVE-2026-49292",
-            "description": "Kiwi TCMS's /init-db/ page renders and responds to requests after first use",
-            "cvss_score": 0.0,
-            "cvss_severity": "Low",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-862",
-            "alienvault_pulses": "No active threat pulses found"
-        },
-        {
-            "cve_id": "CVE-2026-54617",
-            "description": "LaunchServer FileServerHandler has an unauthenticated path traversal issue",
-            "cvss_score": 9.8,
-            "cvss_severity": "Critical",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-22",
-            "alienvault_pulses": "No active threat pulses found"
-        },
-        {
-            "cve_id": "CVE-2026-49284",
-            "description": "SimpleSAMLphp SP accepts a response from an unexpected IdP when unsigned `Response/InResponseTo` is combined with a signed assertion lacking `SubjectConfirmationData/InResponseTo`",
-            "cvss_score": 7.1,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-345",
-            "alienvault_pulses": "No active threat pulses found"
-        },
-        {
-            "cve_id": "CVE-2026-52792",
-            "description": "Algernon vulnerable to server-side script source disclosure on Windows via NTFS filename",
-            "cvss_score": 0.0,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-69",
-            "alienvault_pulses": "No active threat pulses found"
-        },
-        {
-            "cve_id": "CVE-2026-52834",
-            "description": "jxl-grid on 32-bit platforms has an out-of-bounds writes due to integer overflow",
-            "cvss_score": 7.3,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-122",
-            "alienvault_pulses": "No active threat pulses found"
-        },
+    "July 06, 2026": [
         {
             "cve_id": "CVE-2026-2092",
             "description": "Keycloak: Unauthorized access via improper validation of encrypted SAML assertions",
@@ -98,7 +8,7 @@
             "cvss_source": "cna_official",
             "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:H/I:L/A:L",
             "cwe_id": "CWE-1287",
-            "alienvault_pulses": "No active threat pulses found"
+            "alienvault_pulses": "No active threat pulses found."
         },
         {
             "cve_id": "CVE-2026-52830",
@@ -108,7 +18,7 @@
             "cvss_source": "cna_official",
             "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:L",
             "cwe_id": "CWE-22",
-            "alienvault_pulses": "No active threat pulses found"
+            "alienvault_pulses": "No active threat pulses found."
         },
         {
             "cve_id": "CVE-2026-50268",
@@ -118,7 +28,7 @@
             "cvss_source": "cna_official",
             "cvss_vector": "CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:L/I:N/A:N",
             "cwe_id": "CWE-256",
-            "alienvault_pulses": "No active threat pulses found"
+            "alienvault_pulses": "No active threat pulses found."
         },
         {
             "cve_id": "CVE-2026-50267",
@@ -128,7 +38,7 @@
             "cvss_source": "cna_official",
             "cvss_vector": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:N/A:N",
             "cwe_id": "CWE-312",
-            "alienvault_pulses": "No active threat pulses found"
+            "alienvault_pulses": "No active threat pulses found."
         },
         {
             "cve_id": "CVE-2026-50202",
@@ -138,7 +48,7 @@
             "cvss_source": "cna_official",
             "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:H/A:N",
             "cwe_id": "CWE-668",
-            "alienvault_pulses": "No active threat pulses found"
+            "alienvault_pulses": "No active threat pulses found."
         },
         {
             "cve_id": "CVE-2026-50201",
@@ -148,7 +58,7 @@
             "cvss_source": "cna_official",
             "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
             "cwe_id": "CWE-269",
-            "alienvault_pulses": "No active threat pulses found"
+            "alienvault_pulses": "No active threat pulses found."
         },
         {
             "cve_id": "CVE-2026-50200",
@@ -158,7 +68,7 @@
             "cvss_source": "cna_official",
             "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
             "cwe_id": "CWE-200",
-            "alienvault_pulses": "No active threat pulses found"
+            "alienvault_pulses": "No active threat pulses found."
         },
         {
             "cve_id": "CVE-2026-50196",
@@ -168,7 +78,7 @@
             "cvss_source": "cna_official",
             "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
             "cwe_id": "CWE-20",
-            "alienvault_pulses": "No active threat pulses found"
+            "alienvault_pulses": "No active threat pulses found."
         },
         {
             "cve_id": "CVE-2026-50194",
@@ -178,27 +88,117 @@
             "cvss_source": "cna_official",
             "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:N",
             "cwe_id": "CWE-288",
-            "alienvault_pulses": "No active threat pulses found"
+            "alienvault_pulses": "No active threat pulses found."
         },
         {
-            "cve_id": "CVE-2026-49289",
-            "description": "SimpleSAMLphp has Possible DoS via XPath Transform",
-            "cvss_score": 7.5,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-400",
-            "alienvault_pulses": "No active threat pulses found"
+            "cve_id": "CVE-2026-9811",
+            "description": "Mautic has Stored Cross-Site Scripting (XSS) in Project Option Selector",
+            "cvss_score": 5.4,
+            "cvss_severity": "MEDIUM",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N",
+            "cwe_id": "CWE-79",
+            "alienvault_pulses": "No active threat pulses found."
         },
         {
-            "cve_id": "CVE-2026-52829",
-            "description": "Zebra Address Book Aborted by IPv4-Mapped Mempool Misbehavior Update",
+            "cve_id": "CVE-2026-9809",
+            "description": "Mautic has Stored Cross-Site Scripting (XSS) in Projects Component",
+            "cvss_score": 7.6,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:H/A:N",
+            "cwe_id": "CWE-79",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-9808",
+            "description": "Mautic has an Authorization Bypass in API v2 Endpoints",
+            "cvss_score": 7.1,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N",
+            "cwe_id": "CWE-863",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-9559",
+            "description": "Mautic vulnerable to Path Traversal via Campaign Import",
+            "cvss_score": 9.9,
+            "cvss_severity": "CRITICAL",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H",
+            "cwe_id": "CWE-22",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-9558",
+            "description": "Mautic has Server-Side Template Injection (SSTI) in Theme Templates",
+            "cvss_score": 9.9,
+            "cvss_severity": "CRITICAL",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H",
+            "cwe_id": "CWE-1336",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-9557",
+            "description": "Mautic Focus component Vulnerable to SSRF",
+            "cvss_score": 6.4,
+            "cvss_severity": "MEDIUM",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:L/A:N",
+            "cwe_id": "CWE-918",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-4776",
+            "description": "Mautic has SQL Injection in API Contact Filtering",
+            "cvss_score": 7.1,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:L",
+            "cwe_id": "CWE-89",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-52726",
+            "description": "Dulwich's submodule path traversal in porcelain.submodule_update / porcelain.clone(recurse_submodules=True) yields RCE via attacker-dropped .git/hooks payload",
             "cvss_score": 7.5,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-617",
-            "alienvault_pulses": "No active threat pulses found"
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+            "cwe_id": "CWE-22",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-53811",
+            "description": "OpenClaw: Matrix allowFrom could bind to mutable display names",
+            "cvss_score": 8.8,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "cwe_id": "CWE-290",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-53816",
+            "description": "OpenClaw: Paired nodes could forge exec lifecycle events without system.run provenance",
+            "cvss_score": 7.2,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H",
+            "cwe_id": "CWE-284",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-53806",
+            "description": "OpenClaw: Combined POSIX shell options could confuse exec revalidation",
+            "cvss_score": 8.8,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "cwe_id": "CWE-367",
+            "alienvault_pulses": "No active threat pulses found."
         }
     ]
 }

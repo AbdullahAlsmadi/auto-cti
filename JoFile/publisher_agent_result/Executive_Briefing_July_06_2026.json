@@ -1,0 +1,644 @@
+{
+    "report_date": "July 06, 2026",
+    "executive_summary": "As of July 06, 2026, the security operations center has concluded an analysis of 20 identified vulnerabilities, comprised of 3 Critical, 11 High, 5 Medium, and 1 Low severity findings. This current threat landscape represents an elevated organizational risk posture, characterized by vulnerabilities that frequently facilitate unauthorized system access and arbitrary code execution. The primary concern is CVE-2026-9559, Mautic Campaign Import Path Traversal, which requires immediate remediation due to its potential for unrestricted file system access and significant compromise of the application environment. Consequently, we have adopted an aggressive patching posture, requiring the immediate suspension of affected service modules where patches are not yet verifiable. Failure to address these exposures systematically will likely result in increased susceptibility to advanced exploitation attempts against our core digital infrastructure.",
+    "critical_actions": [
+        "CVE-2026-9559: Immediate isolation of Mautic Campaign modules and deployment of emergency hotfix within 24 hours.",
+        "CVE-2026-9558: Immediate implementation of strict input validation policies for Theme Templates within 24 hours.",
+        "CVE-2026-52830: Remediation of the fast-mcp-telegram bearer token validation logic must be completed within 48 hours.",
+        "CVE-2026-53811: Patch the OpenClaw Matrix binding configuration to enforce immutable identity validation within 72 hours.",
+        "CVE-2026-53806: Review and sanitize all POSIX shell execution arguments in OpenClaw components within 72 hours."
+    ],
+    "cve_summary": [
+        {
+            "cve_id": "CVE-2026-9559",
+            "finding_name": "Mautic Campaign Import Path Traversal",
+            "description": "Mautic is vulnerable to a Path Traversal vulnerability through its Campaign Import functionality. The root cause is insufficient sanitization of file paths provided during the import process, allowing directory traversal sequences to manipulate file locations on the server. An authenticated user with low privileges can exploit this to achieve critical impact, including high confidentiality, integrity, and availability, with a scope change.",
+            "cvss_score": 9.9,
+            "score_source": "cna_official",
+            "severity": "Critical",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Changed",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-22",
+            "mitre_mappings": [
+                "T1203",
+                "T1552.001",
+                "T1070.004"
+            ],
+            "urgency_score": 89,
+            "poc": "An authenticated user with low privileges prepares a malicious campaign import file for Mautic. The attacker crafts the import file (e.g., a ZIP archive) to contain entries with path traversal sequences (e.g., `../../`) within the filenames, targeting arbitrary locations outside the designated upload directory. When the Mautic Campaign Import function processes this file, it fails to sanitize the provided paths, extracting the malicious files to arbitrary locations on the server. This results in arbitrary file write capabilities, potentially leading to remote code execution, configuration file modification, or full system compromise.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-9559",
+                "https://www.cve.org/CVERecord?id=CVE-2026-9559",
+                "https://www.tenable.com/cve/CVE-2026-9559"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-9558",
+            "finding_name": "Mautic Server-Side Template Injection",
+            "description": "Mautic suffers from a Server-Side Template Injection (SSTI) vulnerability within its Theme Templates functionality. The root cause is the improper handling of user-supplied input that is directly embedded into server-side templates without adequate sanitization, allowing template engine syntax to be executed. An authenticated user with low privileges can exploit this to achieve critical impact, including high confidentiality, integrity, and availability, with a scope change.",
+            "cvss_score": 9.9,
+            "score_source": "cna_official",
+            "severity": "Critical",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Changed",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-1336",
+            "mitre_mappings": [
+                "T1506",
+                "T1059"
+            ],
+            "urgency_score": 89,
+            "poc": "An authenticated user with low privileges navigates to the Theme Templates editor within Mautic and attempts to modify an existing template or create a new one. The attacker injects server-side template engine syntax (e.g., `{{ 7*7 }}` or `{{ system('id') }}`) into a template field. When the Mautic application processes and renders this template on the server, the injected syntax is evaluated. This results in arbitrary code execution on the server, enabling the attacker to fully compromise the Mautic instance and potentially the underlying host system.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-9558",
+                "https://www.cve.org/CVERecord?id=CVE-2026-9558",
+                "https://www.tenable.com/cve/CVE-2026-9558"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-52830",
+            "finding_name": "fast-mcp-telegram Bearer Token Path Traversal",
+            "description": "The `fast-mcp-telegram` component is vulnerable to a bearer token path traversal bypass, allowing circumvention of Telegram session protection. This vulnerability stems from insufficient sanitization of input paths, which permits directory traversal sequences (`../`) to manipulate file paths in security-sensitive operations. An unauthenticated remote attacker can exploit this to achieve high confidentiality and integrity, and low availability, without requiring user interaction.",
+            "cvss_score": 9.4,
+            "score_source": "cna_official",
+            "severity": "Critical",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:L",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "Low"
+            },
+            "cwe_id": "CWE-22",
+            "mitre_mappings": [
+                "T1203",
+                "T1552.001"
+            ],
+            "urgency_score": 85,
+            "poc": "An unauthenticated remote attacker sends a specially crafted request to the `fast-mcp-telegram` service's session handling endpoint. The attacker includes path traversal sequences such as `../` within the bearer token or an associated parameter intended to specify file paths. The service processes the request without adequately sanitizing the path input, allowing access to directories outside the intended scope. This results in the attacker potentially accessing or manipulating sensitive session data or other system files, leading to unauthorized account access and data compromise.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-52830",
+                "https://www.cve.org/CVERecord?id=CVE-2026-52830",
+                "https://www.tenable.com/cve/CVE-2026-52830"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-53811",
+            "finding_name": "OpenClaw Matrix Mutable Display Name Binding",
+            "description": "OpenClaw's Matrix `allowFrom` functionality could bind to mutable display names, creating a potential security bypass. The root cause is a flaw in the binding mechanism, where trust decisions are made based on easily changeable attributes instead of immutable identifiers. This enables an authenticated user with low privileges to achieve high confidentiality, integrity, and availability impacts by spoofing trusted identities.",
+            "cvss_score": 8.8,
+            "score_source": "cna_official",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-290",
+            "mitre_mappings": [
+                "T1078",
+                "T1078.003",
+                "T1594"
+            ],
+            "urgency_score": 79,
+            "poc": "An authenticated user with low privileges, controlling an OpenClaw Matrix client, attempts to interact with services protected by `allowFrom` policies. The attacker modifies their Matrix display name to mimic a trusted entity or service. The `allowFrom` mechanism, when evaluating access, incorrectly relies on the mutable display name for authorization. This results in the attacker bypassing `allowFrom` restrictions, gaining unauthorized access to sensitive functionalities or data, leading to significant confidentiality, integrity, and availability impacts.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-53811",
+                "https://www.cve.org/CVERecord?id=CVE-2026-53811",
+                "https://www.tenable.com/cve/CVE-2026-53811"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-53806",
+            "finding_name": "OpenClaw POSIX Shell Options Confusion",
+            "description": "OpenClaw is vulnerable to a security flaw where combined POSIX shell options could confuse `exec` revalidation, leading to a bypass of security checks. The root cause is an intricate interaction between various shell options that alters execution flow in an unexpected manner, undermining the revalidation logic. An authenticated user with low privileges can exploit this to achieve high confidentiality, integrity, and availability impacts by executing unauthorized commands.",
+            "cvss_score": 8.8,
+            "score_source": "cna_official",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-367",
+            "mitre_mappings": [
+                "T1059.004",
+                "T1078",
+                "T1546"
+            ],
+            "urgency_score": 79,
+            "poc": "An authenticated user with low privileges crafts an `exec` command within OpenClaw, carefully combining specific POSIX shell options in an unconventional manner. The attacker submits this crafted command for execution, aiming to exploit the revalidation confusion. The OpenClaw `exec` revalidation mechanism, when encountering this particular combination of shell options, misinterprets the intended execution context or security boundaries. This results in the execution of the attacker's command with elevated privileges or in an unintended context, leading to unauthorized data access, system modification, or denial of service.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-53806",
+                "https://www.cve.org/CVERecord?id=CVE-2026-53806",
+                "https://www.tenable.com/cve/CVE-2026-53806"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-50194",
+            "finding_name": "Steeltoe Management Port Isolation Bypass",
+            "description": "Steeltoe is vulnerable to a management-port isolation bypass via spoofed `Host` headers, allowing unauthorized access to restricted endpoints. The root cause is improper validation of the `Host` header, which leads to incorrect routing decisions that bypass network-level access controls designed for management interfaces. An unauthenticated remote attacker can exploit this to achieve high confidentiality and low integrity by accessing restricted management functions.",
+            "cvss_score": 8.2,
+            "score_source": "cna_official",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "Low",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-288",
+            "mitre_mappings": [
+                "T1078",
+                "T1594"
+            ],
+            "urgency_score": 74,
+            "poc": "An unauthenticated remote attacker sends an HTTP request to the main application port of a Steeltoe application, which is typically accessible externally. The attacker crafts the HTTP request to include a spoofed `Host` header that points to the internal management port's hostname or IP address. The application's internal routing mechanism, failing to adequately validate the `Host` header against allowed origins or the intended port, incorrectly directs the request to the management endpoint. This allows the attacker to access sensitive management actuators (e.g., `/actuator/env`, `/actuator/configprops`) that should only be available via the isolated management port, leading to high confidentiality exposure.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-50194",
+                "https://www.cve.org/CVERecord?id=CVE-2026-50194",
+                "https://www.tenable.com/cve/CVE-2026-50194"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-2092",
+            "finding_name": "Keycloak SAML Assertion Validation Bypass",
+            "description": "Keycloak suffers from improper validation of encrypted SAML assertions, leading to an unauthorized access vulnerability. The root cause is insufficient verification of SAML assertion integrity and authenticity, allowing a malicious actor to craft and present a manipulated assertion. This enables an authenticated user with low privileges to bypass intended access controls and achieve high confidentiality, low integrity, and low availability impact with a scope change.",
+            "cvss_score": 7.7,
+            "score_source": "cna_official",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:H/I:L/A:L",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "High",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Changed",
+                "Confidentiality": "High",
+                "Integrity": "Low",
+                "Availability": "Low"
+            },
+            "cwe_id": "CWE-1287",
+            "mitre_mappings": [
+                "T1078.004",
+                "T1537"
+            ],
+            "urgency_score": 69,
+            "poc": "An authenticated user with low privileges identifies the SAML authentication flow within Keycloak. The attacker intercepts and modifies an encrypted SAML assertion, specifically altering attributes to elevate privileges or access restricted resources without detection. Keycloak's assertion validation fails to correctly verify the integrity or authenticity of the modified assertion, accepting it as legitimate. This allows the attacker to gain unauthorized access to resources with elevated privileges, impacting confidentiality and integrity.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-2092",
+                "https://www.cve.org/CVERecord?id=CVE-2026-2092",
+                "https://www.tenable.com/cve/CVE-2026-2092"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-50200",
+            "finding_name": "Steeltoe Env Sanitizer Leaks DB Passwords",
+            "description": "Steeltoe's environment variable sanitizer fails to properly redact connection strings, leading to the leakage of embedded database passwords. The root cause is an incomplete or ineffective sanitization routine that does not recognize or correctly mask sensitive information within database connection string patterns. An unauthenticated remote attacker can exploit this to gain high confidentiality, by potentially accessing database credentials without requiring any user interaction.",
+            "cvss_score": 7.5,
+            "score_source": "cna_official",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "None",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-200",
+            "mitre_mappings": [
+                "T1552.001",
+                "T1083"
+            ],
+            "urgency_score": 68,
+            "poc": "An unauthenticated remote attacker accesses an endpoint that exposes environment variables or configuration details, such as an `/actuator/env` endpoint if inadvertently exposed. The attacker queries this endpoint, expecting sensitive information to be redacted by the sanitizer. However, the Steeltoe env sanitizer fails to properly identify and mask database connection strings containing credentials. This results in the attacker obtaining cleartext database passwords, which can then be used for direct database access and further data exfiltration or manipulation.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-50200",
+                "https://www.cve.org/CVERecord?id=CVE-2026-50200",
+                "https://www.tenable.com/cve/CVE-2026-50200"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-50196",
+            "finding_name": "Steeltoe Eureka Registry Poisoning",
+            "description": "Steeltoe.Discovery.Eureka is vulnerable to a denial-of-service condition where an unrecognized `DataCenterInfo.Name` poisons the entire registry fetch operation. The root cause is improper handling of malformed or unexpected data in the Eureka registry response, leading to a parsing failure that prevents the application from processing any registry updates. An unauthenticated remote attacker can exploit this to achieve high availability impact, effectively disrupting service discovery.",
+            "cvss_score": 7.5,
+            "score_source": "cna_official",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "None",
+                "Integrity": "None",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-20",
+            "mitre_mappings": [
+                "T1499",
+                "T1498"
+            ],
+            "urgency_score": 68,
+            "poc": "An unauthenticated remote attacker targets a vulnerable Steeltoe.Discovery.Eureka client application configured to fetch from a Eureka server. The attacker intercepts or crafts a malicious Eureka registry response containing an `instance` entry with an unrecognized or malformed `DataCenterInfo.Name` attribute. When the Steeltoe client attempts to parse this response, the malformed data causes a critical deserialization or validation error, leading to a complete failure of the registry fetch. This prevents the application from discovering services, effectively causing a denial of service for the client and its dependent services.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-50196",
+                "https://www.cve.org/CVERecord?id=CVE-2026-50196",
+                "https://www.tenable.com/cve/CVE-2026-50196"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-9809",
+            "finding_name": "Mautic Stored XSS in Projects Component",
+            "description": "Mautic is affected by a Stored Cross-Site Scripting (XSS) vulnerability within its Projects Component. The root cause involves inadequate input sanitization and output encoding of user-controlled data that is stored and later reflected in the application's web interface. This allows an authenticated user with low privileges to inject malicious scripts, leading to low confidentiality and high integrity impact on other users with required user interaction.",
+            "cvss_score": 7.6,
+            "score_source": "cna_official",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:H/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "Required",
+                "Scope": "Changed",
+                "Confidentiality": "Low",
+                "Integrity": "High",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-79",
+            "mitre_mappings": [
+                "T1059.007",
+                "T1204.001"
+            ],
+            "urgency_score": 68,
+            "poc": "An authenticated user with low privileges accesses the Mautic Projects Component and creates or modifies a project entry. The attacker injects a persistent XSS payload, such as a JavaScript code snippet designed to deface the page or steal cookies, into a user-editable field (e.g., project name or description). The application stores this malicious content and, when any user subsequently views the affected project, the stored script is executed by their browser due to improper output encoding. This leads to arbitrary client-side script execution, enabling session hijacking, data exfiltration, or UI manipulation.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-9809",
+                "https://www.cve.org/CVERecord?id=CVE-2026-9809",
+                "https://www.tenable.com/cve/CVE-2026-9809"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-52726",
+            "finding_name": "Dulwich Submodule Path Traversal RCE",
+            "description": "Dulwich's `porcelain.submodule_update` and `porcelain.clone(recurse_submodules=True)` functions are vulnerable to a submodule path traversal that can lead to Remote Code Execution (RCE). The root cause is inadequate sanitization of submodule paths, allowing an attacker to place a malicious `.git/hooks` payload in an arbitrary location during submodule operations. An unauthenticated remote attacker can exploit this to achieve high availability impact through arbitrary code execution.",
+            "cvss_score": 7.5,
+            "score_source": "cna_official",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "None",
+                "Integrity": "None",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-22",
+            "mitre_mappings": [
+                "T1203",
+                "T1059"
+            ],
+            "urgency_score": 68,
+            "poc": "An unauthenticated remote attacker creates a malicious Git repository containing a submodule with a path traversal sequence (e.g., `../../.git/hooks/post-checkout`) and embeds an executable payload within it. A user or automated system cloning or updating this repository using Dulwich's `porcelain.clone(recurse_submodules=True)` or `porcelain.submodule_update` functions will trigger the vulnerability. Dulwich processes the submodule path without proper sanitization, dropping the attacker's payload into a critical Git hook directory. This results in remote code execution on the system when subsequent Git operations trigger the hook, leading to full system compromise and high availability impact.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-52726",
+                "https://www.cve.org/CVERecord?id=CVE-2026-52726",
+                "https://www.tenable.com/cve/CVE-2026-52726"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-53816",
+            "finding_name": "OpenClaw Paired Node Exec Event Forgery",
+            "description": "OpenClaw's paired nodes could forge `exec` lifecycle events without proper `system.run` provenance, enabling unauthorized command execution. The root cause is a deficiency in the provenance verification for `exec` lifecycle events, allowing a malicious paired node to inject unauthorized commands. An authenticated user with high privileges can exploit this to achieve high confidentiality, integrity, and availability impacts.",
+            "cvss_score": 7.2,
+            "score_source": "cna_official",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "High",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-284",
+            "mitre_mappings": [
+                "T1078",
+                "T1059",
+                "T1546"
+            ],
+            "urgency_score": 65,
+            "poc": "An authenticated user with high privileges establishes a paired node relationship within the OpenClaw environment. The attacker then crafts and sends a malicious `exec` lifecycle event from their paired node, intentionally omitting or falsifying the `system.run` provenance information typically required for such events. The OpenClaw system processes this event without adequately verifying its provenance, treating it as legitimate. This results in the execution of arbitrary commands or scripts on the target system with the privileges of the affected service, leading to full compromise of confidentiality, integrity, and availability.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-53816",
+                "https://www.cve.org/CVERecord?id=CVE-2026-53816",
+                "https://www.tenable.com/cve/CVE-2026-53816"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-9808",
+            "finding_name": "Mautic API v2 Authorization Bypass",
+            "description": "Mautic contains an Authorization Bypass vulnerability affecting its API v2 Endpoints, allowing unauthorized access to restricted functionalities. The root cause is a flaw in the API's access control logic, which fails to properly enforce privilege separation for certain API operations. This enables an authenticated user with low privileges to perform actions or access data reserved for higher-privileged accounts, resulting in high confidentiality and low integrity impact.",
+            "cvss_score": 7.1,
+            "score_source": "cna_official",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "Low",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-863",
+            "mitre_mappings": [
+                "T1078",
+                "T1078.003"
+            ],
+            "urgency_score": 64,
+            "poc": "An authenticated user with low privileges accesses the Mautic API v2, attempting to interact with endpoints normally restricted to administrators or higher-privileged users. The attacker sends a direct API request to a protected endpoint (e.g., `/api/v2/users/{id}`, `/api/v2/config`) with their low-privileged authentication token. The API's authorization mechanism fails to correctly verify that the requesting user has the necessary permissions for the targeted operation. This allows the attacker to read, modify, or delete data beyond their authorized scope, leading to an authorization bypass and data exposure.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-9808",
+                "https://www.cve.org/CVERecord?id=CVE-2026-9808",
+                "https://www.tenable.com/cve/CVE-2026-9808"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-4776",
+            "finding_name": "Mautic API SQL Injection in Contact Filtering",
+            "description": "Mautic contains a SQL Injection vulnerability within its API Contact Filtering functionality, allowing for direct database manipulation. The root cause is improper sanitization of user-supplied input parameters within the API's filtering logic, leading to the direct inclusion of malicious SQL queries. An authenticated user with low privileges can exploit this to achieve high confidentiality and low availability impact.",
+            "cvss_score": 7.1,
+            "score_source": "cna_official",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:L",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "None",
+                "Availability": "Low"
+            },
+            "cwe_id": "CWE-89",
+            "mitre_mappings": [
+                "T1505.001",
+                "T1059.008"
+            ],
+            "urgency_score": 64,
+            "poc": "An authenticated user with low privileges sends an API request to the Mautic contacts endpoint, attempting to filter contacts using a maliciously crafted parameter. The attacker injects SQL commands (e.g., `' OR 1=1 --`) into the filtering parameter in the API request. The application's backend database query, when constructed, directly incorporates this unsanitized input into the SQL statement, leading to its execution. This results in the attacker being able to extract arbitrary data from the database, bypassing authorization controls, or causing a denial of service by corrupting data.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-4776",
+                "https://www.cve.org/CVERecord?id=CVE-2026-4776",
+                "https://www.tenable.com/cve/CVE-2026-4776"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-50201",
+            "finding_name": "Steeltoe Actuator Privilege Escalation",
+            "description": "Steeltoe's sensitive actuators (e.g., heapdump, env) only require 'Restricted' permission for access, which is often insufficient for proper security segmentation. The root cause is an inadequate authorization model where highly sensitive administrative functions are protected by a permission level that is too broad, allowing unintended access. An authenticated user with low privileges can exploit this to achieve high confidentiality impact by accessing diagnostic data.",
+            "cvss_score": 6.5,
+            "score_source": "cna_official",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "None",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-269",
+            "mitre_mappings": [
+                "T1078",
+                "T1552"
+            ],
+            "urgency_score": 59,
+            "poc": "An authenticated user with low privileges attempts to access sensitive Steeltoe actuator endpoints such as `/actuator/heapdump` or `/actuator/env`. The attacker makes a direct HTTP request to these endpoints, expecting authorization to fail due to insufficient permissions. However, the application's authorization check for 'Restricted' permissions incorrectly grants access to these sensitive functions. This allows the attacker to download heap dumps or environment variables, potentially revealing sensitive configuration details, API keys, or memory contents, leading to high confidentiality compromise.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-50201",
+                "https://www.cve.org/CVERecord?id=CVE-2026-50201",
+                "https://www.tenable.com/cve/CVE-2026-50201"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-9557",
+            "finding_name": "Mautic Focus Component SSRF Vulnerability",
+            "description": "The Mautic Focus component is vulnerable to Server-Side Request Forgery (SSRF), allowing the application to be coerced into making arbitrary network requests. The root cause is inadequate validation of user-supplied URLs or domain names within the Focus component's configuration. An authenticated user with low privileges can exploit this to achieve low confidentiality and integrity impact, allowing for internal network reconnaissance or interaction with intranet services.",
+            "cvss_score": 6.4,
+            "score_source": "cna_official",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:L/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Changed",
+                "Confidentiality": "Low",
+                "Integrity": "Low",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-918",
+            "mitre_mappings": [
+                "T1595.002",
+                "T1090"
+            ],
+            "urgency_score": 58,
+            "poc": "An authenticated user with low privileges accesses the Mautic Focus component configuration interface, which allows specifying external URLs or callback endpoints. The attacker inputs a crafted URL pointing to an internal network resource (e.g., `http://169.254.169.254/latest/meta-data/`) or an intranet service. When the Mautic application processes this configuration, it initiates a request to the attacker-supplied internal URL without proper validation or filtering. This results in the server performing requests to arbitrary internal or external targets, potentially allowing for port scanning, accessing cloud metadata, or interacting with internal services, leading to internal network reconnaissance and limited data exposure.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-9557",
+                "https://www.cve.org/CVERecord?id=CVE-2026-9557",
+                "https://www.tenable.com/cve/CVE-2026-9557"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-50202",
+            "finding_name": "Steeltoe JWKS Cache Invalidation Vulnerability",
+            "description": "Steeltoe's static JWKS (JSON Web Key Set) cache is shared across different authentication schemes and lacks proper invalidation mechanisms. The root cause is an architectural flaw where cryptographic key material is cached globally without scheme-specific isolation or a means to force a refresh when keys are updated. This enables an authenticated user with high privileges to potentially gain high confidentiality and integrity impact by leveraging stale or shared keys.",
+            "cvss_score": 5.9,
+            "score_source": "cna_official",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:H/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "High",
+                "Privileges_Required": "High",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-668",
+            "mitre_mappings": [
+                "T1537",
+                "T1078"
+            ],
+            "urgency_score": 53,
+            "poc": "An authenticated user with high privileges manipulates the JWKS configuration or observes a key rotation event in a multi-scheme Steeltoe deployment. The attacker attempts to authenticate using a token signed with a revoked or outdated key that might still be present in the shared, invalidated cache. The application, relying on the stale cache, validates the token incorrectly, granting unauthorized access. This allows the attacker to maintain access with expired credentials or impersonate other users if keys from different schemes are mixed, leading to confidentiality and integrity compromise.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-50202",
+                "https://www.cve.org/CVERecord?id=CVE-2026-50202",
+                "https://www.tenable.com/cve/CVE-2026-50202"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-9811",
+            "finding_name": "Mautic Stored XSS in Project Option Selector",
+            "description": "Mautic contains a Stored Cross-Site Scripting (XSS) vulnerability within the Project Option Selector component. The root cause is insufficient input sanitization and output encoding of user-supplied data that is subsequently rendered in a web page. This allows an authenticated user with low privileges to inject malicious scripts into the application, resulting in low confidentiality and integrity impact on other users.",
+            "cvss_score": 5.4,
+            "score_source": "cna_official",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "Required",
+                "Scope": "Changed",
+                "Confidentiality": "Low",
+                "Integrity": "Low",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-79",
+            "mitre_mappings": [
+                "T1059.007",
+                "T1204.001"
+            ],
+            "urgency_score": 49,
+            "poc": "An authenticated user with low privileges navigates to the Project Option Selector interface within Mautic and attempts to create or edit a project. The attacker inputs a crafted string containing malicious JavaScript (e.g., `<script>alert(document.cookie)</script>`) into a field that is intended for display in the selector. The application stores this malicious payload in the database and, when the project options are subsequently rendered for other users, it fails to properly escape the output. This results in the execution of the attacker's script in the victim's browser, potentially leading to session hijacking or defacement of the application interface.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-9811",
+                "https://www.cve.org/CVERecord?id=CVE-2026-9811",
+                "https://www.tenable.com/cve/CVE-2026-9811"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-50267",
+            "finding_name": "Steeltoe TLS Private Key Exposure",
+            "description": "Steeltoe is vulnerable to TLS private key exposure due to insecure file handling practices for temporary keys. The root cause lies in the application writing TLS private keys to the `/tmp` directory with default, permissive permissions, and failing to delete them after use. This enables a local user with low privileges to access highly sensitive cryptographic material, resulting in high confidentiality impact.",
+            "cvss_score": 4.7,
+            "score_source": "cna_official",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Local",
+                "Attack_Complexity": "High",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "None",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-312",
+            "mitre_mappings": [
+                "T1552.004",
+                "T1552.001"
+            ],
+            "urgency_score": 42,
+            "poc": "A local user with low privileges observes a Steeltoe application generating TLS private keys. The attacker then checks the `/tmp` directory for newly created files with typical private key extensions or content patterns. Due to default permissive file permissions and the lack of timely deletion, the private keys remain accessible to the attacker. This allows the attacker to steal the TLS private keys, compromising the confidentiality of encrypted communications and potentially enabling man-in-the-middle attacks.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-50267",
+                "https://www.cve.org/CVERecord?id=CVE-2026-50267",
+                "https://www.tenable.com/cve/CVE-2026-50267"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-50268",
+            "finding_name": "Steeltoe OAEP Padding Information Disclosure",
+            "description": "Steeltoe's implementation of OAEP (Optimal Asymmetric Encryption Padding) silently selects PKCS#1 v1.5 padding, diverging from expected behavior without explicit indication. The root cause is an implicit default in the cryptographic library's configuration, leading to a weaker padding scheme being used than might be assumed. This enables a local user with high privileges to potentially gain low confidentiality of encrypted data, but only under specific, hard-to-exploit conditions.",
+            "cvss_score": 1.9,
+            "score_source": "cna_official",
+            "severity": "Low",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:L/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Local",
+                "Attack_Complexity": "High",
+                "Privileges_Required": "High",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "Low",
+                "Integrity": "None",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-256",
+            "mitre_mappings": [
+                "T1552.001"
+            ],
+            "urgency_score": 12,
+            "poc": "A local user with high privileges observes the cryptographic operations within a Steeltoe application utilizing OAEP. The attacker specifically monitors for signs of PKCS#1 v1.5 padding being used, which can sometimes be distinguished from OAEP through timing side channels or error messages in certain configurations. The application's silent selection of PKCS#1 v1.5 padding, contrary to expectation, may introduce a subtle weakness. This could potentially allow the attacker to gather limited information that might aid in further decryption efforts, albeit with significant complexity.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-50268",
+                "https://www.cve.org/CVERecord?id=CVE-2026-50268",
+                "https://www.tenable.com/cve/CVE-2026-50268"
+            ]
+        }
+    ],
+    "severity_stats": {
+        "Critical": 3,
+        "High": 11,
+        "Medium": 5,
+        "Low": 1,
+        "Unknown": 0,
+        "Total": 20
+    }
+}

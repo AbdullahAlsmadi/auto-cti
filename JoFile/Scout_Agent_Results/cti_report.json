@@ -1,6 +1,26 @@
 {
     "July 06, 2026": [
         {
+            "cve_id": "CVE-2026-35338",
+            "description": "chmod: --preserve-root bypassed by any path that resolves to root (e.g. /../)",
+            "cvss_score": 7.3,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:H",
+            "cwe_id": "CWE-22",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2022-46292",
+            "description": "Open Babel has out-of-bounds write in MOPAC translationVectors[] (UNIT CELL TRANSLATION)",
+            "cvss_score": 9.8,
+            "cvss_severity": "CRITICAL",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "cwe_id": "CWE-119",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
             "cve_id": "CVE-2026-2092",
             "description": "Keycloak: Unauthorized access via improper validation of encrypted SAML assertions",
             "cvss_score": 7.7,
@@ -178,26 +198,6 @@
             "cvss_source": "cna_official",
             "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
             "cwe_id": "CWE-290",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53816",
-            "description": "OpenClaw: Paired nodes could forge exec lifecycle events without system.run provenance",
-            "cvss_score": 7.2,
-            "cvss_severity": "HIGH",
-            "cvss_source": "cna_official",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H",
-            "cwe_id": "CWE-284",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53806",
-            "description": "OpenClaw: Combined POSIX shell options could confuse exec revalidation",
-            "cvss_score": 8.8,
-            "cvss_severity": "HIGH",
-            "cvss_source": "cna_official",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
-            "cwe_id": "CWE-367",
             "alienvault_pulses": "No active threat pulses found."
         }
     ]

@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from typing import List
 import sys
 
-sys.stdout.reconfigure(encoding='utf-8') # type: ignore
+sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
 
 load_dotenv()
 
@@ -19,6 +19,39 @@ today_date = datetime.datetime.now().strftime("%B %d, %Y")
 print(f"Scout Agent started. Today: {today_date}")
 print(f"Gemini API Key loaded: {bool(os.getenv('GEMINI_API_KEY'))}")
 print(f"NVD API Key loaded: {bool(os.getenv('NVD_API_KEY'))}")
+
+
+MAMORE_DIR = "MAMORE"
+SEEN_CVES_PATH = os.path.join(MAMORE_DIR, "seen_cve_ids.json")
+
+
+def load_seen_cve_ids() -> set:
+    """
+    Reads the list of previously seen CVE IDs from MAMORE/seen_cve_ids.json.
+    Returns an empty set if the file doesn't exist yet (first run ever)
+    or if it can't be parsed for any reason.
+    """
+    if not os.path.exists(SEEN_CVES_PATH):
+        return set()
+    try:
+        with open(SEEN_CVES_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return set(data.get("seen_cve_ids", []))
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"DEBUG - Could not load seen_cve_ids.json, starting fresh: {e}")
+        return set()
+
+
+def save_seen_cve_ids(seen_ids: set) -> None:
+    """
+    Writes the full updated set of seen CVE IDs back to
+    MAMORE/seen_cve_ids.json. Creates the MAMORE folder if it
+    doesn't exist yet. Called once at the end of a Scout run.
+    """
+    os.makedirs(MAMORE_DIR, exist_ok=True)
+    with open(SEEN_CVES_PATH, "w", encoding="utf-8") as f:
+        json.dump({"seen_cve_ids": sorted(seen_ids)}, f, indent=2, ensure_ascii=False)
+    print(f"DEBUG - Saved {len(seen_ids)} total seen CVE IDs to {SEEN_CVES_PATH}")
 
 
 def fetch_cve_services_cvss(cve_id: str):
@@ -155,6 +188,12 @@ class NISTSearchTool(BaseTool):
     description: str = "Fetches the 20 most recent CVEs published in the last 7 days."
 
     def _run(self, query: str) -> str:
+        # Load CVE IDs that already appeared in previous reports. Every
+        # source below (NVD, GHSA, OSV) checks this set so no CVE is
+        # ever reported twice across different daily runs.
+        seen_ids = load_seen_cve_ids()
+        print(f"DEBUG - Loaded {len(seen_ids)} previously seen CVE IDs from MAMORE.")
+
         headers = {"User-Agent": "Auto-CTI-Agent/1.0"}
         nvd_api_key = os.getenv("NVD_API_KEY")
         if nvd_api_key:
@@ -169,6 +208,11 @@ class NISTSearchTool(BaseTool):
                 cve_id = cve.get("id")
                 if not cve_id:
                     continue
+
+                # Skip CVEs already reported in a previous run.
+                if cve_id in seen_ids:
+                    continue
+
                 desc = "No description available."
                 for d in cve.get("descriptions", []):
                     if d.get("lang") == "en":
@@ -238,7 +282,7 @@ class NISTSearchTool(BaseTool):
             MAX_PAGES = 6
 
             verified_cves = []
-            seen_cve_ids = set()
+            seen_cve_ids = set()  # tracks duplicates WITHIN this run only
             cursor = None
 
             gh_headers = {"Content-Type": "application/json"}
@@ -295,6 +339,11 @@ class NISTSearchTool(BaseTool):
                     if not cve_id or not cve_id.startswith("CVE-") or cve_id in seen_cve_ids:
                         continue
                     seen_cve_ids.add(cve_id)
+
+                    # Skip CVEs already reported in a previous run (MAMORE).
+                    if cve_id in seen_ids:
+                        print(f" --> [SKIPPED] {cve_id}: already reported in a previous run.")
+                        continue
 
                     summary = adv.get("summary", "No description available.")
                     cvss_score = adv.get("cvss", {}).get("score", "N/A")
@@ -357,6 +406,11 @@ class NISTSearchTool(BaseTool):
                                 )
                             if not vuln_id:
                                 continue
+
+                            # Skip CVEs already reported in a previous run (MAMORE).
+                            if vuln_id in seen_ids:
+                                continue
+
                             published = vuln.get("published", "")[:20]
                             summary = vuln.get("summary", vuln.get("details", "No description."))
 
@@ -427,7 +481,7 @@ class TenableSearchTool(BaseTool):
         "Pass a JSON string containing 'cve_id', 'nist_score', and 'nist_vector'."
     )
 
-    def _run(self, query: str) -> str: # type: ignore
+    def _run(self, query: str) -> str:  # type: ignore
         try:
             try:
                 params = json.loads(query)
@@ -475,9 +529,9 @@ alienvault_tool = AlienVaultOTXTool()
 tenable_tool = TenableSearchTool()
 
 scout_llm = LLM(
-    model="gemini/gemini-2.5-flash",
+    model="gemini/gemini-3.1-flash-lite",
     api_key=os.getenv("GEMINI_API_KEY"),
-    max_retries=5 # type: ignore
+    max_retries=5  # type: ignore
 )
 
 scout_agent = Agent(
@@ -534,7 +588,7 @@ if __name__ == "__main__":
     report_filename = os.path.join(results_dir, 'cti_report.json')
 
     try:
-        pydantic_output = result.pydantic # type: ignore
+        pydantic_output = result.pydantic  # type: ignore
         if pydantic_output:
             final_data = pydantic_output.model_dump()
             new_data = final_data.get("vulnerabilities", [])
@@ -566,3 +620,17 @@ if __name__ == "__main__":
         json.dump(all_reports, f, indent=4, ensure_ascii=False)
 
     print(f"\nReport saved safely to: {report_filename}")
+
+    # ============================================================
+    # Update MAMORE with the CVE IDs collected in this run, so that
+    # future runs will exclude them and never repeat the same CVE
+    # across two different daily reports.
+    # ============================================================
+    if isinstance(new_data, list):
+        seen_ids = load_seen_cve_ids()
+        new_ids = {item.get("cve_id") for item in new_data if item.get("cve_id")}
+        seen_ids.update(new_ids)
+        save_seen_cve_ids(seen_ids)
+        print(f"DEBUG - Added {len(new_ids)} new CVE IDs to MAMORE tracking.")
+    else:
+        print("DEBUG - new_data was not a list; skipping MAMORE update for this run.")

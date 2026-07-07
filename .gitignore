@@ -8,3 +8,4 @@ __pycache__/
 # Ignore local database files (e.g., ChromaDB used later)
 *.db
 *.sqlite3
+MAMORE

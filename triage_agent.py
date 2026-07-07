@@ -9,7 +9,7 @@ from crewai import Agent, Task, Crew, LLM
 from dotenv import load_dotenv
 from cvss import CVSS3
 
-sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
+sys.stdout.reconfigure(encoding='utf-8')                 # type: ignore
 
 load_dotenv()
 
@@ -20,7 +20,7 @@ scout_file_path = os.path.join("JoFile", "Scout_Agent_Results", "cti_report.json
 try:
     with open(scout_file_path, 'r', encoding='utf-8') as f:
         all_reports = json.load(f)
-        # القراءة الذكية المحدثة المتوافقة مع الـ Pydantic schema لملف Scout المطور
+                                                                                   
         day_data = all_reports.get(today_date, {})
         if isinstance(day_data, dict) and "vulnerabilities" in day_data:
             raw_threat_data = day_data["vulnerabilities"]
@@ -43,13 +43,13 @@ os.makedirs(output_dir, exist_ok=True)
 triage_llm = LLM(
    model="gemini/gemini-2.5-flash",
     api_key=os.getenv("GEMINI_API_KEY"),
-    max_retries=5 # type: ignore
+    max_retries=5                # type: ignore
 )
 
-# Build a lookup table mapping each CVE ID to everything Scout already
-# verified: the trust level (cvss_source), the official score, and the
-# official vector string. This is the ground truth and must NOT be
-# re-decided, re-derived, or silently overwritten by the LLM later on.
+                                                                      
+                                                                      
+                                                                  
+                                                                      
 cve_source_lookup = {}
 if isinstance(raw_threat_data, list):
     for item in raw_threat_data:
@@ -151,13 +151,13 @@ def enforce_authoritative_cvss(entry: dict, source_info: dict) -> dict:
     vector      = source_info.get("vector", "N/A")
 
     if cvss_source not in ("nvd_verified", "cna_official", "tenable_verified") or not vector or vector == "N/A":
-        return None  # type: ignore # not eligible for enforcement; caller falls back to estimation path
+        return None                                                                                      # type: ignore
 
     entry["CVSS_Vector"] = vector
     entry["CVSS_Breakdown"] = parse_cvss_vector(vector)
     try:
         c = CVSS3(vector)
-        entry["CVSS_Score"] = float(c.base_score)  # type: ignore
+        entry["CVSS_Score"] = float(c.base_score)                 # type: ignore
         entry["CVSS_Severity"] = c.severities()[0]
     except Exception:
         entry["CVSS_Score"] = source_info.get("score", entry.get("CVSS_Score"))
@@ -172,15 +172,15 @@ def map_source_to_score_source(cvss_source: str, was_estimated_by_llm: bool) -> 
     whatever label the LLM produced on its own.
     """
     if cvss_source in ("nvd_verified", "cna_official", "tenable_verified"):
-        # Score came directly from an authoritative or reputable third-party
-        # source with a real vector. The LLM must not have altered it.
+                                                                            
+                                                                      
         return cvss_source
     if cvss_source == "cna_no_cvss":
-        # A CNA record exists but carries no official CVSS score, so any
-        # score present was derived by the LLM from the vulnerability impact.
+                                                                        
+                                                                             
         return "estimated_no_cna_score"
-    # cvss_source == "ghsa_only" or unknown: no authoritative confirmation
-    # was ever found, so the score is, at best, an unverified estimate.
+                                                                          
+                                                                       
     return "estimated_unverified"
 
 
@@ -195,7 +195,7 @@ def recalculate_score_from_vector(entry: dict) -> dict:
         return entry
     try:
         c = CVSS3(vector)
-        calculated_score = float(c.base_score)  # type: ignore
+        calculated_score = float(c.base_score)                 # type: ignore
         entry["CVSS_Score"] = calculated_score
         entry["CVSS_Severity"] = c.severities()[0]
         entry["Score_Source"] = entry.get("Score_Source", "estimated_unverified") + "_recalculated"
@@ -467,7 +467,7 @@ if __name__ == "__main__":
 
         fixed_entries = []
         for entry in parsed:
-            # قراءة ذكية لا تتأثر بتلاعب الذكاء الاصطناعي بأسماء الحقول
+                                                                       
             cve_id = entry.get("CVE_ID") or entry.get("cve_id") or ""
             entry["CVE_ID"] = cve_id  
             
@@ -476,7 +476,7 @@ if __name__ == "__main__":
             )
             cvss_source = source_info["cvss_source"]
 
-            # الفرض الإلزامي للقيم المؤكدة (تدمير مخرجات الذكاء الاصطناعي الخاطئة)
+                                                                                  
             enforced = enforce_authoritative_cvss(entry, source_info)
             if enforced is not None:
                 entry = enforced

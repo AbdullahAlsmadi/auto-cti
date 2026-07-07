@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
 
-sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
+sys.stdout.reconfigure(encoding='utf-8')                 # type: ignore
 
 load_dotenv()
 
@@ -32,7 +32,6 @@ try:
         
         triage_data = json.loads(file_content)
         
-        # دعم قراءة البيانات المهيكلة سواء كانت مصفوفة مباشرة أو داخل قاموس مفتاح محدد
         if isinstance(triage_data, dict):
             report_date = triage_data.get("date", today_date)
             triage_data = triage_data.get("report", triage_data.get("vulnerabilities", []))
@@ -52,7 +51,6 @@ if not isinstance(triage_data, list):
 output_dir = os.path.join("JoFile", "publisher_agent_result")
 os.makedirs(output_dir, exist_ok=True)
 
-# تنظيف الملفات القديمة لضمان نقاء بيئة إصدار التقارير التنفيذية
 if os.path.exists(output_dir):
     for filename in os.listdir(output_dir):
         file_pos = os.path.join(output_dir, filename)
@@ -116,7 +114,7 @@ severity_stats = compute_severity_stats(triage_data)
 publisher_llm = LLM(
     model="gemini/gemini-3.1-flash-lite",
     api_key=os.getenv("GEMINI_API_KEY"),
-    max_retries=5  # type: ignore
+    max_retries=5                 # type: ignore
 )
 
 publisher_agent = Agent(
@@ -302,8 +300,6 @@ def section_header(pdf: FPDF, number: str, title: str):
 
 
 def render_cvss_breakdown_table(pdf: FPDF, breakdown: dict, vector: str):
-    """Renders a two-column CVSS v3.1 scoring criteria table inside the PDF."""
-
     metric_colors = {
         "Network":    (185, 28, 28),
         "Adjacent":   (217, 119, 6),

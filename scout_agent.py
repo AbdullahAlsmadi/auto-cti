@@ -20,7 +20,7 @@ print(f"Scout Agent started. Today: {today_date}")
 print(f"Gemini API Key loaded: {bool(os.getenv('GEMINI_API_KEY'))}")
 print(f"NVD API Key loaded: {bool(os.getenv('NVD_API_KEY'))}")
 
-
+#for mamore tracking______________________________________________________
 MAMORE_DIR = "MAMORE"
 SEEN_CVES_PATH = os.path.join(MAMORE_DIR, "seen_cve_ids.json")
 
@@ -52,8 +52,9 @@ def save_seen_cve_ids(seen_ids: set) -> None:
     with open(SEEN_CVES_PATH, "w", encoding="utf-8") as f:
         json.dump({"seen_cve_ids": sorted(seen_ids)}, f, indent=2, ensure_ascii=False)
     print(f"DEBUG - Saved {len(seen_ids)} total seen CVE IDs to {SEEN_CVES_PATH}")
+#Scraping and Connectivity Functions______________________________________________________
 
-
+#f1
 def fetch_cve_services_cvss(cve_id: str):
     try:
         url = f"https://cveawg.mitre.org/api/cve/{cve_id}"
@@ -79,7 +80,7 @@ def fetch_cve_services_cvss(cve_id: str):
         print(f"DEBUG - CVE Services Error for {cve_id}: {e}")
         return None
 
-
+#f2
 def fetch_opencve_cvss(cve_id: str):
     username = os.getenv("OPENCVE_USERNAME")
     password = os.getenv("OPENCVE_PASSWORD")
@@ -103,7 +104,7 @@ def fetch_opencve_cvss(cve_id: str):
         print(f"DEBUG - OpenCVE Error for {cve_id}: {e}")
         return None
 
-
+#f3
 def fetch_tenable_cvss(cve_id: str):
     try:
         url = f"https://www.tenable.com/cve/{cve_id}"
@@ -167,7 +168,7 @@ def verify_cvss(cve_id: str, fallback_score, fallback_severity):
 
     return fallback_score, fallback_severity, "ghsa_only", "N/A"
 
-
+#Agent and tools_________________________________________________________________________________________
 class CVEEntry(BaseModel):
     cve_id: str = Field(..., description="The official CVE ID starting with CVE-")
     description: str = Field(..., description="Vulnerability description or summary")
@@ -182,7 +183,7 @@ class CVEEntry(BaseModel):
 class ScoutReport(BaseModel):
     vulnerabilities: List[CVEEntry]
 
-
+#the main refrance__________________________________________________________________________________________
 class NISTSearchTool(BaseTool):
     name: str = "NIST NVD Recent Search Tool"
     description: str = "Fetches the 20 most recent CVEs published in the last 7 days."
@@ -440,7 +441,7 @@ class NISTSearchTool(BaseTool):
 
         return "Failed to fetch CVEs from all sources."
 
-
+#for cheacking active pulses in AlienVault OTX______________________________________________________
 class AlienVaultOTXTool(BaseTool):
     name: str = "AlienVault OTX Search Tool"
     description: str = (
@@ -528,6 +529,7 @@ nist_tool = NISTSearchTool()
 alienvault_tool = AlienVaultOTXTool()
 tenable_tool = TenableSearchTool()
 
+#llm and agent setup__________________________________________________________________________________________
 scout_llm = LLM(
     model="gemini/gemini-3.1-flash-lite",
     api_key=os.getenv("GEMINI_API_KEY"),
@@ -575,7 +577,7 @@ cyber_crew = Crew(
     tasks=[live_task],
     verbose=True
 )
-
+#write the final report to a JSON file and update MAMORE with new CVE IDs______________________________________________________
 if __name__ == "__main__":
     print(f"\n{'='*60}")
     print(f"  Auto-CTI Scout Agent — {today_date}")

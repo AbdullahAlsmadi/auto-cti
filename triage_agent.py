@@ -15,6 +15,8 @@ load_dotenv()
 
 today_date = datetime.datetime.now().strftime("%B %d, %Y")
 
+#reading the data___________________________________________________________________________________________
+
 scout_file_path = os.path.join("JoFile", "Scout_Agent_Results", "cti_report.json")
 
 try:
@@ -40,6 +42,8 @@ print(f"DEBUG - CVEs received from Scout: {cve_count}")
 output_dir = os.path.join("JoFile", "triage_agent_result")
 os.makedirs(output_dir, exist_ok=True)
 
+#the llm model____________________________________________________________________________________________
+
 triage_llm = LLM(
    model="gemini/gemini-2.5-flash",
     api_key=os.getenv("GEMINI_API_KEY"),
@@ -47,9 +51,7 @@ triage_llm = LLM(
 )
 
                                                                       
-                                                                      
-                                                                  
-                                                                      
+                                                                                                                                           
 cve_source_lookup = {}
 if isinstance(raw_threat_data, list):
     for item in raw_threat_data:
@@ -61,6 +63,7 @@ if isinstance(raw_threat_data, list):
                 "vector":      item.get("cvss_vector", "N/A"),
             }
 
+#using Tenable to fetch missing CVSS vectors___________________________________________________________________________________________
 def fetch_tenable_live_cvss(cve_id: str):
     try:
         url = f"https://www.tenable.com/cve/{cve_id}"
@@ -104,6 +107,7 @@ if isinstance(raw_threat_data, list):
             time.sleep(0.3)
 print("DEBUG - Pre-Enrichment Complete.\n")
 
+#This is function for later using at vector_____________________________________________________________________________________________
 def parse_cvss_vector(vector: str):
     """
     Deterministically parses a CVSS:3.1 vector string into the same
@@ -223,7 +227,7 @@ def is_reference_alive(url: str) -> bool:
         return True
 
 
-
+#for references_____________________________________________________________________________________________
 def build_verified_references(cve_id: str) -> list:
     """
     Builds the References list independently in Python instead of trusting
@@ -253,7 +257,7 @@ def build_verified_references(cve_id: str) -> list:
 
     return alive_refs
 
-
+#agent tools______________________________________________________________________________________________
 triage_agent = Agent(
     role='Senior Cyber Threat Intelligence Analyst',
     goal=(

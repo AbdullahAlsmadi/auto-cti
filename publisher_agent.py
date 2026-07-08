@@ -14,6 +14,7 @@ load_dotenv()
 
 today_date = datetime.datetime.now().strftime("%B %d, %Y")
 
+#Data Handshake____________________________________________________________________________________________
 triage_dir = os.path.join("JoFile", "triage_agent_result")
 list_of_files = [os.path.join(triage_dir, f) for f in os.listdir(triage_dir) if f.endswith(".json")]
 
@@ -44,12 +45,14 @@ except json.JSONDecodeError:
     print(f"Error: The file {latest_file} contains invalid JSON. Please run triage_agent.py again.")
     exit()
 
+#Self-cleaning____________________________________________________________________________________________
 if not isinstance(triage_data, list):
     print("Error: Triage data is not a list of CVE objects. Cannot build report.")
     exit()
 
 output_dir = os.path.join("JoFile", "publisher_agent_result")
 os.makedirs(output_dir, exist_ok=True)
+
 
 if os.path.exists(output_dir):
     for filename in os.listdir(output_dir):
@@ -61,7 +64,7 @@ if os.path.exists(output_dir):
 reports_dir = os.path.join("JoFile", "Reports")
 os.makedirs(reports_dir, exist_ok=True)
 
-
+#Processing and Normalization____________________________________________________________________________________________
 def build_cve_summary(data: list) -> list:
     seen = set()
     normalized = []
@@ -91,7 +94,7 @@ def build_cve_summary(data: list) -> list:
         })
     return sorted(normalized, key=lambda x: x["urgency_score"], reverse=True)
 
-
+#this is for score cvss_____________________________________________________________________________________________________
 def compute_severity_stats(data: list) -> dict:
     stats = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0, "Unknown": 0}
     seen  = set()
@@ -111,12 +114,15 @@ def compute_severity_stats(data: list) -> dict:
 cve_summary    = build_cve_summary(triage_data)
 severity_stats = compute_severity_stats(triage_data)
 
+#this is  LLM____________________________________________________________________________________________
 publisher_llm = LLM(
     model="gemini/gemini-3.1-flash-lite",
     api_key=os.getenv("GEMINI_API_KEY"),
     max_retries=5                 # type: ignore
 )
 
+
+#This is agent tools____________________________________________________________________________________________
 publisher_agent = Agent(
     role='Senior Security Communications Officer',
     goal='Compile analyzed threat data into a formal, authoritative executive briefing.',
@@ -266,7 +272,7 @@ def collapse_string_newlines(text: str) -> str:
 
 CLASSIFICATION = "TLP:AMBER - FOR INTERNAL DISTRIBUTION ONLY"
 
-
+#this is for pdf_____________________________________________________________________________________________________
 class CTIReportPDF(FPDF):
     def header(self):
         self.set_fill_color(15, 23, 42)
@@ -612,7 +618,7 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
 
     pdf.output(output_path)
 
-
+#this is for main_____________________________________________________________________________________________________
 if __name__ == "__main__":
     print(f"Publisher Agent is compiling the formal executive briefing for: {report_date}...")
     result = publisher_crew.kickoff()

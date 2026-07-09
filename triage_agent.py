@@ -45,7 +45,7 @@ os.makedirs(output_dir, exist_ok=True)
 #the llm model____________________________________________________________________________________________
 
 triage_llm = LLM(
-   model="gemini/gemini-2.5-flash",
+   model="gemini/gemini-3.1-flash-lite",
     api_key=os.getenv("GEMINI_API_KEY"),
     max_retries=5                # type: ignore
 )

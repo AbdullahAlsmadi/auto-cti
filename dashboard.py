@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import glob
+import time 
 import datetime
 import subprocess
 import streamlit as st
@@ -427,29 +428,40 @@ def render_console(T, log_lines, height=300):
     components.html(html, height=height + 55, scrolling=False)
 
     if log_lines:
-        with st.expander("🔍 Raw Agent Log (debug)", expanded=False):
-            raw_text = "\n".join(log_lines[-300:])
-            safe_raw = (raw_text
-                        .replace("&", "&amp;")
-                        .replace("<", "&lt;")
-                        .replace(">", "&gt;")
-                        .replace("\n", "<br>"))
-            st.markdown(f"""
-            <div style="
-                background: {T['CONSOLE_BG']};
-                color: {T['CONSOLE_TEXT']} !important;
-                font-family: 'JetBrains Mono', 'Courier New', monospace;
-                font-size: 0.75rem;
-                line-height: 1.6;
-                padding: 0.9rem 1rem;
-                border-radius: 8px;
-                border: 1px solid #243248;
-                max-height: 260px;
-                overflow-y: auto;
-                white-space: pre-wrap;
-                word-break: break-all;
-            ">{safe_raw}</div>
-            """, unsafe_allow_html=True)
+        st.markdown(f"<div style='height:0.6rem;'></div>", unsafe_allow_html=True)
+        raw_text = "\n".join(log_lines[-300:])
+        safe_raw = (raw_text
+                    .replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                    .replace("\n", "<br>"))
+
+        raw_html = f"""
+        <div style="background:{T['CONSOLE_BG']}; border:1px solid {T['BORDER']};
+                    border-radius:10px; overflow:hidden;">
+            <div style="background:{T['BANNER_BG']}; padding:0.45rem 0.9rem;
+                        display:flex; align-items:center; gap:0.4rem;
+                        border-bottom:1px solid {T['BORDER']};
+                        font-family:'JetBrains Mono',monospace; font-size:0.7rem; color:{T['TEXT_DIM']};">
+                <span style="width:9px;height:9px;border-radius:50%;background:#ef4444;display:inline-block;"></span>
+                <span style="width:9px;height:9px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
+                <span style="width:9px;height:9px;border-radius:50%;background:#10b981;display:inline-block;"></span>
+                <span style="margin-left:0.5rem;">RAW AGENT LOG — Debug Terminal</span>
+            </div>
+            <div id="raw-console"
+                 style="font-family:'JetBrains Mono',monospace; font-size:0.75rem;
+                        color:{T['CONSOLE_TEXT']}; padding:0.9rem 1rem; height:260px;
+                        overflow-y:auto; white-space:pre-wrap; line-height:1.6;
+                        word-break:break-all; background:{T['CONSOLE_BG']};">
+                {safe_raw}
+            </div>
+        </div>
+        <script>
+            var el = document.getElementById('raw-console');
+            if (el) el.scrollTop = el.scrollHeight;
+        </script>
+        """
+        components.html(raw_html, height=315, scrolling=False)
 
 def run_agent_with_console(ring_placeholder, console_placeholder, T, agents_data, current_index, script_name):
     try:
@@ -461,6 +473,10 @@ def run_agent_with_console(ring_placeholder, console_placeholder, T, agents_data
             env={**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1"}
         )
 
+        progress = 0 
+        last_update_time = time.time()
+        update_interval = 0.5
+
         progress = 0
         while True:
             line = process.stdout.readline() # type: ignore
@@ -471,13 +487,17 @@ def run_agent_with_console(ring_placeholder, console_placeholder, T, agents_data
                 progress = min(progress + 4, 95)
                 agents_data[current_index]['pct'] = progress
 
-                ring_placeholder.empty()
-                with ring_placeholder:
-                    components.html(generate_agent_rings_html(T, agents_data), height=170, scrolling=False)
+                current_time = time.time()
+                if current_time - last_update_time >= update_interval:
+                    ring_placeholder.empty()
+                    with ring_placeholder:
+                        components.html(generate_agent_rings_html(T, agents_data), height=170, scrolling=False)
+                        
+                    console_placeholder.empty()
+                    with console_placeholder:
+                        render_console(T, st.session_state.console_log)
 
-                console_placeholder.empty()
-                with console_placeholder:
-                    render_console(T, st.session_state.console_log)
+                    last_update_time = current_time
 
         if process.returncode == 0:
             agents_data[current_index]['pct'] = 100
@@ -489,6 +509,7 @@ def run_agent_with_console(ring_placeholder, console_placeholder, T, agents_data
             with console_placeholder:
                 render_console(T, st.session_state.console_log)
             return True
+        
         else:
             st.session_state.console_log.append(f"[FAILED] {script_name} exited with code {process.returncode}.")
             st.error(f"⚠️ Agent '{script_name}' failed with return code {process.returncode}.")

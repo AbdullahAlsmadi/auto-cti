@@ -103,7 +103,6 @@ def fetch_opencve_cvss(cve_id: str):
     except Exception as e:
         print(f"DEBUG - OpenCVE Error for {cve_id}: {e}")
         return None
-
 #f3
 def fetch_tenable_cvss(cve_id: str):
     try:
@@ -235,19 +234,26 @@ class NISTSearchTool(BaseTool):
                         if wd.get("lang") == "en":
                             cwe_id = wd.get("value", "N/A")
                             break
-                if cvss_vector == "N/A":
-                    continue
+                # Determine source
+                if cvss_vector != "N/A":
+                    cvss_source = "nvd_verified"
+                else:
+                  cvss_source = "nvd_no_vector"   # Triage will estimate
                 verified_cves.append(
                     f"SOURCE: NVD | VERIFIED_CVE_ID: {cve_id} | "
                     f"CVSS: {cvss_score} | SEVERITY: {cvss_severity} | "
-                    f"CWE: {cwe_id} | CVSS_SOURCE: nvd_verified | "
+                    f"CWE: {cwe_id} | CVSS_SOURCE: {cvss_source} | "
                     f"CVSS_VECTOR: {cvss_vector} | DESC: {desc[:500]}"
                 )
             return verified_cves
-
         try:
             print("DEBUG - Trying NVD (no date filter, resultsPerPage=20)...")
-            r = requests.get(nvd_url, headers=headers, params={"resultsPerPage": 20}, timeout=30)
+            params = {
+                "resultsPerPage": 20,
+                "sortBy": "publishDate",
+                "sortOrder": "desc"
+            }
+            r = requests.get(nvd_url, headers=headers, params=params, timeout=30)
             print(f"DEBUG - NVD Status: {r.status_code}")
             if r.status_code == 200:
                 cves = parse_nvd_response(r.json())
@@ -255,26 +261,6 @@ class NISTSearchTool(BaseTool):
                     return "STRICT INSTRUCTION: USE EXACTLY THESE IDs AND SCORES:\n" + "\n".join(cves)
         except Exception as e:
             print(f"DEBUG - NVD Error: {e}")
-
-        try:
-            end_dt = datetime.datetime.utcnow()
-            start_dt = end_dt - datetime.timedelta(days=7)
-            start_str = start_dt.strftime("%Y-%m-%dT%H:%M:%S.000") + "Z"
-            end_str = end_dt.strftime("%Y-%m-%dT%H:%M:%S.000") + "Z"
-            params = {
-                "resultsPerPage": 20,
-                "pubStartDate": start_str,
-                "pubEndDate": end_str,
-            }
-            print("DEBUG - Trying NVD (Strict 7-day Publication Range)...")
-            r = requests.get(nvd_url, headers=headers, params=params, timeout=30)
-            print(f"DEBUG - NVD pubDate Status: {r.status_code}")
-            if r.status_code == 200:
-                cves = parse_nvd_response(r.json())
-                if cves:
-                    return "STRICT INSTRUCTION: USE EXACTLY THESE IDs AND SCORES:\n" + "\n".join(cves)
-        except Exception as e:
-            print(f"DEBUG - NVD pubDate Error: {e}")
 
         try:
             print("DEBUG - Trying GitHub Advisory Database (GraphQL, paginated)...")
@@ -358,9 +344,13 @@ class NISTSearchTool(BaseTool):
                     )
                     time.sleep(0.3)
 
-                    if cvss_source not in ("cna_official", "tenable_verified") or verified_vector in (None, "N/A"):
-                        print(f" --> [DROPPED] {cve_id}: no verifiable CVSS vector (source={cvss_source})")
-                        continue
+                    # Keep the CVE even without a vector
+                    if verified_vector in (None, "N/A"):
+                        verified_vector = "N/A"
+                        if verified_score in (None, "N/A"):
+                            verified_score = 0.0
+                        if cvss_source not in ("cna_official", "tenable_verified"):
+                            cvss_source = "ghsa_only"
 
                     verified_cves.append(
                         f"SOURCE: GHSA | VERIFIED_CVE_ID: {cve_id} | "
@@ -420,8 +410,12 @@ class NISTSearchTool(BaseTool):
                             )
                             time.sleep(0.3)
 
-                            if cvss_source not in ("cna_official", "tenable_verified") or verified_vector in (None, "N/A"):
-                                continue
+                            if verified_vector in (None, "N/A"):
+                                verified_vector = "N/A"
+                                if verified_score in (None, "N/A"):
+                                    verified_score = 0.0
+                                if cvss_source not in ("cna_official", "tenable_verified"):
+                                    cvss_source = "ghsa_only"
 
                             osv_cves.append(
                                 f"SOURCE: OSV | VERIFIED_CVE_ID: {vuln_id} | "

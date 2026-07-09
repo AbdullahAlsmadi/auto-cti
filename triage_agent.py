@@ -63,7 +63,36 @@ if isinstance(raw_threat_data, list):
                 "vector":      item.get("cvss_vector", "N/A"),
             }
 
-#using Tenable to fetch missing CVSS vectors___________________________________________________________________________________________
+#using fetch missing CVSS vectors___________________________________________________________________________________________
+def fetch_nvd_cvss(cve_id: str):
+    try:
+        url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?cveId={cve_id}"
+        headers = {"User-Agent": "Auto-CTI-Agent/1.0"}
+        nvd_api_key = os.getenv("NVD_API_KEY")
+        if nvd_api_key:
+            headers["apiKey"] = nvd_api_key
+        r = requests.get(url, timeout=10, headers=headers)
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        vulns = data.get("vulnerabilities", [])
+        if not vulns:
+            return None
+        cve_item = vulns[0].get("cve", {})
+        metrics = cve_item.get("metrics", {})
+        cvss_v3 = metrics.get("cvssMetricV31", []) or metrics.get("cvssMetricV30", [])
+        if not cvss_v3:
+            return None
+        cvss_data = cvss_v3[0].get("cvssData", {})
+        score = cvss_data.get("baseScore")
+        vector = cvss_data.get("vectorString")
+        severity = cvss_data.get("baseSeverity")
+        if score is not None and vector:
+            return {"score": score, "vector": vector, "severity": severity}
+        return None
+    except Exception:
+        return None
+
 def fetch_tenable_live_cvss(cve_id: str):
     try:
         url = f"https://www.tenable.com/cve/{cve_id}"
@@ -88,24 +117,38 @@ def fetch_tenable_live_cvss(cve_id: str):
         }
     except Exception as e:
         return None
-print("\nDEBUG - Performing Pre-Triage Tenable Enrichment for missing vectors...")
+
+print("\nDEBUG - Performing Pre-Triage Enrichment for missing vectors (NVD → Tenable)...")
 if isinstance(raw_threat_data, list):
     for item in raw_threat_data:
         cid = item.get("cve_id")
         source = item.get("cvss_source", "")
         vector = item.get("cvss_vector", "N/A")
-        
+
+        # Only enrich if the source is non‑authoritative or vector is missing
         if source in ("ghsa_only", "cna_no_cvss") or vector == "N/A":
             if cid:
-                tenable_data = fetch_tenable_live_cvss(cid)
-                if tenable_data and tenable_data.get("vector") and tenable_data.get("vector") != "N/A":
-                    item["cvss_score"] = tenable_data["score"]
-                    item["cvss_vector"] = tenable_data["vector"]
-                    item["cvss_severity"] = tenable_data["severity"]
-                    item["cvss_source"] = "tenable_verified"
-                    print(f" --> [SUCCESS] Pre-enriched {cid} directly from Tenable.")
-            time.sleep(0.3)
+                # 1) Try NVD first
+                nvd_data = fetch_nvd_cvss(cid)
+                if nvd_data and nvd_data.get("vector") and nvd_data.get("vector") != "N/A":
+                    item["cvss_score"] = nvd_data["score"]
+                    item["cvss_vector"] = nvd_data["vector"]
+                    item["cvss_severity"] = nvd_data["severity"]
+                    item["cvss_source"] = "nvd_verified"
+                    print(f" --> [SUCCESS] Pre-enriched {cid} from NVD.")
+                else:
+                    # 2) Fallback to Tenable
+                    tenable_data = fetch_tenable_live_cvss(cid)
+                    if tenable_data and tenable_data.get("vector") and tenable_data.get("vector") != "N/A":
+                        item["cvss_score"] = tenable_data["score"]
+                        item["cvss_vector"] = tenable_data["vector"]
+                        item["cvss_severity"] = tenable_data["severity"]
+                        item["cvss_source"] = "tenable_verified"
+                        print(f" --> [SUCCESS] Pre-enriched {cid} from Tenable.")
+            time.sleep(0.3)   
 print("DEBUG - Pre-Enrichment Complete.\n")
+
+
 
 #This is function for later using at vector_____________________________________________________________________________________________
 def parse_cvss_vector(vector: str):
@@ -162,7 +205,7 @@ def enforce_authoritative_cvss(entry: dict, source_info: dict) -> dict:
     try:
         c = CVSS3(vector)
         entry["CVSS_Score"] = float(c.base_score)                 # type: ignore
-        entry["CVSS_Severity"] = c.severities()[0]
+        entry["CVSS_Severity"] = c.severities()[0].capitalize()
     except Exception:
         entry["CVSS_Score"] = source_info.get("score", entry.get("CVSS_Score"))
     entry["Score_Source"] = cvss_source
@@ -191,21 +234,34 @@ def map_source_to_score_source(cvss_source: str, was_estimated_by_llm: bool) -> 
 def recalculate_score_from_vector(entry: dict) -> dict:
     """
     Independently recomputes the CVSS base score from the CVSS_Vector string
-    using the `cvss` library. This catches cases where the LLM wrote a score
-    and a vector that are not mathematically consistent with each other.
+    using the `cvss` library. If the vector is invalid, logs the error and
+    keeps the original score.
     """
-    vector = entry.get("CVSS_Vector", "")
+    vector = entry.get("CVSS_Vector", "").strip()
     if not vector or vector == "N/A":
         return entry
+
+    # Normalise the vector: ensure correct prefix and remove duplicate slashes
+    if not vector.startswith("CVSS:3."):
+        vector = "CVSS:3.1/" + vector.lstrip("/")
+    vector = re.sub(r'/+', '/', vector)   # collapse multiple slashes
+
     try:
         c = CVSS3(vector)
-        calculated_score = float(c.base_score)                 # type: ignore
-        entry["CVSS_Score"] = calculated_score
-        entry["CVSS_Severity"] = c.severities()[0]
+        base_score = c.base_score
+        if base_score is None:
+            raise ValueError("CVSS vector produced no base score")
+        calculated_score = float(base_score)
+        print(f"DEBUG: {entry.get('CVE_ID')} vector='{vector}' -> calc_score={calculated_score}")
+        entry["CVSS_Score"] = round(calculated_score, 1)
+        entry["CVSS_Severity"] = c.severities()[0].capitalize()
         entry["Score_Source"] = entry.get("Score_Source", "estimated_unverified") + "_recalculated"
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"WARNING: Recalculation failed for {entry.get('CVE_ID', 'unknown')}: {e}")
+        # keep original score (do nothing)
+
     return entry
+
 
 
 def is_reference_alive(url: str) -> bool:
@@ -256,7 +312,6 @@ def build_verified_references(cve_id: str) -> list:
         alive_refs = [f"https://github.com/advisories?query={cve_id}"]
 
     return alive_refs
-
 #agent tools______________________________________________________________________________________________
 triage_agent = Agent(
     role='Senior Cyber Threat Intelligence Analyst',
@@ -487,6 +542,8 @@ if __name__ == "__main__":
             else:
                 entry["Score_Source"] = map_source_to_score_source(cvss_source, True)
                 entry = recalculate_score_from_vector(entry)
+
+            print(f"AFTER RECALC: {entry['CVE_ID']} -> score={entry['CVSS_Score']} vector={entry['CVSS_Vector']}")
 
             entry["References"] = build_verified_references(cve_id)
 

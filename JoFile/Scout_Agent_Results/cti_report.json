@@ -1,5 +1,185 @@
 {
-    "July 09, 2026": [
+    "July 11, 2026": [
+        {
+            "cve_id": "CVE-2026-53638",
+            "description": "Sylius: Channel-based payment method restriction bypass on shop account orders API endpoint",
+            "cvss_score": 4.3,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-863",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-53637",
+            "description": "Sylius: Cart FormComponent allows modification or deletion of an already-completed order",
+            "cvss_score": 6.5,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-672",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-52778",
+            "description": "YesWiki has Unsafe eval() in its Formula Calculato, Leading to Remote Code Execution & Denial of Service",
+            "cvss_score": 9.8,
+            "cvss_severity": "CRITICAL",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "cwe_id": "CWE-94",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-52777",
+            "description": "YesWiki Vulnerable to Authenticated PHP Object Injection in BazarImportAction via unserialize",
+            "cvss_score": 0.0,
+            "cvss_severity": "Critical",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-352",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-52775",
+            "description": "YesWiki has Authenticated SQL Injection via ReactionManager",
+            "cvss_score": 8.8,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-89",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-52774",
+            "description": "YesWiki Vulnerable to Reflected XSS via Unescaped `id` Parameter in Bazar Widget HTML Attributes",
+            "cvss_score": 6.1,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-80",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-52773",
+            "description": "YesWiki Vulnerable to Reflected XSS via Unescaped Archived-Revision `time` Parameter in `handlers/page/show.php`",
+            "cvss_score": 6.1,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-80",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-52772",
+            "description": "YesWiki has stored XSS in Bazar form-field templates via unescaped field.label / field.hint (|raw('html'))",
+            "cvss_score": 5.5,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-79",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-52771",
+            "description": "YesWiki: Second-Order SQL Injection in Page Delete API via Unescaped Page Tag (`ApiController::deletePage`)",
+            "cvss_score": 8.3,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-89",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-52770",
+            "description": "YesWiki: SQL Injection possible through public Bazar entry-listing APIs via numeric `query`/`queries` filters",
+            "cvss_score": 7.5,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-89",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-52769",
+            "description": "YesWiki has Unauthenticated Server-Side Request Forgery via ActivityPub `Signature.keyId`",
+            "cvss_score": 8.3,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-918",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-52767",
+            "description": "YesWiki Vulnerable to Unauthenticated ActivityPub Signature-Verification Bypass via `!openssl_verify(...)` accepting `int(-1)`",
+            "cvss_score": 8.2,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-347",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-52766",
+            "description": "YesWiki vulnerable to unauthenticated arbitrary page deletion via `{{erasespamedcomments}}` action",
+            "cvss_score": 9.1,
+            "cvss_severity": "Critical",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-276",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-52763",
+            "description": "YesWiki: SQL injection via the `recentchanges` action `period` argument leads to arbitrary DB read",
+            "cvss_score": 6.5,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-89",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-52762",
+            "description": "YesWiki: Authenticated (Admin) Server-Side Template Injection to Remote Code Execution via Bazar Semantic Templates",
+            "cvss_score": 0.0,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-1336",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-53769",
+            "description": "Avo: Direct attachment upload endpoint lacks upload authorization and bypasses field-level upload policy",
+            "cvss_score": 6.5,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-862",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-53932",
+            "description": "laravel-backup-restore has an OS Command Injection during database restore",
+            "cvss_score": 8.0,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-77",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-53602",
+            "description": "nebula-mesh: Host revocation is not durable - blocked/offboarded hosts can regain a valid certificate",
+            "cvss_score": 0.0,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-613",
+            "alienvault_pulses": "None"
+        },
         {
             "cve_id": "CVE-2026-53760",
             "description": "Admidio: CSRF on Plugin Install, Uninstall, and Update via Unprotected GET Requests",
@@ -18,186 +198,6 @@
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
             "cwe_id": "CWE-918",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-49485",
-            "description": "org.hl7.fhir.core: ReDoS via FHIRPath matches()/replaceMatches() in FHIR Validator HTTP Endpoint",
-            "cvss_score": 7.5,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-400",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-53720",
-            "description": "pymonocypher: Potential heap buffer overflow on nb_blocks in argon2i_32 when provided buffer is too small",
-            "cvss_score": 0.0,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-122",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-50553",
-            "description": "Note Mark: Path traversal via unsanitized book/note slug in migrate export (sibling of GHSA-g49p)",
-            "cvss_score": 0.0,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-20",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-50554",
-            "description": "Note Mark: Unauthenticated disclosure of soft-deleted note metadata via deleted=true on public books",
-            "cvss_score": 5.3,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-200",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-49477",
-            "description": "Soup Sieve: Regular Expression Denial of Service (ReDoS) via Selector Parser",
-            "cvss_score": 7.5,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-400",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-49476",
-            "description": "Soup Sieve has Memory Exhaustion via Large Comma-Separated Selector Lists",
-            "cvss_score": 7.5,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-400",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-48987",
-            "description": "pyLoad: Unbounded Memory Growth Leading to DoS and Potential DDoS in EventManager",
-            "cvss_score": 6.5,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-400",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-48737",
-            "description": "pyLoad: SSRF guard bypass via IPv6 6to4/NAT64 transition wrappers of internal IPs",
-            "cvss_score": 4.9,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-918",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-49471",
-            "description": "Serena: Unauthenticated Flask dashboard on fixed port enables DNS rebinding → memory poisoning → RCE",
-            "cvss_score": 8.3,
-            "cvss_severity": "HIGH",
-            "cvss_source": "cna_official",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:H/I:H/A:H",
-            "cwe_id": "CWE-306",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-49464",
-            "description": "NL Portal: IDOR allows any authenticated user to complete and tamper with another user's taak",
-            "cvss_score": 8.1,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-639",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-49463",
-            "description": "NL Portal: Missing per-user authorization on document and decision GraphQL queries in nl-portal-backend-libraries",
-            "cvss_score": 6.5,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-200",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-49456",
-            "description": "Waku has an Open Redirect via `unstable_redirect` Helper",
-            "cvss_score": 3.1,
-            "cvss_severity": "Low",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-601",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-49455",
-            "description": "Waku: Cross-Origin CSRF on RSC Server Action Dispatch",
-            "cvss_score": 6.5,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-352",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-53649",
-            "description": "Joro: Unauthenticated Cross-Origin Plugin Upload Leads to RCE",
-            "cvss_score": 9.6,
-            "cvss_severity": "Critical",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-306",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-49833",
-            "description": "DSpace: Path Traversal is possible through LDN message generation",
-            "cvss_score": 5.5,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-22",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-49830",
-            "description": "DSpace: ORE resource URI does not validate scheme for non-web resources",
-            "cvss_score": 4.4,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-20",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-49831",
-            "description": "DSpace has a possible Path Traversal Vulnerability in its Curation Task Reporter output path",
-            "cvss_score": 5.5,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-22",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-49832",
-            "description": "DSpace has possible Remote Code Execution (RCE)  through Velocity Templates used by LDN",
-            "cvss_score": 8.0,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-94",
             "alienvault_pulses": "None"
         }
     ]

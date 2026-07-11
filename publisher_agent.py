@@ -241,9 +241,9 @@ def reference_label(url: str) -> str:
 def severity_color(severity: str):
     s = (severity or "").strip().lower()
     if s == "critical": return (128, 0, 128)
-    if s == "high":     return (220, 38, 38)
-    if s == "medium":   return (255, 165, 0)
-    if s == "low":      return (22, 163, 74)
+    if s == "high":     return (255, 0, 51)
+    if s == "medium":   return (255, 192, 0)
+    if s == "low":      return (51, 255, 0)
     if s == "info":     return (56, 189, 248)
     return (100, 116, 139)
 

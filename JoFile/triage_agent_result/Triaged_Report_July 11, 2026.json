@@ -1,0 +1,607 @@
+[
+  {
+    "CVE_ID": "CVE-2026-53638",
+    "Finding_Name": "Channel Restriction Bypass in Shop API",
+    "Description": "The Sylius shop account orders API endpoint fails to enforce channel-based payment method restrictions during order processing. The root cause is a deficiency in the authorization logic which neglects to validate if the selected payment method is associated with the requested channel. This allows an authenticated user to perform unauthorized transactions, compromising integrity and service logic.",
+    "CVSS_Score": 4.3,
+    "CVSS_Severity": "Medium",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "Low",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "None",
+      "Integrity": "Low",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-863",
+    "MITRE_Mappings": [
+      "T1565"
+    ],
+    "Urgency_Score": 39,
+    "PoC": "An authenticated user logs into the shop account. The user sends a PATCH request to the orders API endpoint with a payment method ID that is restricted from the current channel. The server processes the payment assignment without verifying channel compliance. This results in the order being successfully processed despite business policy restrictions.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-53638",
+      "https://www.cve.org/CVERecord?id=CVE-2026-53638",
+      "https://www.tenable.com/cve/CVE-2026-53638"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-53637",
+    "Finding_Name": "Unauthorized Modification of Completed Orders",
+    "Description": "The Sylius Cart FormComponent permits the modification or deletion of orders that have already reached a completed status. The root cause is the absence of an order state validation check before invoking state-mutating methods on completed order entities. This flaw allows an authenticated attacker to alter finalized transaction records, violating business logic and data integrity.",
+    "CVSS_Score": 6.5,
+    "CVSS_Severity": "Medium",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "Low",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "None",
+      "Integrity": "High",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-672",
+    "MITRE_Mappings": [
+      "T1565"
+    ],
+    "Urgency_Score": 59,
+    "PoC": "An authenticated customer accesses the order history via the Cart FormComponent. The attacker identifies a completed order ID and sends a request to the update handler to modify line items or delete the order entity. The application processes the request because it fails to verify that the order state is still mutable. This results in the successful unauthorized modification of a legally completed transaction.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-53637",
+      "https://www.cve.org/CVERecord?id=CVE-2026-53637",
+      "https://www.tenable.com/cve/CVE-2026-53637"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-52778",
+    "Finding_Name": "Remote Code Execution via Unsafe Eval",
+    "Description": "YesWiki's Formula Calculator component utilizes an unsafe eval() function for mathematical expression processing. The lack of input sanitization or sandboxing enables the execution of arbitrary PHP code provided within the calculator input field. Unauthenticated remote attackers can leverage this vulnerability to gain full remote code execution, resulting in total system compromise.",
+    "CVSS_Score": 9.8,
+    "CVSS_Severity": "Critical",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "High",
+      "Availability": "High"
+    },
+    "CWE_ID": "CWE-94",
+    "MITRE_Mappings": [
+      "T1190",
+      "T1059"
+    ],
+    "Urgency_Score": 88,
+    "PoC": "An unauthenticated remote attacker accesses the YesWiki formula calculator input field. The attacker inputs a payload containing PHP system execution commands disguised as a mathematical expression. The application passes this string directly into the internal eval() function without validation. This results in the server executing the payload, granting the attacker arbitrary code execution privileges.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52778",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52778",
+      "https://www.tenable.com/cve/CVE-2026-52778"
+    ],
+    "Score_Source": "cve_org_official"
+  },
+  {
+    "CVE_ID": "CVE-2026-52777",
+    "Finding_Name": "Authenticated PHP Object Injection in Bazar",
+    "Description": "The BazarImportAction in YesWiki improperly utilizes the PHP unserialize() function on user-supplied input. This flaw allows an authenticated user to inject malicious serialized objects, potentially leading to arbitrary code execution or object state manipulation. The resulting vulnerability poses a severe threat to the confidentiality and integrity of the application server.",
+    "CVSS_Score": 8.8,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "Low",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "High",
+      "Availability": "High"
+    },
+    "CWE_ID": "CWE-352",
+    "MITRE_Mappings": [
+      "T1190"
+    ],
+    "Urgency_Score": 73,
+    "PoC": "An authenticated user with low privileges targets the BazarImportAction endpoint. The attacker crafts a malicious serialized PHP object payload designed to trigger a gadget chain. The application calls unserialize() on the input without proper validation or filtering. This results in the instantiation of arbitrary objects, which allows for remote code execution or state corruption.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52777",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52777",
+      "https://www.tenable.com/cve/CVE-2026-52777"
+    ],
+    "Score_Source": "tenable_verified_verified"
+  },
+  {
+    "CVE_ID": "CVE-2026-52775",
+    "Finding_Name": "Authenticated SQL Injection in ReactionManager",
+    "Description": "The ReactionManager component in YesWiki is vulnerable to SQL injection due to improper sanitization of inputs within database queries. An authenticated attacker can manipulate SQL query parameters to gain unauthorized access to or modify backend database contents. This impacts the confidentiality and integrity of the system by allowing arbitrary database operations.",
+    "CVSS_Score": 8.8,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "Low",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "High",
+      "Availability": "High"
+    },
+    "CWE_ID": "CWE-89",
+    "MITRE_Mappings": [
+      "T1190",
+      "T1059"
+    ],
+    "Urgency_Score": 79,
+    "PoC": "An authenticated attacker intercepts a request processed by the ReactionManager. The attacker injects malicious SQL statements into the parameter being sent to the backend database. The application concatenates this input directly into the query without parameterized execution. This results in the database executing the injected commands, exposing sensitive data to the attacker.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52775",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52775",
+      "https://www.tenable.com/cve/CVE-2026-52775"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-52774",
+    "Finding_Name": "Reflected XSS in Bazar Widget",
+    "Description": "The Bazar widget in YesWiki fails to properly escape the `id` parameter used within HTML attributes, leading to a Reflected Cross-Site Scripting vulnerability. An attacker can craft a malicious URL containing JavaScript payloads that are executed in the context of the user's browser. This enables session hijacking, credential theft, or unauthorized actions on behalf of the victim.",
+    "CVSS_Score": 6.1,
+    "CVSS_Severity": "Medium",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "Required",
+      "Scope": "Changed",
+      "Confidentiality": "Low",
+      "Integrity": "Low",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-80",
+    "MITRE_Mappings": [
+      "T1189"
+    ],
+    "Urgency_Score": 55,
+    "PoC": "An attacker creates a malicious link pointing to the YesWiki Bazar widget with the `id` parameter set to a script-based payload. A victim clicks the link, and their browser sends the request to the application. The application reflects the unsanitized `id` parameter back into the HTML output. This results in the victim's browser executing the injected script.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52774",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52774",
+      "https://www.tenable.com/cve/CVE-2026-52774"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-52773",
+    "Finding_Name": "Reflected XSS in Page Revision Handler",
+    "Description": "The `handlers/page/show.php` file in YesWiki fails to escape the `time` parameter of archived revisions, resulting in a Reflected Cross-Site Scripting vulnerability. Remote attackers can inject arbitrary client-side scripts that execute when a victim visits a specifically crafted URL. This facilitates the potential theft of session tokens and further malicious interaction with the web application.",
+    "CVSS_Score": 6.1,
+    "CVSS_Severity": "Medium",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "Required",
+      "Scope": "Changed",
+      "Confidentiality": "Low",
+      "Integrity": "Low",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-80",
+    "MITRE_Mappings": [
+      "T1189"
+    ],
+    "Urgency_Score": 55,
+    "PoC": "An attacker constructs a URL targeting the page revision handler with a JavaScript payload injected into the `time` parameter. The attacker convinces a user to click this link. The server receives the request and renders the unsanitized `time` parameter directly into the page source. This results in the execution of the attacker's JavaScript within the victim's active session.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52773",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52773",
+      "https://www.tenable.com/cve/CVE-2026-52773"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-52772",
+    "Finding_Name": "Stored XSS in Bazar Form Templates",
+    "Description": "The Bazar form-field templates in YesWiki fail to properly encode `field.label` and `field.hint` values when using the `raw('html')` filter. This deficiency creates a Stored Cross-Site Scripting vulnerability where malicious scripts are saved to the database. These scripts subsequently execute in the browser of any user viewing the affected Bazar form.",
+    "CVSS_Score": 5.5,
+    "CVSS_Severity": "Medium",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:L/I:L/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "High",
+      "User_Interaction": "None",
+      "Scope": "Changed",
+      "Confidentiality": "Low",
+      "Integrity": "Low",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-79",
+    "MITRE_Mappings": [
+      "T1189"
+    ],
+    "Urgency_Score": 50,
+    "PoC": "An attacker with authorized access to modify Bazar forms inserts a script tag into the `field.label` property. The application saves this malicious content to the database without filtering. When a user visits the form page, the application renders the stored script inside the page DOM. This results in the automatic execution of the attacker's script in the user's browser session.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52772",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52772",
+      "https://www.tenable.com/cve/CVE-2026-52772"
+    ],
+    "Score_Source": "tenable_verified_verified"
+  },
+  {
+    "CVE_ID": "CVE-2026-52771",
+    "Finding_Name": "Second-Order SQL Injection in Page Deletion",
+    "Description": "The `ApiController::deletePage` method in YesWiki exhibits a second-order SQL injection vulnerability through the handling of page tags. The application stores unsanitized user-supplied tags, which are subsequently processed in a vulnerable database query during the page deletion operation. This allows an attacker to execute arbitrary SQL commands when interacting with the API.",
+    "CVSS_Score": 8.3,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:L",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "Low",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "High",
+      "Availability": "Low"
+    },
+    "CWE_ID": "CWE-89",
+    "MITRE_Mappings": [
+      "T1190",
+      "T1059"
+    ],
+    "Urgency_Score": 75,
+    "PoC": "An attacker saves a page with a tag containing a malicious SQL injection payload. Later, the attacker triggers the page deletion API, which retrieves and uses that tag in an unsanitized SQL query. The backend database executes the payload contained within the tag. This results in potential unauthorized data exfiltration or system modification.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52771",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52771",
+      "https://www.tenable.com/cve/CVE-2026-52771"
+    ],
+    "Score_Source": "tenable_verified_verified"
+  },
+  {
+    "CVE_ID": "CVE-2026-52770",
+    "Finding_Name": "SQL Injection in Bazar Entry Listing",
+    "Description": "Public Bazar entry-listing APIs in YesWiki are susceptible to SQL injection via the `query` and `queries` numeric filter parameters. The application lacks proper input validation for these numeric inputs, permitting attackers to inject malicious SQL syntax into the query execution. This allows unauthorized access to backend database contents.",
+    "CVSS_Score": 7.5,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "None",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-89",
+    "MITRE_Mappings": [
+      "T1190"
+    ],
+    "Urgency_Score": 68,
+    "PoC": "An unauthenticated attacker sends a GET request to the Bazar entry-listing API, modifying the `query` parameter to include an SQL injection payload. The server processes this parameter as part of a database query without adequate sanitization. This results in the database executing the malicious query and returning unauthorized information to the attacker.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52770",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52770",
+      "https://www.tenable.com/cve/CVE-2026-52770"
+    ],
+    "Score_Source": "tenable_verified_verified"
+  },
+  {
+    "CVE_ID": "CVE-2026-52769",
+    "Finding_Name": "SSRF in ActivityPub Key Retrieval",
+    "Description": "YesWiki contains an unauthenticated Server-Side Request Forgery vulnerability within the ActivityPub signature verification process, triggered by the `Signature.keyId` parameter. The application performs outbound requests to user-supplied URLs to fetch keys, without validating the destination host. This allows an attacker to perform internal network scanning and access sensitive metadata from the application server.",
+    "CVSS_Score": 8.3,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:L/I:L/A:L",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Changed",
+      "Confidentiality": "Low",
+      "Integrity": "Low",
+      "Availability": "Low"
+    },
+    "CWE_ID": "CWE-918",
+    "MITRE_Mappings": [
+      "T1190"
+    ],
+    "Urgency_Score": 75,
+    "PoC": "An unauthenticated attacker sends an ActivityPub request to YesWiki, providing a local network URL in the `Signature.keyId` field. The server attempts to fetch the signing key from the provided URL, facilitating interaction with internal services. The server then returns the result of the fetch to the attacker. This results in unauthorized access to sensitive internal resources.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52769",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52769",
+      "https://www.tenable.com/cve/CVE-2026-52769"
+    ],
+    "Score_Source": "tenable_verified_verified"
+  },
+  {
+    "CVE_ID": "CVE-2026-52767",
+    "Finding_Name": "Signature Verification Bypass in ActivityPub",
+    "Description": "YesWiki's ActivityPub signature verification implementation is vulnerable to a logic error where the result of `!openssl_verify()` accepts `int(-1)` as a valid authentication state. This allows an unauthenticated attacker to bypass cryptographic signature checks by providing an invalid signature that triggers the error code. The flaw enables the spoofing of ActivityPub messages, compromising the integrity of the federated content.",
+    "CVSS_Score": 8.2,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:L",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "None",
+      "Integrity": "High",
+      "Availability": "Low"
+    },
+    "CWE_ID": "CWE-347",
+    "MITRE_Mappings": [
+      "T1558"
+    ],
+    "Urgency_Score": 74,
+    "PoC": "An unauthenticated attacker sends an ActivityPub message to the instance, setting the signature to an invalid value that causes the OpenSSL function to return -1. The application checks the result using a logic that interprets -1 as a successful verification due to improper strict equality checking. This results in the server accepting the forged message as authentic.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52767",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52767",
+      "https://www.tenable.com/cve/CVE-2026-52767"
+    ],
+    "Score_Source": "tenable_verified_verified"
+  },
+  {
+    "CVE_ID": "CVE-2026-52766",
+    "Finding_Name": "Unauthenticated Arbitrary Page Deletion",
+    "Description": "YesWiki allows unauthenticated users to invoke the `{{erasespamedcomments}}` action, which results in the deletion of site content. The lack of an authentication check in this specific action allows any remote user to trigger the deletion logic. This vulnerability poses a critical risk to the availability and integrity of the site's data.",
+    "CVSS_Score": 9.1,
+    "CVSS_Severity": "Critical",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:H",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "None",
+      "Integrity": "High",
+      "Availability": "High"
+    },
+    "CWE_ID": "CWE-276",
+    "MITRE_Mappings": [
+      "T1485",
+      "T1490"
+    ],
+    "Urgency_Score": 82,
+    "PoC": "An unauthenticated attacker sends a request to a YesWiki page containing the `{{erasespamedcomments}}` markup. The application parses the markup and executes the associated action without checking if the user is authorized. The execution logic removes the intended content from the database. This results in permanent data loss and service disruption.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52766",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52766",
+      "https://www.tenable.com/cve/CVE-2026-52766"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-52763",
+    "Finding_Name": "SQL Injection in Recent Changes",
+    "Description": "The `recentchanges` action in YesWiki improperly sanitizes the `period` argument when generating SQL queries for the database. This enables an SQL injection vulnerability where an attacker can influence the database query. This vulnerability provides a pathway for unauthorized reading of site data.",
+    "CVSS_Score": 6.5,
+    "CVSS_Severity": "Medium",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "Low",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "None",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-89",
+    "MITRE_Mappings": [
+      "T1190"
+    ],
+    "Urgency_Score": 59,
+    "PoC": "An unauthenticated attacker requests the `recentchanges` page with a manipulated `period` argument containing SQL keywords. The application injects this input directly into the query building logic. The database executes the resulting malicious query, which leads to unauthorized data retrieval. This results in the leakage of site activity records.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52763",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52763",
+      "https://www.tenable.com/cve/CVE-2026-52763"
+    ],
+    "Score_Source": "tenable_verified_verified"
+  },
+  {
+    "CVE_ID": "CVE-2026-52762",
+    "Finding_Name": "RCE via Template Injection in Bazar",
+    "Description": "YesWiki allows administrative users to perform Server-Side Template Injection via Bazar semantic templates, leading to Remote Code Execution. The vulnerability stems from insecure handling of user-controllable template directives that resolve to underlying system commands or application code execution. This allows an admin account to compromise the entire server environment.",
+    "CVSS_Score": 7.2,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.0/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "High",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "High",
+      "Availability": "High"
+    },
+    "CWE_ID": "CWE-1336",
+    "MITRE_Mappings": [
+      "T1190",
+      "T1059"
+    ],
+    "Urgency_Score": 65,
+    "PoC": "An authenticated administrator submits a malicious semantic template containing template injection syntax to the Bazar configuration section. The template engine evaluates this input during page rendering without sufficient sanitization. The malicious template triggers a server-side execution of arbitrary code. This results in full administrative control over the underlying operating system.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-52762",
+      "https://www.cve.org/CVERecord?id=CVE-2026-52762",
+      "https://www.tenable.com/cve/CVE-2026-52762"
+    ],
+    "Score_Source": "tenable_verified_verified"
+  },
+  {
+    "CVE_ID": "CVE-2026-53769",
+    "Finding_Name": "Upload Authorization Bypass in Avo",
+    "Description": "The direct attachment upload endpoint in Avo fails to verify upload authorization, effectively bypassing field-level upload policy. This vulnerability occurs due to the lack of access control checks on the storage request handler. An attacker can upload files to unauthorized storage locations, impacting the integrity of the filesystem.",
+    "CVSS_Score": 6.5,
+    "CVSS_Severity": "Medium",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "Low",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "None",
+      "Integrity": "High",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-862",
+    "MITRE_Mappings": [
+      "T1565"
+    ],
+    "Urgency_Score": 59,
+    "PoC": "An authenticated user with low privileges sends a POST request to the Avo attachment upload endpoint. The request provides a file intended for a field or location the user is not authorized to modify. The server processes the upload without checking the user's permissions or the field policy. This results in the unauthorized placement of files on the server.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-53769",
+      "https://www.cve.org/CVERecord?id=CVE-2026-53769",
+      "https://www.tenable.com/cve/CVE-2026-53769"
+    ],
+    "Score_Source": "estimated_unverified_recalculated"
+  },
+  {
+    "CVE_ID": "CVE-2026-53932",
+    "Finding_Name": "OS Command Injection in Database Restore",
+    "Description": "The `laravel-backup-restore` package is susceptible to OS command injection during the database restore process. The vulnerability is caused by improperly sanitized user inputs that are directly concatenated into system commands used to invoke database binaries. An attacker can supply crafted input to achieve remote code execution on the underlying host.",
+    "CVSS_Score": 8.0,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:H",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "Low",
+      "User_Interaction": "Required",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "High",
+      "Availability": "High"
+    },
+    "CWE_ID": "CWE-77",
+    "MITRE_Mappings": [
+      "T1059"
+    ],
+    "Urgency_Score": 72,
+    "PoC": "An authenticated user with administrative rights initiates a backup restoration by passing a crafted argument to the restore command. The underlying package constructs a shell command using this argument without sufficient filtering. The operating system interprets the malicious input as a valid command. This results in remote code execution with the permissions of the application user.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-53932",
+      "https://www.cve.org/CVERecord?id=CVE-2026-53932",
+      "https://www.tenable.com/cve/CVE-2026-53932"
+    ],
+    "Score_Source": "tenable_verified_verified"
+  },
+  {
+    "CVE_ID": "CVE-2026-53602",
+    "Finding_Name": "Lack of Durable Revocation in Nebula-Mesh",
+    "Description": "The Nebula-Mesh host revocation mechanism is not durable, allowing offboarded hosts to potentially regain valid certificates. The failure occurs because the revocation state is cached improperly, and certificate re-enrollment logic does not correctly verify the revocation status against the source-of-truth. This enables a revoked host to maintain connectivity, violating access control policies.",
+    "CVSS_Score": 9.1,
+    "CVSS_Severity": "Critical",
+    "CVSS_Vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "High",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-613",
+    "MITRE_Mappings": [
+      "T1550"
+    ],
+    "Urgency_Score": 61,
+    "PoC": "A revoked host attempts to request a new certificate using stale credentials during a renewal window. The Nebula-Mesh server verifies the certificate request against a flawed cache rather than the definitive blacklist. The server issues a valid certificate despite the host's revoked status. This results in the host maintaining unauthorized access to the network mesh.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-53602",
+      "https://www.cve.org/CVERecord?id=CVE-2026-53602",
+      "https://www.tenable.com/cve/CVE-2026-53602"
+    ],
+    "Score_Source": "tenable_verified_verified"
+  },
+  {
+    "CVE_ID": "CVE-2026-53760",
+    "Finding_Name": "CSRF in Admidio Plugin Management",
+    "Description": "Admidio is vulnerable to Cross-Site Request Forgery via unprotected GET requests used for plugin installation, uninstallation, and updates. The lack of anti-CSRF tokens in these administrative actions allows an attacker to trigger state changes on behalf of an authenticated administrator. This could lead to malicious plugin installation and further system compromise.",
+    "CVSS_Score": 5.2,
+    "CVSS_Severity": "Medium",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:R/S:U/C:N/I:H/A:L",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "High",
+      "User_Interaction": "Required",
+      "Scope": "Unchanged",
+      "Confidentiality": "None",
+      "Integrity": "High",
+      "Availability": "Low"
+    },
+    "CWE_ID": "CWE-352",
+    "MITRE_Mappings": [
+      "T1521"
+    ],
+    "Urgency_Score": 47,
+    "PoC": "An attacker creates a malicious webpage that includes hidden GET requests to the Admidio plugin management dashboard. The attacker lures an authenticated administrator into visiting this site. The browser automatically sends the requests to the Admidio instance. This results in unauthorized plugins being installed or removed, compromising the site's configuration.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-53760",
+      "https://www.cve.org/CVERecord?id=CVE-2026-53760",
+      "https://www.tenable.com/cve/CVE-2026-53760"
+    ],
+    "Score_Source": "tenable_verified_verified"
+  },
+  {
+    "CVE_ID": "CVE-2026-53727",
+    "Finding_Name": "SSRF and Local File Disclosure in CSS Parser",
+    "Description": "The Ruby CSS Parser's `CssParser::Parser#read_remote_file` method is vulnerable to Server-Side Request Forgery and Local File Disclosure. The method fails to restrict URI schemes, allowing an attacker to specify `file://` or internal service URLs. This permits the attacker to read arbitrary files from the server or interact with internal networked services.",
+    "CVSS_Score": 7.5,
+    "CVSS_Severity": "High",
+    "CVSS_Vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+    "CVSS_Breakdown": {
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "None",
+      "Availability": "None"
+    },
+    "CWE_ID": "CWE-918",
+    "MITRE_Mappings": [
+      "T1190"
+    ],
+    "Urgency_Score": 68,
+    "PoC": "An attacker provides a malicious CSS source URL using the `file:///etc/passwd` scheme to an application utilizing the Ruby CSS Parser. The `read_remote_file` method processes the URI without validating the scheme or path constraints. The parser reads the contents of the local file and includes it in the CSS output. This results in the exposure of sensitive server files to the attacker.",
+    "References": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-53727",
+      "https://www.cve.org/CVERecord?id=CVE-2026-53727",
+      "https://www.tenable.com/cve/CVE-2026-53727"
+    ],
+    "Score_Source": "tenable_verified_verified"
+  }
+]

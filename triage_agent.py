@@ -496,6 +496,130 @@ def build_verified_references(cve_id: str) -> list:
         alive_refs = [f"https://github.com/advisories?query={cve_id}"]
 
     return alive_refs
+
+def enhance_poc(entry: dict) -> dict:
+    """
+    Enhances the PoC with technical details (curl commands, payloads) based on CWE,
+    description, and CVSS vector. Uses CWE as the primary indicator.
+    """
+    poc = entry.get("PoC", "")
+    cwe = entry.get("CWE_ID", "")
+    description = entry.get("Description", "")
+    vector = entry.get("CVSS_Vector", "")
+
+    # Skip if PoC already has technical details
+    if any(marker in poc.lower() for marker in ["curl", "http://", "https://", "technical details"]):
+        return entry
+
+    # Map CWE to vulnerability type (prioritise CWE)
+    cwe_map = {
+        "CWE-78": "cmd_injection",
+        "CWE-77": "cmd_injection",
+        "CWE-89": "sql",
+        "CWE-79": "xss",
+        "CWE-80": "xss",
+        "CWE-918": "ssrf",
+        "CWE-22": "path_traversal",
+        "CWE-23": "path_traversal",
+        "CWE-639": "idor",
+        "CWE-352": "csrf",
+        "CWE-94": "cmd_injection",
+        "CWE-400": "dos",
+        "CWE-770": "dos",
+        "CWE-122": "memory_corruption",   # heap overflow
+        "CWE-787": "memory_corruption",   # out-of-bounds write
+    }
+    vuln_type = cwe_map.get(cwe)
+
+    # Fallback: use description keywords, and only consider vector if description indicates RCE
+    if not vuln_type:
+        desc_lower = description.lower()
+        vector_upper = vector.upper()
+
+        # Keywords that indicate command injection / RCE
+        rce_keywords = ["rce", "remote code execution", "command injection", "arbitrary code execution"]
+        is_rce = any(kw in desc_lower for kw in rce_keywords)
+
+        if "ssrf" in desc_lower or "server-side request" in desc_lower:
+            vuln_type = "ssrf"
+        elif "sql" in desc_lower or "sqli" in desc_lower or ("injection" in desc_lower and "database" in desc_lower):
+            vuln_type = "sql"
+        elif "xss" in desc_lower or "cross-site scripting" in desc_lower:
+            vuln_type = "xss"
+        elif "path traversal" in desc_lower or "directory traversal" in desc_lower:
+            vuln_type = "path_traversal"
+        elif "idor" in desc_lower or "insecure direct object" in desc_lower:
+            vuln_type = "idor"
+        elif "redos" in desc_lower or "regular expression" in desc_lower or "dos" in desc_lower:
+            vuln_type = "dos"
+        elif is_rce and ("AV:N" in vector_upper and "PR:N" in vector_upper and "UI:N" in vector_upper and "C:H" in vector_upper and "I:H" in vector_upper):
+            vuln_type = "cmd_injection"
+
+    # If still no match, return entry without adding any snippet
+    if not vuln_type:
+        return entry
+
+    # Build the technical snippet based on vulnerability type
+    technical = "\n\n**Technical Details:**\n```\n"
+    if vuln_type == "cmd_injection":
+        technical += (
+            "POST /vulnerable-endpoint HTTP/1.1\nHost: target.com\n"
+            "Content-Type: application/x-www-form-urlencoded\n\n"
+            "param=value; id\n```\n\n**curl command:**\n```bash\n"
+            'curl -X POST "https://target.com/vulnerable-endpoint" -d "param=value; id"\n```\n'
+            "The server executes the injected command and returns the output, confirming RCE."
+        )
+    elif vuln_type == "sql":
+        technical += (
+            "GET /api/items?id=1' OR '1'='1'-- HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\n"
+            'curl "https://target.com/api/items?id=1%27%20OR%20%271%27=%271%27--"\n```\n'
+            "The response includes all records instead of a single one, confirming SQL injection."
+        )
+    elif vuln_type == "xss":
+        technical += (
+            "GET /search?q=<img src=x onerror=alert(1)> HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\n"
+            'curl "https://target.com/search?q=<img src=x onerror=alert(1)>"\n```\n'
+            "The server reflects the unsanitized payload in the response, confirming XSS."
+        )
+    elif vuln_type == "ssrf":
+        technical += (
+            "GET /fetch?url=http://169.254.169.254/latest/meta-data/ HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\n"
+            'curl "https://target.com/fetch?url=http://169.254.169.254/latest/meta-data/"\n```\n'
+            "The server returns internal metadata, confirming SSRF."
+        )
+    elif vuln_type == "path_traversal":
+        technical += (
+            "GET /assets/../../../../etc/passwd HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\n"
+            'curl "https://target.com/assets/../../../../etc/passwd"\n```\n'
+            "The server returns the contents of /etc/passwd, confirming path traversal."
+        )
+    elif vuln_type == "idor":
+        technical += (
+            "GET /api/orders/12345 HTTP/1.1\nHost: target.com\n```\n\n"
+            "The attacker changes the order ID to `12346` and retrieves another user's order.\n"
+            "**curl command:**\n```bash\n"
+            'curl "https://target.com/api/orders/12346"\n```\n'
+            "The server returns the order of a different user without authorization, confirming IDOR."
+        )
+    elif vuln_type == "dos":
+        technical += (
+            "An attacker sends a specially crafted input that triggers resource exhaustion.\n"
+            "For example, a deeply nested structure or a massive list can consume CPU or memory.\n"
+            "**curl command (conceptual):**\n```bash\n"
+            'curl "https://target.com/vulnerable-endpoint?payload=<malicious_input>"\n```\n'
+            "The server becomes unresponsive or crashes, confirming the denial of service."
+        )
+    elif vuln_type == "memory_corruption":
+        technical += (
+            "An attacker sends a specially crafted input designed to trigger a memory corruption condition.\n"
+            "For example, providing an excessively large or malformed buffer may cause an out‑of‑bounds write.\n"
+            "**curl command (conceptual):**\n```bash\n"
+            'curl "https://target.com/vulnerable-endpoint?payload=<malicious_buffer>"\n```\n'
+            "The server crashes or behaves abnormally, confirming the memory corruption."
+        )
+
+    entry["PoC"] = poc + technical
+    return entry
 #agent tools______________________________________________________________________________________________
 triage_agent = Agent(
     role='Senior Cyber Threat Intelligence Analyst',
@@ -644,7 +768,10 @@ For EACH CVE entry, produce a complete professional triage record following thes
 CRITICAL OUTPUT RULES:
 - Output ONLY a raw valid JSON array. No markdown. No code fences. No extra text.
 - Every field must be present in every object.
-- The JSON must be parseable by Python json.loads() without any cleanup.''',
+- The JSON must be parseable by Python json.loads() without any cleanup.
+
+For EACH CVE, you MUST write a 3-sentence professional description. Do NOT omit this.
+''',
 
     expected_output=f'''A raw valid JSON array containing exactly {cve_count} objects:
 [
@@ -710,16 +837,21 @@ if __name__ == "__main__":
 
         fixed_entries = []
         for entry in parsed:
-                                                                       
             cve_id = entry.get("CVE_ID") or entry.get("cve_id") or ""
-            entry["CVE_ID"] = cve_id  
-            
+            entry["CVE_ID"] = cve_id
+
+            # ===== FALLBACK: If description is missing, use raw threat data description =====
+            if not entry.get("Description") or entry["Description"] == "No description available.":
+                raw_desc = next((item.get("description") for item in raw_threat_data if item.get("cve_id") == cve_id), "")
+                if raw_desc:
+                    entry["Description"] = raw_desc
+            # =================================================================================
+
             source_info = cve_source_lookup.get(
                 cve_id, {"cvss_source": "ghsa_only", "score": None, "vector": "N/A"}
             )
             cvss_source = source_info["cvss_source"]
 
-                                                                                  
             enforced = enforce_authoritative_cvss(entry, source_info)
             if enforced is not None:
                 entry = enforced
@@ -732,6 +864,8 @@ if __name__ == "__main__":
 
             # Ensure severity is not "Unknown"
             entry = ensure_severity(entry)
+
+            entry = enhance_poc(entry)
 
             print(f"AFTER RECALC: {entry['CVE_ID']} -> score={entry['CVSS_Score']} vector={entry['CVSS_Vector']}")
 

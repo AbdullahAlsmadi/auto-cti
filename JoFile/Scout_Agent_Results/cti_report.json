@@ -1,204 +1,204 @@
 {
     "July 17, 2026": [
         {
-            "cve_id": "CVE-2026-59950",
-            "description": "MCP Python SDK: WebSocket server transport does not support Host/Origin validation",
-            "cvss_score": 0.0,
+            "cve_id": "CVE-2026-54457",
+            "description": "TensorZero Gateway: Arbitrary file read and SSRF in internal object storage endpoint",
+            "cvss_score": 7.7,
             "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-552",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-54452",
+            "description": "safeurl is Missing IPv6 CIDR Ranges in Blocklist",
+            "cvss_score": 0.0,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-918",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-53656",
+            "description": "FiftyOne App server uses wildcard CORS (Access-Control-Allow-Origin: *), enabling cross-origin reads of local server data",
+            "cvss_score": 6.3,
+            "cvss_severity": "Moderate",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
             "cwe_id": "CWE-346",
-            "alienvault_pulses": "No active threat pulses found."
+            "alienvault_pulses": "None"
         },
         {
-            "cve_id": "CVE-2026-55579",
-            "description": "Pheditor: Hardcoded default password 'admin' with no forced change enables full application compromise",
-            "cvss_score": 9.8,
-            "cvss_severity": "Critical",
+            "cve_id": "CVE-2026-54450",
+            "description": "ToolHive: SSRF guard misses IPv6 NAT64 ranges (64:ff9b::/96, 64:ff9b:1::/48), allowing metadata/internal access behind a NAT64 gateway",
+            "cvss_score": 0.0,
+            "cvss_severity": "Low",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
-            "cwe_id": "CWE-798",
-            "alienvault_pulses": "No active threat pulses found."
+            "cwe_id": "CWE-918",
+            "alienvault_pulses": "None"
         },
         {
-            "cve_id": "CVE-2026-55578",
-            "description": "Pheditor: Incomplete command sanitization in terminal feature allows RCE via pipe operator, backtick substitution, and newline injection",
-            "cvss_score": 8.8,
+            "cve_id": "CVE-2026-62944",
+            "description": "MantisBT: Stored XSS in print_all_bug_page_word.php",
+            "cvss_score": 0.0,
             "cvss_severity": "High",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
-            "cwe_id": "CWE-78",
-            "alienvault_pulses": "No active threat pulses found."
+            "cwe_id": "CWE-79",
+            "alienvault_pulses": "None"
         },
         {
-            "cve_id": "CVE-2026-52724",
-            "description": "kuma-dp connects to control plane without verifying TLS certificate when no CA is configured",
+            "cve_id": "CVE-2026-52883",
+            "description": "MantisBT: Injection of TIME_TRACKING and REMINDER Notes via REST and SOAP APIs",
             "cvss_score": 0.0,
             "cvss_severity": "Moderate",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
-            "cwe_id": "CWE-295",
-            "alienvault_pulses": "No active threat pulses found."
+            "cwe_id": "CWE-20",
+            "alienvault_pulses": "None"
         },
         {
-            "cve_id": "CVE-2026-54076",
-            "description": "ArcadeDB: Read-only users can mutate database schema (incomplete fix of CVE-2026-44221)",
-            "cvss_score": 8.1,
-            "cvss_severity": "High",
+            "cve_id": "CVE-2026-52882",
+            "description": "MantisBT: REST and SOAP API Issue Update Accepts Unreleased Product Versions From Updaters",
+            "cvss_score": 0.0,
+            "cvss_severity": "Moderate",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
-            "cwe_id": "CWE-862",
-            "alienvault_pulses": "No active threat pulses found."
+            "cwe_id": "CWE-639",
+            "alienvault_pulses": "None"
         },
         {
-            "cve_id": "CVE-2026-54077",
-            "description": "ArcadeDB: IMPORT DATABASE allows SSRF and arbitrary local file read by authenticated users",
+            "cve_id": "CVE-2026-52881",
+            "description": "MantisBT: Reflected XSS in admin/install.php via unescaped printf",
+            "cvss_score": 0.0,
+            "cvss_severity": "Critical",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-79",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-52847",
+            "description": "MantisBT: Reflected XSS in admin/install.php",
+            "cvss_score": 0.0,
+            "cvss_severity": "Critical",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-79",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-54494",
+            "description": "Koel: Full-read SSRF via podcast enclosure URL: isPublicHost() filter_var guard does not reject NAT64 (64:ff9b::/96) or 6to4 (2002::/16) IPv6-transition wrappers of internal IPv4",
+            "cvss_score": 0.0,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-918",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-50552",
+            "description": "Koel: Server-Side Request Forgery (SSRF) in radio station creation due to missing validation bail",
+            "cvss_score": 6.3,
+            "cvss_severity": "MEDIUM",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:L",
+            "cwe_id": "CWE-918",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-54491",
+            "description": "Koel: Incomplete fix for CVE-2026-47260 — systemic SSRF in podcast & radio fetch paths",
             "cvss_score": 7.1,
             "cvss_severity": "High",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
-            "cwe_id": "CWE-22",
-            "alienvault_pulses": "No active threat pulses found."
+            "cwe_id": "CWE-918",
+            "alienvault_pulses": "None"
         },
         {
-            "cve_id": "CVE-2026-54542",
-            "description": "nimiq-primitives: Out-of-bounds panic in KeyNibbles::Add from oversized child suffix in a deserialized proof",
-            "cvss_score": 3.7,
-            "cvss_severity": "Low",
+            "cve_id": "CVE-2026-54451",
+            "description": "Protobuf: Unbounded recursion depth in embedded-message decoding",
+            "cvss_score": 0.0,
+            "cvss_severity": "High",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
-            "cwe_id": "CWE-125",
-            "alienvault_pulses": "No active threat pulses found."
+            "cwe_id": "CWE-674",
+            "alienvault_pulses": "None"
         },
         {
-            "cve_id": "CVE-2026-54541",
-            "description": "nimiq-primitives: Panic in TrieProof::verify via child_index unwrap on equal-length keys",
-            "cvss_score": 3.7,
-            "cvss_severity": "Low",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-248",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-54540",
-            "description": "Pheditor has an authenticated terminal command whitelist bypass",
+            "cve_id": "CVE-2026-54449",
+            "description": "LangBot: Authenticated RCE Via MCP Configuration",
             "cvss_score": 8.8,
             "cvss_severity": "High",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
-            "cwe_id": "CWE-78",
-            "alienvault_pulses": "No active threat pulses found."
+            "cwe_id": "CWE-77",
+            "alienvault_pulses": "None"
         },
         {
-            "cve_id": "CVE-2026-52869",
-            "description": "MCP Python SDK: HTTP transports serve session requests without verifying the authenticated principal",
-            "cvss_score": 7.1,
-            "cvss_severity": "HIGH",
-            "cvss_source": "cna_official",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:L",
-            "cwe_id": "CWE-639",
-            "alienvault_pulses": "No active threat pulses found."
+            "cve_id": "CVE-2026-54447",
+            "description": "garminconnect Has Insecure Permission Assignment for Garmin OAuth Token Store",
+            "cvss_score": 8.4,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-732",
+            "alienvault_pulses": "None"
         },
         {
-            "cve_id": "CVE-2026-52870",
-            "description": "MCP Python SDK: Experimental task handlers allow any client to access and cancel other clients' tasks",
-            "cvss_score": 7.6,
-            "cvss_severity": "HIGH",
-            "cvss_source": "cna_official",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:L",
-            "cwe_id": "CWE-862",
-            "alienvault_pulses": "No active threat pulses found."
+            "cve_id": "CVE-2026-54493",
+            "description": "Koel: Authenticated Full-Read SSRF via Subsonic Internet Radio Stations",
+            "cvss_score": 7.7,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-918",
+            "alienvault_pulses": "None"
         },
         {
-            "cve_id": "CVE-2026-52832",
-            "description": "Nuclio: Unauthenticated path traversal in spec.handler allows arbitrary file write in Dashboard container",
-            "cvss_score": 4.9,
+            "cve_id": "CVE-2026-54492",
+            "description": "Koel: Authenticated Blind SSRF via Subsonic Podcast Channel Creation",
+            "cvss_score": 4.3,
             "cvss_severity": "Moderate",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
-            "cwe_id": "CWE-22",
-            "alienvault_pulses": "No active threat pulses found."
+            "cwe_id": "CWE-918",
+            "alienvault_pulses": "None"
         },
         {
-            "cve_id": "CVE-2026-52833",
-            "description": "Nuclio: Unsanitized runtimeAttributes.repositories injected into Groovy build.gradle leads to build-time RCE",
-            "cvss_score": 8.0,
+            "cve_id": "CVE-2026-49280",
+            "description": "MantisBT: REST API unauthorized Issue status change",
+            "cvss_score": 0.0,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-862",
+            "alienvault_pulses": "None"
+        },
+        {
+            "cve_id": "CVE-2026-49273",
+            "description": "MantisBT: Remote Code Execution via eval() Class Hoisting in adm_config_set.php",
+            "cvss_score": 0.0,
             "cvss_severity": "High",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
-            "cwe_id": "CWE-94",
-            "alienvault_pulses": "No active threat pulses found."
+            "cwe_id": "CWE-95",
+            "alienvault_pulses": "None"
         },
         {
-            "cve_id": "CVE-2026-53714",
-            "description": "Envoy Gateway: xDS Control Plane Information Disclosure when operating in GatewayNamespaceMode",
-            "cvss_score": 7.4,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-306",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53713",
-            "description": "Envoy Gateway: Authentication Bypass via Improper Input Validation in EnvoyExtensionPolicy Lua Allows Secret Disclosure",
-            "cvss_score": 9.1,
+            "cve_id": "CVE-2026-47156",
+            "description": "MantisBT: SOAP API Authentication Bypass with Privilege Escalation to Administrator",
+            "cvss_score": 0.0,
             "cvss_severity": "Critical",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
-            "cwe_id": "CWE-20",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53715",
-            "description": "Envoy Gateway: Wasm cache ServeHTTP reads mappingPath2Cache without lock",
-            "cvss_score": 5.3,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-362",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53717",
-            "description": "Envoy Gateway: OCI layer extraction allocates make([]byte, h.Size) from untrusted tar header",
-            "cvss_score": 6.5,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-789",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53719",
-            "description": "Envoy Gateway: Nil-dereference when SecurityPolicy targets TCPRoute without spec.authorization",
-            "cvss_score": 6.5,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-476",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53716",
-            "description": "Envoy Gateway: Wasm HTTP fetch decompresses gzip without output-size limit",
-            "cvss_score": 6.5,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-789",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53718",
-            "description": "Envoy Gateway custom backendRef cross-namespace ReferenceGrant bypass",
-            "cvss_score": 6.4,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-862",
-            "alienvault_pulses": "No active threat pulses found."
+            "cwe_id": "CWE-287",
+            "alienvault_pulses": "None"
         }
     ]
 }

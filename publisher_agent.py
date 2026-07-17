@@ -219,11 +219,14 @@ def score_source_label(source: str) -> str:
         "nvd_verified":           "NVD Verified",
         "cna_official":           "CNA Official",
         "tenable_verified":       "Tenable Verified",
+        "opencve_verified":       "OpenCVE Verified",
+        "cve_org_official":       "CVE.org Verified",
         "estimated_no_cna_score": "Estimated (No Official CVSS)",
         "estimated_unverified":   "Estimated (Unverified)",
         "verified":               "Verified",
         "estimated":              "Estimated",
     }
+
     label = labels.get(base, "Unverified")
     if source.endswith("_recalculated"):
         label += " - Vector Recalculated"

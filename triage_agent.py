@@ -297,7 +297,7 @@ def verify_and_correct_cvss(entry: dict) -> dict:
         entry["CVSS_Vector"] = official_data["vector"]
         entry["CVSS_Severity"] = official_data["severity"]
         entry["CVSS_Breakdown"] = parse_cvss_vector(official_data["vector"])
-        entry["Score_Source"] = source + "_verified"
+        entry["Score_Source"] = source
     else:
         print(f"   ✅ {cve_id}: Already matches authoritative source")
 
@@ -497,6 +497,31 @@ def build_verified_references(cve_id: str) -> list:
 
     return alive_refs
 
+def recalculate_urgency_score(entry: dict, raw_threat_data: list) -> dict:
+    cve_id = entry.get("CVE_ID")
+    cvss = entry.get("CVSS_Score")
+    if cvss is None:
+        return entry
+
+    # Find raw entry to get pulses
+    raw_entry = next((item for item in raw_threat_data if item.get("cve_id") == cve_id), {})
+    pulse_count = raw_entry.get("alienvault_pulse_count", 0)  # adjust field name if different
+
+    base = cvss * 9
+    if base > 90:
+        base = 90
+    urgency = base
+    if pulse_count > 0:
+        urgency += 10
+    severity = entry.get("CVSS_Severity", "")
+    if severity in ("Low", "None"):
+        urgency -= 5
+    urgency = int(round(urgency))
+    # Ensure within 1-100
+    urgency = max(1, min(100, urgency))
+    entry["Urgency_Score"] = urgency
+    return entry
+
 def enhance_poc(entry: dict) -> dict:
     """
     Enhances the PoC with technical details (curl commands, payloads) based on CWE,
@@ -536,21 +561,26 @@ def enhance_poc(entry: dict) -> dict:
         desc_lower = description.lower()
         vector_upper = vector.upper()
 
-        # Keywords that indicate command injection / RCE
-        rce_keywords = ["rce", "remote code execution", "command injection", "arbitrary code execution"]
-        is_rce = any(kw in desc_lower for kw in rce_keywords)
+        # Keywords that indicate command injection / RCE.
+        # Use word-boundary regex, not plain substring — "rce" as a bare
+        # substring false-positives on ordinary words like "enforcement"
+        # or "resources", which was silently mislabeling unrelated CVEs
+        # (policy bypass, tar smuggling, etc.) as command injection.
+        rce_keywords = [r"\brce\b", "remote code execution", "command injection", "arbitrary code execution"]
+        is_rce = any(re.search(kw, desc_lower) for kw in rce_keywords)
 
         if "ssrf" in desc_lower or "server-side request" in desc_lower:
             vuln_type = "ssrf"
-        elif "sql" in desc_lower or "sqli" in desc_lower or ("injection" in desc_lower and "database" in desc_lower):
+        # FIXED: require literal "sql" plus "injection", not just "database"
+        elif "sqli" in desc_lower or "sql injection" in desc_lower or ("sql" in desc_lower and "injection" in desc_lower):
             vuln_type = "sql"
         elif "xss" in desc_lower or "cross-site scripting" in desc_lower:
             vuln_type = "xss"
         elif "path traversal" in desc_lower or "directory traversal" in desc_lower:
             vuln_type = "path_traversal"
-        elif "idor" in desc_lower or "insecure direct object" in desc_lower:
+        elif re.search(r'\bidor\b', desc_lower) or "insecure direct object" in desc_lower:
             vuln_type = "idor"
-        elif "redos" in desc_lower or "regular expression" in desc_lower or "dos" in desc_lower:
+        elif "redos" in desc_lower or "regular expression" in desc_lower or "denial of service" in desc_lower or "denial-of-service" in desc_lower:
             vuln_type = "dos"
         elif is_rce and ("AV:N" in vector_upper and "PR:N" in vector_upper and "UI:N" in vector_upper and "C:H" in vector_upper and "I:H" in vector_upper):
             vuln_type = "cmd_injection"
@@ -864,7 +894,8 @@ if __name__ == "__main__":
 
             # Ensure severity is not "Unknown"
             entry = ensure_severity(entry)
-
+            # Recalculate urgency score using formula (override LLM)
+            entry = recalculate_urgency_score(entry, raw_threat_data)  # type: ignore
             entry = enhance_poc(entry)
 
             print(f"AFTER RECALC: {entry['CVE_ID']} -> score={entry['CVSS_Score']} vector={entry['CVSS_Vector']}")

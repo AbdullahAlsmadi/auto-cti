@@ -1,29 +1,29 @@
 {
-    "July 12, 2026": [
+    "July 13, 2026": [
         {
-            "cve_id": "CVE-2026-53600",
-            "description": "async-tar PAX extension-header desync enables tar entry/content smuggling",
+            "cve_id": "CVE-2026-26193",
+            "description": "Open WebUI vulnerable to Stored XSS via iFrame embeds in response messages",
+            "cvss_score": 7.3,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:N",
+            "cwe_id": "CWE-79",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-26192",
+            "description": "Open WebUI vulnerable to Stored XSS via iFrame in citations model",
+            "cvss_score": 7.3,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:N",
+            "cwe_id": "CWE-79",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2025-46719",
+            "description": "Open WebUI vulnerable to stored XSS via unescaped markdown token in MarkdownTokens.svelte leading to full account takeover and RCE via functions",
             "cvss_score": 0.0,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-20",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-50197",
-            "description": "Skipper: opaAuthorizeRequestWithBody filter bypasses OPA policy on Transfer-Encoding — chunked / HTTP/2 requests",
-            "cvss_score": 8.7,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-444",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-49825",
-            "description": "`lxml_html_clean.Cleaner` does not strip `javascript:` URLs from namespaced URL attributes",
-            "cvss_score": 8.2,
             "cvss_severity": "High",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
@@ -31,19 +31,19 @@
             "alienvault_pulses": "No active threat pulses found."
         },
         {
-            "cve_id": "CVE-2026-50127",
-            "description": "Weblate SSRF: outbound URL guard misses some private ranges",
-            "cvss_score": 5.9,
-            "cvss_severity": "MEDIUM",
-            "cvss_source": "cna_official",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N",
-            "cwe_id": "CWE-918",
+            "cve_id": "CVE-2025-46571",
+            "description": "Open WebUI  allows limited stored XSS vila uploaded html file",
+            "cvss_score": 0.0,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-79",
             "alienvault_pulses": "No active threat pulses found."
         },
         {
-            "cve_id": "CVE-2026-53508",
-            "description": "oasdiff does not enforce --allow-external-refs=false on the git-revision load path (SSRF / local file read)",
-            "cvss_score": 0.0,
+            "cve_id": "CVE-2026-45016",
+            "description": "EGroupware Vulnerable to Local File Inclusion via file:// URI in Mail Compose",
+            "cvss_score": 6.5,
             "cvss_severity": "Moderate",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
@@ -51,153 +51,153 @@
             "alienvault_pulses": "No active threat pulses found."
         },
         {
-            "cve_id": "CVE-2026-53572",
-            "description": "KEDA has PostgreSQL connection string parameter injection via incomplete whitespace escaping",
-            "cvss_score": 5.9,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-74",
+            "cve_id": "CVE-2026-44512",
+            "description": "ONNX has Null Pointer Dereference in Upsample Version Converter Adapter (Zero Inputs)",
+            "cvss_score": 5.5,
+            "cvss_severity": "MEDIUM",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H",
+            "cwe_id": "CWE-476",
             "alienvault_pulses": "No active threat pulses found."
         },
         {
-            "cve_id": "CVE-2026-53553",
-            "description": "Goploy: Arbitrary File Read via Path Traversal in /deploy/fileDiff allows Remote Server Compromise",
-            "cvss_score": 7.7,
+            "cve_id": "CVE-2026-44342",
+            "description": "New API is vulnerable to CSRF through user email binding",
+            "cvss_score": 5.3,
+            "cvss_severity": "MEDIUM",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:N/I:H/A:N",
+            "cwe_id": "CWE-352",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-40187",
+            "description": "EGroupware has Authenticated RCE via Malicious eTemplate Upload",
+            "cvss_score": 0.0,
             "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-78",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-34151",
+            "description": "XWiki Platform Old Core: Resource path traversal via /skin/ action endpoint in Jetty 12+",
+            "cvss_score": 0.0,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-24",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-33655",
+            "description": "New API: SSRF Protection Bypass via Unresolved Hostname in Notification URLs",
+            "cvss_score": 7.7,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:N/A:N",
+            "cwe_id": "CWE-918",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-27823",
+            "description": "EGroupware has a Remote Code Execution Vulnerability",
+            "cvss_score": 0.0,
+            "cvss_severity": "Critical",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
             "cwe_id": "CWE-22",
             "alienvault_pulses": "No active threat pulses found."
         },
         {
-            "cve_id": "CVE-2026-53552",
-            "description": "Goploy: Cross-namespace IDOR and RCE via body-supplied row id in project and project_file handlers",
-            "cvss_score": 9.6,
-            "cvss_severity": "Critical",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-639",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53533",
-            "description": "aiosmtplib vulnerable to SMTP command injection via CR/LF in sender/recipient address",
-            "cvss_score": 0.0,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-77",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53487",
-            "description": "Kite has an authenticated cluster RBAC bypass in /api/v1/overview",
-            "cvss_score": 4.3,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-862",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53531",
-            "description": "ratex-parser has unbounded parser recursion that leads to stack overflow (process abort)",
-            "cvss_score": 0.0,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-400",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53530",
-            "description": "ratex-parser panics on `\\verb` with a multibyte delimiter (UTF-8 byte-boundary slice)",
-            "cvss_score": 0.0,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-248",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53518",
-            "description": "@better-auth/oauth-provider's OAuth authorization-code grant allows concurrent redemption when two token requests race the find-then-delete primitive",
-            "cvss_score": 8.1,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-294",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53513",
-            "description": "@better-auth/sso provider registration has server-side request forgery via unvalidated OIDC endpoints",
-            "cvss_score": 9.6,
-            "cvss_severity": "Critical",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-20",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53517",
-            "description": "Better Auth: OAuth refresh-token rotation forks the token family on concurrent redemption",
-            "cvss_score": 8.1,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-294",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53516",
-            "description": "Better Auth has an account takeover issue via OAuth auto-link to unverified pre-registered email",
-            "cvss_score": 8.3,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-287",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53514",
-            "description": "Better Auth vulnerable to unauthorized invitation acceptance via unverified email match in organization plugin",
-            "cvss_score": 7.7,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-287",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53512",
-            "description": "Better Auth: OAuth refresh-token replay via missing client authentication on oidc-provider and mcp plugins",
-            "cvss_score": 9.1,
-            "cvss_severity": "Critical",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-287",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-53509",
-            "description": "@aborruso/ckan-mcp-server: SSRF via base_url allows access to internal networks (Potential fix bypass of CVE-2026-33060)",
-            "cvss_score": 5.7,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-918",
-            "alienvault_pulses": "No active threat pulses found."
-        },
-        {
-            "cve_id": "CVE-2026-34225",
-            "description": "Open WebUI has Blind Server Side Request Forgery in its Image Edit Functionality",
-            "cvss_score": 4.3,
-            "cvss_severity": "MEDIUM",
+            "cve_id": "CVE-2026-35381",
+            "description": "cut: -s ignored in -z -d '' newline-delimiter mode",
+            "cvss_score": 3.3,
+            "cvss_severity": "LOW",
             "cvss_source": "cna_official",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N",
-            "cwe_id": "CWE-918",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",
+            "cwe_id": "CWE-684",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-35361",
+            "description": "mknod: Device nodes created mislabeled on SELinux, with broken cleanup (remove_dir on a node)",
+            "cvss_score": 3.4,
+            "cvss_severity": "LOW",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:U/C:L/I:L/A:N",
+            "cwe_id": "CWE-281",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-35341",
+            "description": "mkfifo: permissions of an existing file are changed after FIFO creation fails",
+            "cvss_score": 7.1,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N",
+            "cwe_id": "CWE-281",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-55630",
+            "description": "Kiwi TCMS vulnerable to stored XSS via JavaScript: URI in extra_link field (TestPlan & TestCase)",
+            "cvss_score": 0.0,
+            "cvss_severity": "Low",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-79",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-55501",
+            "description": "9router: Login brute-force protection bypass via spoofed X-Forwarded-For header",
+            "cvss_score": 7.3,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L",
+            "cwe_id": "CWE-290",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-55500",
+            "description": "9routers has Exposure of Sensitive Information and Unprotected Database Import/Export, Allowing Complete Credential Theft and Database Takeover",
+            "cvss_score": 9.9,
+            "cvss_severity": "CRITICAL",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H",
+            "cwe_id": "CWE-200",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-55794",
+            "description": "Craft CMS: Potential authenticated Remote Code Execution via referrer redirect",
+            "cvss_score": 0.0,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-94",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-55793",
+            "description": "Craft CMS: Stored XSS via Structure entry title in table view",
+            "cvss_score": 0.0,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-79",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-55792",
+            "description": "Craft CMS: Sensitive File Disclosure / Server-Side File Read",
+            "cvss_score": 0.0,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-200",
             "alienvault_pulses": "No active threat pulses found."
         }
     ]

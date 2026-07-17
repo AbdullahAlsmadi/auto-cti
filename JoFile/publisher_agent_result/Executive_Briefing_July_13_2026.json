@@ -1,0 +1,626 @@
+{
+    "report_date": "July 13, 2026",
+    "executive_summary": "As of July 13, 2026, the security operations center has completed the analysis of 20 total vulnerabilities, categorized as 2 Critical, 9 High, 7 Medium, and 2 Low severity findings. This current threat landscape represents an elevated organizational risk posture, characterized by multiple high-severity remote code execution vectors that necessitate immediate remediation to maintain system integrity. The most critical threat is identified as CVE-2026-55500, Database Exposure and Takeover in 9router, which demands prioritization due to the potential for total system compromise and unauthorized data exfiltration. Given the direct accessibility of these exploitable endpoints, the recommended response posture is an immediate, accelerated emergency patching cycle to eliminate these critical exposure windows. Security teams must treat these identified vulnerabilities as high-probability targets for imminent exploitation by sophisticated threat actors.",
+    "critical_actions": [
+        "CVE-2026-55500: Initiate emergency isolation and deployment of vendor patches for 9router within 24 hours.",
+        "CVE-2026-27823: Execute immediate remediation of EGroupware path handling configurations to neutralize RCE vectors within 24 hours.",
+        "CVE-2026-40187: Implement strict eTemplate upload filters and apply security updates for EGroupware within 48 hours.",
+        "CVE-2026-55794: Deploy Craft CMS security patches to remediate Referrer Redirect vulnerabilities within 48 hours.",
+        "CVE-2026-33655: Apply comprehensive SSRF filtering and hostname resolution patches to the New API within 72 hours."
+    ],
+    "cve_summary": [
+        {
+            "cve_id": "CVE-2026-55500",
+            "finding_name": "Database Exposure and Takeover in 9router",
+            "description": "The 9router application exhibits an exposure of sensitive configuration and database management endpoints that are left unprotected. This flaw enables an unauthenticated or low-privileged user to access import/export functionalities that reveal or overwrite the application's database contents. The resulting impact includes complete credential theft, unauthorized database modifications, and full application takeover.",
+            "cvss_score": 9.9,
+            "score_source": "cve_org_official",
+            "severity": "Critical",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Changed",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-200",
+            "mitre_mappings": [
+                "T1552",
+                "T1005"
+            ],
+            "urgency_score": 89,
+            "poc": "An attacker navigates to the undocumented '/admin/db_manage' endpoint while authenticated with a low-privileged account. The endpoint fails to enforce authorization checks, presenting the attacker with a full database dump of all users and settings. Using the import functionality, the attacker uploads a malicious database backup that modifies administrative user credentials. This results in total control over the 9router system.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-55500",
+                "https://www.cve.org/CVERecord?id=CVE-2026-55500",
+                "https://www.tenable.com/cve/CVE-2026-55500"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-27823",
+            "finding_name": "Remote Code Execution in EGroupware",
+            "description": "EGroupware is vulnerable to a severe Remote Code Execution (RCE) flaw related to improper path handling. The vulnerability is rooted in an inadequately protected endpoint that permits the execution of arbitrary files placed within the system's directory structure. An attacker can use this to gain full control over the application server.",
+            "cvss_score": 9.8,
+            "score_source": "tenable_verified",
+            "severity": "Critical",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-22",
+            "mitre_mappings": [
+                "T1190",
+                "T1059"
+            ],
+            "urgency_score": 88,
+            "poc": "The attacker identifies an endpoint in EGroupware that improperly handles file access, allowing a path traversal that leads to an execution context. By crafting a specific HTTP request, the attacker triggers the execution of an uploaded script file. The server processes the request and runs the malicious payload with the application's privilege level. This results in total system compromise and arbitrary command execution.\n\n**Technical Details:**\n```\nGET /assets/../../../../etc/passwd HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/assets/../../../../etc/passwd\"\n```\nThe server returns the contents of /etc/passwd, confirming path traversal.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-27823",
+                "https://www.cve.org/CVERecord?id=CVE-2026-27823",
+                "https://www.tenable.com/cve/CVE-2026-27823"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-40187",
+            "finding_name": "Authenticated RCE via eTemplate Upload in EGroupware",
+            "description": "EGroupware allows an authenticated user to perform Remote Code Execution (RCE) by uploading a malicious eTemplate file. The root cause is the lack of server-side validation on the structure and content of the template, which is subsequently executed by the server. This vulnerability provides a direct pathway for an attacker to run arbitrary system commands under the permissions of the web server.",
+            "cvss_score": 8.8,
+            "score_source": "tenable_verified",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-78",
+            "mitre_mappings": [
+                "T1190",
+                "T1059"
+            ],
+            "urgency_score": 79,
+            "poc": "The authenticated attacker uploads a specially crafted eTemplate file to the EGroupware server through the management interface. The server parses the template and executes the embedded instructions as a server-side process due to insufficient sanitization of the template contents. Once the file is processed, the attacker triggers the template, executing arbitrary OS commands on the server. This results in full system compromise.\n\n**Technical Details:**\n```\nPOST /vulnerable-endpoint HTTP/1.1\nHost: target.com\nContent-Type: application/x-www-form-urlencoded\n\nparam=value; id\n```\n\n**curl command:**\n```bash\ncurl -X POST \"https://target.com/vulnerable-endpoint\" -d \"param=value; id\"\n```\nThe server executes the injected command and returns the output, confirming RCE.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-40187",
+                "https://www.cve.org/CVERecord?id=CVE-2026-40187",
+                "https://www.tenable.com/cve/CVE-2026-40187"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-55794",
+            "finding_name": "Authenticated RCE via Referrer Redirect in Craft CMS",
+            "description": "Craft CMS contains a vulnerability that may allow authenticated users to perform Remote Code Execution (RCE) via manipulation of the referrer redirect mechanism. The root cause is the unsafe processing of the redirect target, which can be coerced to resolve to a malicious script or system command. This flaw allows an authenticated attacker to execute arbitrary code on the web server.",
+            "cvss_score": 8.8,
+            "score_source": "tenable_verified",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-94",
+            "mitre_mappings": [
+                "T1190",
+                "T1059"
+            ],
+            "urgency_score": 79,
+            "poc": "The authenticated attacker crafts a request to the Craft CMS login or management controller, including a specific malicious URL in the referrer header. The application fails to validate the target, instead interpreting the input as a command source to execute on the underlying server. Upon trigger, the server processes the redirect request, executing the payload with administrative privileges. This results in full system compromise.\n\n**Technical Details:**\n```\nPOST /vulnerable-endpoint HTTP/1.1\nHost: target.com\nContent-Type: application/x-www-form-urlencoded\n\nparam=value; id\n```\n\n**curl command:**\n```bash\ncurl -X POST \"https://target.com/vulnerable-endpoint\" -d \"param=value; id\"\n```\nThe server executes the injected command and returns the output, confirming RCE.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-55794",
+                "https://www.cve.org/CVERecord?id=CVE-2026-55794",
+                "https://www.tenable.com/cve/CVE-2026-55794"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-33655",
+            "finding_name": "SSRF Protection Bypass in New API",
+            "description": "The New API allows for a Server-Side Request Forgery (SSRF) protection bypass through the use of unresolved hostnames in notification URLs. The application fails to properly validate the final resolved IP address of the hostname, enabling the request to reach internal resources. This vulnerability allows an attacker to interact with sensitive internal services that are otherwise protected from public access.",
+            "cvss_score": 7.7,
+            "score_source": "cve_org_official",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Changed",
+                "Confidentiality": "High",
+                "Integrity": "None",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-918",
+            "mitre_mappings": [
+                "T1514"
+            ],
+            "urgency_score": 69,
+            "poc": "An authenticated user provides a crafted hostname pointing to an internal-only IP address (e.g., 169.254.169.254) in a notification URL field. The server processes this hostname but fails to restrict resolution to safe network ranges, permitting the underlying request to connect to the internal service. The server subsequently returns the output of the internal request to the attacker. This results in the exposure of sensitive internal infrastructure and data.\n\n**Technical Details:**\n```\nGET /fetch?url=http://169.254.169.254/latest/meta-data/ HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/fetch?url=http://169.254.169.254/latest/meta-data/\"\n```\nThe server returns internal metadata, confirming SSRF.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-33655",
+                "https://www.cve.org/CVERecord?id=CVE-2026-33655",
+                "https://www.tenable.com/cve/CVE-2026-33655"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-34151",
+            "finding_name": "Resource Path Traversal in XWiki Platform",
+            "description": "XWiki Platform, when utilizing Jetty 12+, exhibits a resource path traversal vulnerability via the /skin/ action endpoint. The application fails to sanitize path inputs, allowing an attacker to navigate outside the intended directory structure. This vulnerability allows unauthorized access to sensitive files on the host system that are intended to remain private.",
+            "cvss_score": 7.5,
+            "score_source": "tenable_verified",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "None",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-24",
+            "mitre_mappings": [
+                "T1552"
+            ],
+            "urgency_score": 68,
+            "poc": "An unauthenticated attacker sends a HTTP request to the /skin/ endpoint using a path traversal sequence like '../' in the resource parameter. The backend, running on Jetty 12+, fails to normalize the path correctly and resolves it against the filesystem root. This allows the attacker to read arbitrary system files by observing the response content. This results in significant information disclosure of sensitive configuration files.\n\n**Technical Details:**\n```\nGET /assets/../../../../etc/passwd HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/assets/../../../../etc/passwd\"\n```\nThe server returns the contents of /etc/passwd, confirming path traversal.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-34151",
+                "https://www.cve.org/CVERecord?id=CVE-2026-34151",
+                "https://www.tenable.com/cve/CVE-2026-34151"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-55792",
+            "finding_name": "Sensitive File Disclosure in Craft CMS",
+            "description": "Craft CMS contains a vulnerability that allows for sensitive file disclosure or Server-Side File Read. The vulnerability arises from an endpoint that accepts arbitrary path inputs without proper validation of the directory traversal constraints. This enables an authenticated attacker to read system files or application source code that should not be publicly accessible.",
+            "cvss_score": 7.5,
+            "score_source": "tenable_verified",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "None",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-200",
+            "mitre_mappings": [
+                "T1552"
+            ],
+            "urgency_score": 68,
+            "poc": "An authenticated attacker interacts with a file-reading utility endpoint within the Craft CMS backend. The attacker passes a crafted relative path using sequences like '../' to target sensitive configuration files such as '.env'. The server fails to validate the directory bounds, reading the target file and returning its contents in the HTTP response. This results in the exposure of database credentials and system configuration.\n\n**Technical Details:**\n```\nGET /assets/../../../../etc/passwd HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/assets/../../../../etc/passwd\"\n```\nThe server returns the contents of /etc/passwd, confirming path traversal.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-55792",
+                "https://www.cve.org/CVERecord?id=CVE-2026-55792",
+                "https://www.tenable.com/cve/CVE-2026-55792"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-26193",
+            "finding_name": "Stored XSS via iFrame in Open WebUI",
+            "description": "The Open WebUI component fails to sanitize iFrame embeds within incoming response messages. This vulnerability is caused by improper handling of user-supplied HTML content which is rendered directly in the user's browser session. An authenticated attacker can leverage this to execute arbitrary JavaScript in the context of a victim's session, leading to potential session hijacking or data theft.",
+            "cvss_score": 7.3,
+            "score_source": "cve_org_official",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "Required",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-79",
+            "mitre_mappings": [
+                "T1189"
+            ],
+            "urgency_score": 66,
+            "poc": "An authenticated user with low privileges targets the messaging interface. The attacker sends a chat response containing a crafted iFrame element pointing to a malicious external script. The Open WebUI client renders the iFrame without adequate escaping, executing the script in the context of the victim's browser. This allows the attacker to steal CSRF tokens or perform unauthorized actions on behalf of the victim.\n\n**Technical Details:**\n```\nGET /search?q=<img src=x onerror=alert(1)> HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/search?q=<img src=x onerror=alert(1)>\"\n```\nThe server reflects the unsanitized payload in the response, confirming XSS.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-26193",
+                "https://www.cve.org/CVERecord?id=CVE-2026-26193",
+                "https://www.tenable.com/cve/CVE-2026-26193"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-26192",
+            "finding_name": "Stored XSS in Open WebUI Citations Model",
+            "description": "The citations model within Open WebUI improperly handles iFrame tags provided within citation data fields. The underlying failure is due to a lack of sanitization for user-controllable input rendered in the application's user interface. This flaw allows an attacker to execute malicious scripts within a victim's session, compromising the confidentiality and integrity of their interaction.",
+            "cvss_score": 7.3,
+            "score_source": "cve_org_official",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "Required",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-79",
+            "mitre_mappings": [
+                "T1189"
+            ],
+            "urgency_score": 66,
+            "poc": "An authenticated attacker supplies a citation string containing a malicious iFrame embed to the citations API. When a target user views the generated response, the citation component renders the unvalidated iFrame. The embedded script executes within the victim's security context, enabling access to sensitive UI data or account session tokens. This results in the complete compromise of the victim's session integrity.\n\n**Technical Details:**\n```\nGET /search?q=<img src=x onerror=alert(1)> HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/search?q=<img src=x onerror=alert(1)>\"\n```\nThe server reflects the unsanitized payload in the response, confirming XSS.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-26192",
+                "https://www.cve.org/CVERecord?id=CVE-2026-26192",
+                "https://www.tenable.com/cve/CVE-2026-26192"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-55501",
+            "finding_name": "Brute-Force Bypass via Spoofed Header in 9router",
+            "description": "9router is vulnerable to a login brute-force protection bypass through the exploitation of the X-Forwarded-For HTTP header. The system relies on this header for IP-based rate limiting, which can be easily spoofed by an attacker to represent different origin addresses. This vulnerability permits an attacker to perform credential stuffing or brute-force attacks against user accounts without triggering account lockouts.",
+            "cvss_score": 7.3,
+            "score_source": "cve_org_official",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "Low",
+                "Integrity": "Low",
+                "Availability": "Low"
+            },
+            "cwe_id": "CWE-290",
+            "mitre_mappings": [
+                "T1110"
+            ],
+            "urgency_score": 66,
+            "poc": "An attacker initiates a brute-force login attempt against the 9router login portal. For every request, the attacker modifies the 'X-Forwarded-For' header to a random or rotating IP address. The application backend evaluates the rate limit based on the header value rather than the true source IP. This successfully circumvents the security mechanism, allowing the attacker to continue attempts indefinitely.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-55501",
+                "https://www.cve.org/CVERecord?id=CVE-2026-55501",
+                "https://www.tenable.com/cve/CVE-2026-55501"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-35341",
+            "finding_name": "Insecure Permission Changes in mkfifo",
+            "description": "The 'mkfifo' utility improperly modifies the permissions of existing files when a FIFO creation process fails. This vulnerability is caused by an error in the atomicity of the operation, where the code proceeds to chmod a file regardless of the creation outcome. This flaw allows a local user to potentially change permissions on files they do not own, leading to unauthorized access.",
+            "cvss_score": 7.1,
+            "score_source": "cve_org_official",
+            "severity": "High",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Local",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "High",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-281",
+            "mitre_mappings": [
+                "T1068"
+            ],
+            "urgency_score": 64,
+            "poc": "A local attacker points 'mkfifo' to an existing file that they should not have write permissions to modify. The creation fails as the file already exists, but the 'mkfifo' logic erroneously triggers a chmod call on the path. The utility then changes the permissions of the existing file to an insecure state. This allows the attacker to then access or modify the contents of the file.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-35341",
+                "https://www.cve.org/CVERecord?id=CVE-2026-35341",
+                "https://www.tenable.com/cve/CVE-2026-35341"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-45016",
+            "finding_name": "Local File Inclusion in EGroupware Mail Compose",
+            "description": "The EGroupware mail compose feature allows Local File Inclusion (LFI) via improper handling of file:// URI schemes. The application fails to validate protocol prefixes, allowing an attacker to reference local system files instead of network resources. This vulnerability allows for unauthorized reading of sensitive local files, which may contain configuration data or system credentials.",
+            "cvss_score": 6.5,
+            "score_source": "tenable_verified",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "High",
+                "Integrity": "None",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-73",
+            "mitre_mappings": [
+                "T1552"
+            ],
+            "urgency_score": 58,
+            "poc": "An authenticated user triggers the mail compose function within EGroupware. The attacker modifies the attachment parameter in the request to include a 'file:///etc/passwd' URI. The backend processes this input without verifying the resource location, subsequently returning the contents of the file in the email preview. This allows the attacker to exfiltrate sensitive local files from the server.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-45016",
+                "https://www.cve.org/CVERecord?id=CVE-2026-45016",
+                "https://www.tenable.com/cve/CVE-2026-45016"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-44512",
+            "finding_name": "Null Pointer Dereference in ONNX Upsample Converter",
+            "description": "The ONNX Upsample version converter adapter is susceptible to a null pointer dereference when processing zero-length inputs. The fault occurs when the converter fails to initialize or validate the input buffer before attempting to access its memory address. This condition results in an application crash, causing a Denial of Service (DoS) vulnerability triggered by an attacker-controlled input file.",
+            "cvss_score": 5.5,
+            "score_source": "cve_org_official",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H",
+            "cvss_breakdown": {
+                "Attack_Vector": "Local",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "None",
+                "User_Interaction": "Required",
+                "Scope": "Unchanged",
+                "Confidentiality": "None",
+                "Integrity": "None",
+                "Availability": "High"
+            },
+            "cwe_id": "CWE-476",
+            "mitre_mappings": [
+                "T1499"
+            ],
+            "urgency_score": 50,
+            "poc": "A user provides a specially crafted ONNX model file containing an empty Upsample operator to the converter tool. Upon processing, the converter logic attempts to reference the memory block allocated for the operator inputs, which has not been initialized. The application subsequently dereferences the null pointer and terminates abnormally. This successfully causes a local Denial of Service condition on the machine processing the model.\n\n**Technical Details:**\n```\nAn attacker sends a specially crafted input that triggers resource exhaustion.\nFor example, a deeply nested structure or a massive list can consume CPU or memory.\n**curl command (conceptual):**\n```bash\ncurl \"https://target.com/vulnerable-endpoint?payload=<malicious_input>\"\n```\nThe server becomes unresponsive or crashes, confirming the denial of service.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-44512",
+                "https://www.cve.org/CVERecord?id=CVE-2026-44512",
+                "https://www.tenable.com/cve/CVE-2026-44512"
+            ]
+        },
+        {
+            "cve_id": "CVE-2025-46719",
+            "finding_name": "Full Account Takeover and RCE in Open WebUI",
+            "description": "The MarkdownTokens.svelte component in Open WebUI is vulnerable to stored Cross-Site Scripting (XSS) due to unescaped markdown token processing. This vulnerability stems from the direct rendering of input that can be manipulated to inject malicious scripts, leading to complete client-side compromise. Attackers can escalate these privileges to achieve Remote Code Execution (RCE) via the application's function extension framework.",
+            "cvss_score": 5.4,
+            "score_source": "tenable_verified",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "Required",
+                "Scope": "Changed",
+                "Confidentiality": "Low",
+                "Integrity": "Low",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-79",
+            "mitre_mappings": [
+                "T1190",
+                "T1059"
+            ],
+            "urgency_score": 49,
+            "poc": "An authenticated attacker submits a malicious markdown snippet containing a payload designed to target the MarkdownTokens.svelte component. The application fails to sanitize the input, executing the payload as a script within the user's browser. The script then interacts with the internal function registry to call administrative commands. This leads to full account takeover and execution of arbitrary code on the host server.\n\n**Technical Details:**\n```\nGET /search?q=<img src=x onerror=alert(1)> HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/search?q=<img src=x onerror=alert(1)>\"\n```\nThe server reflects the unsanitized payload in the response, confirming XSS.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2025-46719",
+                "https://www.cve.org/CVERecord?id=CVE-2025-46719",
+                "https://www.tenable.com/cve/CVE-2025-46719"
+            ]
+        },
+        {
+            "cve_id": "CVE-2025-46571",
+            "finding_name": "Stored XSS via File Upload in Open WebUI",
+            "description": "Open WebUI allows for stored Cross-Site Scripting (XSS) through the uploading of malicious HTML files. The root cause is a failure to properly validate or sanitize the content of uploaded documents before they are hosted or rendered by the application. This vulnerability enables an attacker to deliver persistent malicious payloads to other users who access the uploaded content.",
+            "cvss_score": 5.4,
+            "score_source": "tenable_verified",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "Required",
+                "Scope": "Changed",
+                "Confidentiality": "Low",
+                "Integrity": "Low",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-79",
+            "mitre_mappings": [
+                "T1189"
+            ],
+            "urgency_score": 49,
+            "poc": "An authenticated user uploads an HTML file containing an embedded script payload through the file-upload feature. When another user navigates to the URL associated with the uploaded file, the malicious content is rendered in their browser session. The script executes without authorization, potentially accessing session-specific information. This results in the compromise of the victim's session integrity.\n\n**Technical Details:**\n```\nGET /search?q=<img src=x onerror=alert(1)> HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/search?q=<img src=x onerror=alert(1)>\"\n```\nThe server reflects the unsanitized payload in the response, confirming XSS.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2025-46571",
+                "https://www.cve.org/CVERecord?id=CVE-2025-46571",
+                "https://www.tenable.com/cve/CVE-2025-46571"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-55793",
+            "finding_name": "Stored XSS in Craft CMS Structure Title",
+            "description": "Craft CMS is susceptible to stored Cross-Site Scripting (XSS) due to improper validation of the Structure entry title when displayed in a table view. The application fails to properly encode the title content, permitting the injection of arbitrary HTML and script elements. When a user views the structure management table, the malicious script executes within their session.",
+            "cvss_score": 5.4,
+            "score_source": "tenable_verified",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "Required",
+                "Scope": "Changed",
+                "Confidentiality": "Low",
+                "Integrity": "Low",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-79",
+            "mitre_mappings": [
+                "T1189"
+            ],
+            "urgency_score": 49,
+            "poc": "An authenticated user creates a structure entry with a title containing a malicious JavaScript payload. When an administrator navigates to the list view, the Craft CMS table component renders the entry title without sanitization. The script executes in the administrator's browser, potentially allowing the attacker to perform unauthorized management operations. This results in the compromise of the administrator's account session.\n\n**Technical Details:**\n```\nGET /search?q=<img src=x onerror=alert(1)> HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/search?q=<img src=x onerror=alert(1)>\"\n```\nThe server reflects the unsanitized payload in the response, confirming XSS.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-55793",
+                "https://www.cve.org/CVERecord?id=CVE-2026-55793",
+                "https://www.tenable.com/cve/CVE-2026-55793"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-44342",
+            "finding_name": "Cross-Site Request Forgery in New API",
+            "description": "The New API endpoint is vulnerable to Cross-Site Request Forgery (CSRF) during the user email binding process. The implementation fails to enforce anti-CSRF tokens or verify the origin of the request, allowing unauthorized state changes. An attacker can trick a victim into submitting a request that binds an attacker-controlled email address to the victim's account.",
+            "cvss_score": 5.3,
+            "score_source": "cve_org_official",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:N/I:H/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "High",
+                "Privileges_Required": "None",
+                "User_Interaction": "Required",
+                "Scope": "Unchanged",
+                "Confidentiality": "None",
+                "Integrity": "High",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-352",
+            "mitre_mappings": [
+                "T1526"
+            ],
+            "urgency_score": 48,
+            "poc": "The attacker creates a malicious webpage designed to automatically send a POST request to the target API's email binding endpoint. The victim visits the page while logged into the application, causing their browser to send the unauthorized request. The API processes the request without validating the origin or using tokens, successfully changing the associated email. This results in the attacker gaining the ability to reset the victim's password.\n\n**Technical Details:**\n```\n",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-44342",
+                "https://www.cve.org/CVERecord?id=CVE-2026-44342",
+                "https://www.tenable.com/cve/CVE-2026-44342"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-55630",
+            "finding_name": "Stored XSS in Kiwi TCMS",
+            "description": "Kiwi TCMS is vulnerable to stored Cross-Site Scripting (XSS) via the 'extra_link' field in the TestPlan and TestCase modules. The issue arises from the application's failure to filter 'javascript:' URI schemes, which are then rendered as clickable links. An attacker can exploit this to execute malicious JavaScript in the context of another user's session.",
+            "cvss_score": 4.6,
+            "score_source": "estimated_unverified_recalculated",
+            "severity": "Medium",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:L/I:L/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Network",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "Required",
+                "Scope": "Unchanged",
+                "Confidentiality": "Low",
+                "Integrity": "Low",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-79",
+            "mitre_mappings": [
+                "T1189"
+            ],
+            "urgency_score": 41,
+            "poc": "An authenticated attacker creates or edits a TestPlan and injects a 'javascript:alert(1)' URI into the 'extra_link' field. When another user views this TestPlan and clicks the link, the browser executes the script in the context of the user's session. This allows the attacker to perform actions as the victim or steal session cookies. The impact is a compromise of the victim's session integrity.\n\n**Technical Details:**\n```\nGET /search?q=<img src=x onerror=alert(1)> HTTP/1.1\nHost: target.com\n```\n\n**curl command:**\n```bash\ncurl \"https://target.com/search?q=<img src=x onerror=alert(1)>\"\n```\nThe server reflects the unsanitized payload in the response, confirming XSS.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-55630",
+                "https://www.cve.org/CVERecord?id=CVE-2026-55630",
+                "https://www.tenable.com/cve/CVE-2026-55630"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-35361",
+            "finding_name": "Mislabeled SELinux Device Nodes via mknod",
+            "description": "The 'mknod' utility fails to correctly label device nodes under SELinux security policies when an error occurs during creation. The issue is caused by a flawed cleanup routine that attempts 'remove_dir' on a node, leaving it in an insecure or mislabeled state. This creates a risk where device nodes may be accessible to unauthorized users or processes.",
+            "cvss_score": 3.4,
+            "score_source": "cve_org_official",
+            "severity": "Low",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:U/C:L/I:L/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Local",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "High",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "Low",
+                "Integrity": "Low",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-281",
+            "mitre_mappings": [
+                "T1068"
+            ],
+            "urgency_score": 26,
+            "poc": "An administrator executes 'mknod' in a manner that triggers a partial creation failure while SELinux is active. The cleanup function executes incorrectly, failing to remove the file while also failing to apply the correct security label. A subsequent user-space process may access the device node due to the incorrect labeling. This leads to a degradation of system security policy enforcement.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-35361",
+                "https://www.cve.org/CVERecord?id=CVE-2026-35361",
+                "https://www.tenable.com/cve/CVE-2026-35361"
+            ]
+        },
+        {
+            "cve_id": "CVE-2026-35381",
+            "finding_name": "Logic Error in cut Command Processing",
+            "description": "The 'cut' utility fails to properly handle the '-s' flag when executed in conjunction with '-z' and '-d' newline-delimiter modes. This logic error causes the utility to ignore the 'suppress-lines' directive under specific delimiter conditions. The vulnerability results in unexpected data output which could affect automated scripts relying on output suppression.",
+            "cvss_score": 3.3,
+            "score_source": "cve_org_official",
+            "severity": "Low",
+            "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",
+            "cvss_breakdown": {
+                "Attack_Vector": "Local",
+                "Attack_Complexity": "Low",
+                "Privileges_Required": "Low",
+                "User_Interaction": "None",
+                "Scope": "Unchanged",
+                "Confidentiality": "None",
+                "Integrity": "Low",
+                "Availability": "None"
+            },
+            "cwe_id": "CWE-684",
+            "mitre_mappings": [
+                "T1562"
+            ],
+            "urgency_score": 25,
+            "poc": "A local user executes 'cut' with the flags '-z', '-d' (null), and '-s' on a file that does not contain the delimiter. The utility, due to the logic error, proceeds to output the entire input stream instead of suppressing it as expected. This behavior alters the intended output of the command in a script context. The resulting integrity impact is limited to the incorrect processing of text data.",
+            "references": [
+                "https://nvd.nist.gov/vuln/detail/CVE-2026-35381",
+                "https://www.cve.org/CVERecord?id=CVE-2026-35381",
+                "https://www.tenable.com/cve/CVE-2026-35381"
+            ]
+        }
+    ],
+    "severity_stats": {
+        "Critical": 2,
+        "High": 9,
+        "Medium": 7,
+        "Low": 2,
+        "Unknown": 0,
+        "Total": 20
+    }
+}

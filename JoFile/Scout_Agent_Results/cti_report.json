@@ -1,204 +1,204 @@
 {
-    "July 17, 2026": [
+    "July 23, 2026": [
         {
-            "cve_id": "CVE-2026-54457",
-            "description": "TensorZero Gateway: Arbitrary file read and SSRF in internal object storage endpoint",
-            "cvss_score": 7.7,
+            "cve_id": "CVE-2026-64649",
+            "description": "Next.js: Server-Side Request Forgery in Server Actions on custom servers",
+            "cvss_score": 0.0,
             "cvss_severity": "High",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
-            "cwe_id": "CWE-552",
-            "alienvault_pulses": "None"
+            "cwe_id": "CWE-918",
+            "alienvault_pulses": "No active threat pulses found."
         },
         {
-            "cve_id": "CVE-2026-54452",
-            "description": "safeurl is Missing IPv6 CIDR Ranges in Blocklist",
+            "cve_id": "CVE-2026-64648",
+            "description": "Next.js: Cache confusion of response bodies for requests with bodies",
             "cvss_score": 0.0,
             "cvss_severity": "Moderate",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
-            "cwe_id": "CWE-918",
-            "alienvault_pulses": "None"
+            "cwe_id": "CWE-524",
+            "alienvault_pulses": "No active threat pulses found."
         },
         {
-            "cve_id": "CVE-2026-53656",
-            "description": "FiftyOne App server uses wildcard CORS (Access-Control-Allow-Origin: *), enabling cross-origin reads of local server data",
-            "cvss_score": 6.3,
+            "cve_id": "CVE-2026-64647",
+            "description": "Next.js: Cache confusion of response bodies for requests with bodies containing invalid UTF-8 byte sequences",
+            "cvss_score": 0.0,
             "cvss_severity": "Moderate",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
-            "cwe_id": "CWE-346",
-            "alienvault_pulses": "None"
+            "cwe_id": "CWE-116",
+            "alienvault_pulses": "No active threat pulses found."
         },
         {
-            "cve_id": "CVE-2026-54450",
-            "description": "ToolHive: SSRF guard misses IPv6 NAT64 ranges (64:ff9b::/96, 64:ff9b:1::/48), allowing metadata/internal access behind a NAT64 gateway",
+            "cve_id": "CVE-2026-64646",
+            "description": "Next.js: Unbounded Server Action payload in Edge runtime",
+            "cvss_score": 0.0,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-770",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-64645",
+            "description": "Next.js: Server-Side Request Forgery in rewrites via attacker-controlled destination hostname",
+            "cvss_score": 0.0,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-918",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-64644",
+            "description": "Next.js: Denial of Service in the Image Optimization API using SVGs",
+            "cvss_score": 0.0,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-407",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-64643",
+            "description": "Next.js: Unauthenticated disclosure of internal Server Function endpoints",
+            "cvss_score": 0.0,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-201",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-64642",
+            "description": "Next.js: Middleware / Proxy bypass in App Router applications using Turbopack and single locale",
+            "cvss_score": 0.0,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-285",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-64641",
+            "description": "Next.js: Denial of Service in App Router using Server Actions",
+            "cvss_score": 0.0,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-834",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2024-7708",
+            "description": "Eclipse Jetty: DoS attack triggering OutOfMemory with 100-Continue requests",
+            "cvss_score": 7.5,
+            "cvss_severity": "HIGH",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+            "cwe_id": "CWE-400",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-8384",
+            "description": "Eclipse Jetty: Path parameter traversal",
+            "cvss_score": 5.3,
+            "cvss_severity": "MEDIUM",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+            "cwe_id": "CWE-647",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-6790",
+            "description": "Eclipse Jetty: HTTP Authority/Host mismatch",
+            "cvss_score": 5.3,
+            "cvss_severity": "MEDIUM",
+            "cvss_source": "cna_official",
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+            "cwe_id": "CWE-20",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-10051",
+            "description": "Eclipse Jetty: Cross-Request Leakage for trailers on HTTP/1.1 keep-alive connections",
+            "cvss_score": 0.0,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-200",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-10050",
+            "description": "Eclipse Jetty Digest Authentication: ISO-8859-1 lossy encoding allows authentication bypass via character substitution",
+            "cvss_score": 0.0,
+            "cvss_severity": "High",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-173",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-65589",
+            "description": "n8n: Custom Header Credential Values Leaked in Plaintext into LLM Node Execution Data",
+            "cvss_score": 0.0,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-532",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-59943",
+            "description": "Dompdf: Embedded SVG images can leak existence of files and directories within the filesystem",
+            "cvss_score": 0.0,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-209",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-59942",
+            "description": "Dompdf: Denial of Service (DoS) via Resource Exhaustion using Oversized Image Bitmaps",
+            "cvss_score": 0.0,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-400",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-59941",
+            "description": "Dompdf: Uncontrolled resource consumption based on declared BMP dimensions",
+            "cvss_score": 0.0,
+            "cvss_severity": "Moderate",
+            "cvss_source": "ghsa_only",
+            "cvss_vector": "N/A",
+            "cwe_id": "CWE-400",
+            "alienvault_pulses": "No active threat pulses found."
+        },
+        {
+            "cve_id": "CVE-2026-59821",
+            "description": "LiteLLM: Custom Code Guardrails production endpoints bypass code safety checks",
             "cvss_score": 0.0,
             "cvss_severity": "Low",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
-            "cwe_id": "CWE-918",
-            "alienvault_pulses": "None"
+            "cwe_id": "CWE-94",
+            "alienvault_pulses": "No active threat pulses found."
         },
         {
-            "cve_id": "CVE-2026-62944",
-            "description": "MantisBT: Stored XSS in print_all_bug_page_word.php",
+            "cve_id": "CVE-2026-59822",
+            "description": "LiteLLM: MCP Authentication Bypass via OAuth2 Passthrough Fallback",
             "cvss_score": 0.0,
             "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-79",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-52883",
-            "description": "MantisBT: Injection of TIME_TRACKING and REMINDER Notes via REST and SOAP APIs",
-            "cvss_score": 0.0,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-20",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-52882",
-            "description": "MantisBT: REST and SOAP API Issue Update Accepts Unreleased Product Versions From Updaters",
-            "cvss_score": 0.0,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-639",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-52881",
-            "description": "MantisBT: Reflected XSS in admin/install.php via unescaped printf",
-            "cvss_score": 0.0,
-            "cvss_severity": "Critical",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-79",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-52847",
-            "description": "MantisBT: Reflected XSS in admin/install.php",
-            "cvss_score": 0.0,
-            "cvss_severity": "Critical",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-79",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-54494",
-            "description": "Koel: Full-read SSRF via podcast enclosure URL: isPublicHost() filter_var guard does not reject NAT64 (64:ff9b::/96) or 6to4 (2002::/16) IPv6-transition wrappers of internal IPv4",
-            "cvss_score": 0.0,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-918",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-50552",
-            "description": "Koel: Server-Side Request Forgery (SSRF) in radio station creation due to missing validation bail",
-            "cvss_score": 6.3,
-            "cvss_severity": "MEDIUM",
-            "cvss_source": "cna_official",
-            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:L",
-            "cwe_id": "CWE-918",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-54491",
-            "description": "Koel: Incomplete fix for CVE-2026-47260 — systemic SSRF in podcast & radio fetch paths",
-            "cvss_score": 7.1,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-918",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-54451",
-            "description": "Protobuf: Unbounded recursion depth in embedded-message decoding",
-            "cvss_score": 0.0,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-674",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-54449",
-            "description": "LangBot: Authenticated RCE Via MCP Configuration",
-            "cvss_score": 8.8,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-77",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-54447",
-            "description": "garminconnect Has Insecure Permission Assignment for Garmin OAuth Token Store",
-            "cvss_score": 8.4,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-732",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-54493",
-            "description": "Koel: Authenticated Full-Read SSRF via Subsonic Internet Radio Stations",
-            "cvss_score": 7.7,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-918",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-54492",
-            "description": "Koel: Authenticated Blind SSRF via Subsonic Podcast Channel Creation",
-            "cvss_score": 4.3,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-918",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-49280",
-            "description": "MantisBT: REST API unauthorized Issue status change",
-            "cvss_score": 0.0,
-            "cvss_severity": "Moderate",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-862",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-49273",
-            "description": "MantisBT: Remote Code Execution via eval() Class Hoisting in adm_config_set.php",
-            "cvss_score": 0.0,
-            "cvss_severity": "High",
-            "cvss_source": "ghsa_only",
-            "cvss_vector": "N/A",
-            "cwe_id": "CWE-95",
-            "alienvault_pulses": "None"
-        },
-        {
-            "cve_id": "CVE-2026-47156",
-            "description": "MantisBT: SOAP API Authentication Bypass with Privilege Escalation to Administrator",
-            "cvss_score": 0.0,
-            "cvss_severity": "Critical",
             "cvss_source": "ghsa_only",
             "cvss_vector": "N/A",
             "cwe_id": "CWE-287",
-            "alienvault_pulses": "None"
+            "alienvault_pulses": "No active threat pulses found."
         }
     ]
 }

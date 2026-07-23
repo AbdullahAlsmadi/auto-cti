@@ -525,7 +525,7 @@ tenable_tool = TenableSearchTool()
 
 #llm and agent setup__________________________________________________________________________________________
 scout_llm = LLM(
-    model="gemini/gemini-3.1-flash-lite",
+    model="gemini/gemini-3.5-flash-lite",
     api_key=os.getenv("GEMINI_API_KEY"),
     max_retries=5  # type: ignore
 )

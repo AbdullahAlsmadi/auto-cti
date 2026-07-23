@@ -17,6 +17,7 @@ today_date = datetime.datetime.now().strftime("%B %d, %Y")
 #Data Handshake____________________________________________________________________________________________
 triage_dir = os.path.join("JoFile", "triage_agent_result")
 list_of_files = [os.path.join(triage_dir, f) for f in os.listdir(triage_dir) if f.endswith(".json")]
+latest_file = max(list_of_files, key=os.path.getctime)
 
 if not list_of_files:
     print("Error: No Triage Report found. Please run triage_agent.py first.")
@@ -116,7 +117,7 @@ severity_stats = compute_severity_stats(triage_data)
 
 #this is  LLM____________________________________________________________________________________________
 publisher_llm = LLM(
-    model="gemini/gemini-3.1-flash-lite",
+    model="gemini/gemini-3.5-flash-lite",
     api_key=os.getenv("GEMINI_API_KEY"),
     max_retries=5                 # type: ignore
 )

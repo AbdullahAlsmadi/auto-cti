@@ -11,8 +11,9 @@ from crewai import Agent, Task, Crew, LLM
 from dotenv import load_dotenv
 from cvss import CVSS3
 from bs4 import BeautifulSoup
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
+sys.stdout.reconfigure(encoding='utf-8') # type: ignore
 
 load_dotenv()
 
@@ -45,7 +46,7 @@ os.makedirs(output_dir, exist_ok=True)
 triage_llm = LLM(
     model="gemini/gemini-3.5-flash-lite",
     api_key=os.getenv("GEMINI_API_KEY"),
-    max_retries=5  # type: ignore
+    max_retries=5 # type: ignore
 )
 
 
@@ -306,13 +307,13 @@ def enforce_authoritative_cvss(entry: dict, source_info: dict) -> dict:
     vector = source_info.get("vector", "N/A")
 
     if cvss_source not in ("nvd_verified", "cna_official", "tenable_verified", "opencve_verified", "cve_org_official") or not vector or vector == "N/A":
-        return None  # type: ignore
+        return None # type: ignore
 
     entry["CVSS_Vector"] = vector
     entry["CVSS_Breakdown"] = parse_cvss_vector(vector)
     try:
         c = CVSS3(vector)
-        entry["CVSS_Score"] = float(c.base_score)  # type: ignore
+        entry["CVSS_Score"] = float(c.base_score) # type: ignore
         entry["CVSS_Severity"] = c.severities()[0].capitalize()
     except Exception:
         entry["CVSS_Score"] = source_info.get("score", entry.get("CVSS_Score"))
@@ -524,7 +525,6 @@ def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
 
         print(f"   No advisory found for {cve_id}, falling back to general search...")
 
-        # 1) Search in repository metadata (name, description, readme)
         query = f'{cve_id} in:name,description,readme'
         url = "https://api.github.com/search/repositories"
         r2 = requests.get(
@@ -543,14 +543,8 @@ def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
                 description = repo.get("description", "") or ""
                 if not repo_url or repo_url in results:
                     continue
-                owner, _, name = full_name.partition("/")
-
-                # Skip if it's a personal/placeholder repo (owner == repo name)
-                # But we no longer reject based on junk patterns; we rely on the final aggregator detection.
-                # (The filter is relaxed to avoid missing genuine PoCs)
                 results.append(repo_url)
 
-        # 2) Also search inside code files (catches PoC scripts that mention the CVE)
         if not results:
             code_query = f'{cve_id} in:file'
             r3 = requests.get(
@@ -582,14 +576,14 @@ def fetch_exploitdb_matches(cve_id: str) -> list:
             headers = {"User-Agent": "Auto-CTI-Agent/1.0"}
             r = requests.get(url, timeout=30, headers=headers)
             if r.status_code == 200:
-                _EXPLOITDB_CSV_CACHE["data"] = r.text  # type: ignore
+                _EXPLOITDB_CSV_CACHE["data"] = r.text # type: ignore
                 print("   Exploit-DB CSV loaded successfully.")
             else:
                 print(f"   Exploit-DB CSV fetch failed with status {r.status_code}")
-                _EXPLOITDB_CSV_CACHE["data"] = ""  # type: ignore
+                _EXPLOITDB_CSV_CACHE["data"] = "" # type: ignore
         except Exception as e:
             print(f"   Exploit-DB CSV fetch failed: {e}")
-            _EXPLOITDB_CSV_CACHE["data"] = ""  # type: ignore
+            _EXPLOITDB_CSV_CACHE["data"] = "" # type: ignore
 
     csv_text = _EXPLOITDB_CSV_CACHE["data"]
     if not csv_text:
@@ -769,7 +763,6 @@ def fetch_sploitus_exploits(cve_id: str) -> list:
         soup = BeautifulSoup(r.text, 'html.parser')
         refs = []
 
-        # Improved parser: look for result containers and get the title link
         for result in soup.find_all('div', class_='result'):
             link = result.find('a', class_='title')
             if link and link.get('href'):
@@ -787,7 +780,6 @@ def fetch_sploitus_exploits(cve_id: str) -> list:
 
 
 def fetch_0daytoday_exploits(cve_id: str) -> list:
-    """Fetch exploits from VulnCheck's 0day.today archive (JSON)."""
     try:
         url = f"https://raw.githubusercontent.com/vulncheck-oss/0day-today-archive/main/{cve_id}.json"
         r = requests.get(url, timeout=10)
@@ -923,13 +915,25 @@ if os.path.exists(output_file_path):
     os.remove(output_file_path)
     print(f"Removed old report before regenerating: {output_file_path}")
 
+# Create a summarised version of raw_threat_data for the prompt (to save tokens)
+summary_data = []
+for item in raw_threat_data:
+    summary_data.append({
+        "cve_id": item.get("cve_id"),
+        "description": item.get("description", "")[:150],
+        "cvss_score": item.get("cvss_score"),
+        "cvss_vector": item.get("cvss_vector", "N/A"),
+        "cvss_source": item.get("cvss_source", "ghsa_only")
+    })
+summary_json = json.dumps(summary_data, indent=2)
+
 triage_task = Task(
     description=f'''You are analyzing CVE threat data collected on {today_date}.
 
 MANDATORY: The input contains exactly {cve_count} CVE entries. You MUST produce exactly {cve_count} objects in your output array. Do NOT stop early. Do NOT skip any entry. Process every single one.
 
-RAW THREAT DATA:
-{json.dumps(raw_threat_data, indent=2)}
+RAW THREAT DATA (summarised – use these values exactly as given):
+{summary_json}
 
 Each entry in the raw data carries a "cvss_source" field and, when available,
 a "cvss_vector" field set by the data collection stage.
@@ -1111,8 +1115,8 @@ if __name__ == "__main__":
     try:
         parsed = json.loads(raw_result)
 
-        fixed_entries = []
-        for entry in parsed:
+        # Function to process a single entry – will be used in parallel
+        def process_entry(entry):
             cve_id = entry.get("CVE_ID") or entry.get("cve_id") or ""
             entry["CVE_ID"] = cve_id
 
@@ -1135,19 +1139,32 @@ if __name__ == "__main__":
 
             entry = verify_and_correct_cvss(entry)
             entry = ensure_severity(entry)
-            entry = recalculate_urgency_score(entry, raw_threat_data)  # type: ignore
+            entry = recalculate_urgency_score(entry, raw_threat_data) # type: ignore
             entry = enhance_poc(entry)
 
             print(f"AFTER RECALC: {entry['CVE_ID']} -> score={entry['CVSS_Score']} vector={entry['CVSS_Vector']}")
 
             entry["References"] = build_verified_references(cve_id)
 
-            fixed_entries.append(entry)
+            return entry
 
+        # Process entries in parallel using ThreadPoolExecutor
+        fixed_entries = []
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            future_to_entry = {executor.submit(process_entry, entry): entry for entry in parsed}
+            for future in as_completed(future_to_entry):
+                try:
+                    result_entry = future.result()
+                    fixed_entries.append(result_entry)
+                except Exception as e:
+                    print(f"Error processing entry: {e}")
+
+        # Ensure severity is set for any remaining Unknown entries
         for entry in fixed_entries:
             if entry.get("CVSS_Severity") == "Unknown":
                 entry = ensure_severity(entry)
 
+        # Cross-CVE aggregator detection (same as before)
         repo_to_cves = {}
         for entry in fixed_entries:
             if entry.get("PoC_Source") != "github_poc_repo":
@@ -1159,7 +1176,6 @@ if __name__ == "__main__":
                     repo_to_cves.setdefault(repo_url, set()).add(entry["CVE_ID"])
 
         SUSPICIOUS_THRESHOLD = 2
-
         suspicious_repos = {url for url, cves in repo_to_cves.items() if len(cves) >= SUSPICIOUS_THRESHOLD}
 
         if suspicious_repos:
@@ -1217,6 +1233,7 @@ if __name__ == "__main__":
             json.dump(fixed_entries, f, indent=2, ensure_ascii=False)
         print(f"Triage report saved: {output_file_path}")
         print(f"Total CVEs triaged: {len(fixed_entries)}")
+
     except json.JSONDecodeError as e:
         print(f"Warning: Could not parse output as clean JSON: {e}")
         print("Saving raw output as fallback...")

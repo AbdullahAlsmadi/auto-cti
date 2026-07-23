@@ -20,17 +20,17 @@ print(f"Scout Agent started. Today: {today_date}")
 print(f"Gemini API Key loaded: {bool(os.getenv('GEMINI_API_KEY'))}")
 print(f"NVD API Key loaded: {bool(os.getenv('NVD_API_KEY'))}")
 
+# ============================================================
+# CONFIGURATION – change this number to collect more/fewer CVEs
+# ============================================================
+DESIRED_CVE_COUNT = 100
+
 #for mamore tracking______________________________________________________
 MAMORE_DIR = "MAMORE"
 SEEN_CVES_PATH = os.path.join(MAMORE_DIR, "seen_cve_ids.json")
 
 
 def load_seen_cve_ids() -> set:
-    """
-    Reads the list of previously seen CVE IDs from MAMORE/seen_cve_ids.json.
-    Returns an empty set if the file doesn't exist yet (first run ever)
-    or if it can't be parsed for any reason.
-    """
     if not os.path.exists(SEEN_CVES_PATH):
         return set()
     try:
@@ -43,18 +43,13 @@ def load_seen_cve_ids() -> set:
 
 
 def save_seen_cve_ids(seen_ids: set) -> None:
-    """
-    Writes the full updated set of seen CVE IDs back to
-    MAMORE/seen_cve_ids.json. Creates the MAMORE folder if it
-    doesn't exist yet. Called once at the end of a Scout run.
-    """
     os.makedirs(MAMORE_DIR, exist_ok=True)
     with open(SEEN_CVES_PATH, "w", encoding="utf-8") as f:
         json.dump({"seen_cve_ids": sorted(seen_ids)}, f, indent=2, ensure_ascii=False)
     print(f"DEBUG - Saved {len(seen_ids)} total seen CVE IDs to {SEEN_CVES_PATH}")
+
 #Scraping and Connectivity Functions______________________________________________________
 
-#f1
 def fetch_cve_services_cvss(cve_id: str):
     try:
         url = f"https://cveawg.mitre.org/api/cve/{cve_id}"
@@ -80,7 +75,7 @@ def fetch_cve_services_cvss(cve_id: str):
         print(f"DEBUG - CVE Services Error for {cve_id}: {e}")
         return None
 
-#f2
+
 def fetch_opencve_cvss(cve_id: str):
     username = os.getenv("OPENCVE_USERNAME")
     password = os.getenv("OPENCVE_PASSWORD")
@@ -103,7 +98,8 @@ def fetch_opencve_cvss(cve_id: str):
     except Exception as e:
         print(f"DEBUG - OpenCVE Error for {cve_id}: {e}")
         return None
-#f3
+
+
 def fetch_tenable_cvss(cve_id: str):
     try:
         url = f"https://www.tenable.com/cve/{cve_id}"
@@ -185,12 +181,9 @@ class ScoutReport(BaseModel):
 #the main refrance__________________________________________________________________________________________
 class NISTSearchTool(BaseTool):
     name: str = "NIST NVD Recent Search Tool"
-    description: str = "Fetches the 20 most recent CVEs published in the last 7 days."
+    description: str = f"Fetches the {DESIRED_CVE_COUNT} most recent CVEs published in the last 7 days."
 
     def _run(self, query: str) -> str:
-        # Load CVE IDs that already appeared in previous reports. Every
-        # source below (NVD, GHSA, OSV) checks this set so no CVE is
-        # ever reported twice across different daily runs.
         seen_ids = load_seen_cve_ids()
         print(f"DEBUG - Loaded {len(seen_ids)} previously seen CVE IDs from MAMORE.")
 
@@ -209,7 +202,6 @@ class NISTSearchTool(BaseTool):
                 if not cve_id:
                     continue
 
-                # Skip CVEs already reported in a previous run.
                 if cve_id in seen_ids:
                     continue
 
@@ -234,11 +226,10 @@ class NISTSearchTool(BaseTool):
                         if wd.get("lang") == "en":
                             cwe_id = wd.get("value", "N/A")
                             break
-                # Determine source
                 if cvss_vector != "N/A":
                     cvss_source = "nvd_verified"
                 else:
-                  cvss_source = "nvd_no_vector"   # Triage will estimate
+                    cvss_source = "nvd_no_vector"
                 verified_cves.append(
                     f"SOURCE: NVD | VERIFIED_CVE_ID: {cve_id} | "
                     f"CVSS: {cvss_score} | SEVERITY: {cvss_severity} | "
@@ -246,10 +237,11 @@ class NISTSearchTool(BaseTool):
                     f"CVSS_VECTOR: {cvss_vector} | DESC: {desc[:500]}"
                 )
             return verified_cves
+
         try:
-            print("DEBUG - Trying NVD (no date filter, resultsPerPage=20)...")
+            print(f"DEBUG - Trying NVD (resultsPerPage={DESIRED_CVE_COUNT})...")
             params = {
-                "resultsPerPage": 20,
+                "resultsPerPage": DESIRED_CVE_COUNT,
                 "sortBy": "publishDate",
                 "sortOrder": "desc"
             }
@@ -265,11 +257,11 @@ class NISTSearchTool(BaseTool):
         try:
             print("DEBUG - Trying GitHub Advisory Database (GraphQL, paginated)...")
 
-            TARGET_COUNT = 20
-            MAX_PAGES = 6
+            TARGET_COUNT = DESIRED_CVE_COUNT
+            MAX_PAGES = 10  # increased to fetch enough CVEs
 
             verified_cves = []
-            seen_cve_ids = set()  # tracks duplicates WITHIN this run only
+            seen_cve_ids = set()
             cursor = None
 
             gh_headers = {"Content-Type": "application/json"}
@@ -284,7 +276,7 @@ class NISTSearchTool(BaseTool):
                 after_clause = f', after: "{cursor}"' if cursor else ""
                 query_body = f"""
                 {{
-                  securityAdvisories(first: 30, orderBy: {{field: PUBLISHED_AT, direction: DESC}}{after_clause}) {{
+                  securityAdvisories(first: 50, orderBy: {{field: PUBLISHED_AT, direction: DESC}}{after_clause}) {{
                     pageInfo {{ hasNextPage endCursor }}
                     nodes {{
                       ghsaId
@@ -327,7 +319,6 @@ class NISTSearchTool(BaseTool):
                         continue
                     seen_cve_ids.add(cve_id)
 
-                    # Skip CVEs already reported in a previous run (MAMORE).
                     if cve_id in seen_ids:
                         print(f" --> [SKIPPED] {cve_id}: already reported in a previous run.")
                         continue
@@ -344,7 +335,6 @@ class NISTSearchTool(BaseTool):
                     )
                     time.sleep(0.3)
 
-                    # Keep the CVE even without a vector
                     if verified_vector in (None, "N/A"):
                         verified_vector = "N/A"
                         if verified_score in (None, "N/A"):
@@ -379,12 +369,12 @@ class NISTSearchTool(BaseTool):
             print("DEBUG - Trying OSV.dev API...")
             osv_cves = []
             for eco in ["PyPI", "npm", "Go", "Maven", "NuGet", "crates.io"]:
-                if len(osv_cves) >= 20:
+                if len(osv_cves) >= DESIRED_CVE_COUNT:
                     break
                 try:
                     r = requests.post(
                         "https://api.osv.dev/v1/query",
-                        json={"page_size": 3, "query": {"package": {"ecosystem": eco}}},
+                        json={"page_size": 10, "query": {"package": {"ecosystem": eco}}},
                         timeout=20
                     )
                     if r.status_code == 200:
@@ -398,7 +388,6 @@ class NISTSearchTool(BaseTool):
                             if not vuln_id:
                                 continue
 
-                            # Skip CVEs already reported in a previous run (MAMORE).
                             if vuln_id in seen_ids:
                                 continue
 
@@ -428,7 +417,7 @@ class NISTSearchTool(BaseTool):
 
             if osv_cves:
                 print(f"DEBUG - OSV returned {len(osv_cves)} verified CVEs")
-                return "STRICT INSTRUCTION: USE EXACTLY THESE IDs:\n" + "\n".join(osv_cves[:20])
+                return "STRICT INSTRUCTION: USE EXACTLY THESE IDs:\n" + "\n".join(osv_cves[:DESIRED_CVE_COUNT])
 
         except Exception as e:
             print(f"DEBUG - OSV Error: {e}")
@@ -476,7 +465,7 @@ class TenableSearchTool(BaseTool):
         "Pass a JSON string containing 'cve_id', 'nist_score', and 'nist_vector'."
     )
 
-    def _run(self, query: str) -> str:  # type: ignore
+    def _run(self, query: str) -> str: # type: ignore
         try:
             try:
                 params = json.loads(query)
@@ -527,7 +516,7 @@ tenable_tool = TenableSearchTool()
 scout_llm = LLM(
     model="gemini/gemini-3.5-flash-lite",
     api_key=os.getenv("GEMINI_API_KEY"),
-    max_retries=5  # type: ignore
+    max_retries=5 # type: ignore
 )
 
 scout_agent = Agent(
@@ -571,7 +560,7 @@ cyber_crew = Crew(
     tasks=[live_task],
     verbose=True
 )
-#write the final report to a JSON file and update MAMORE with new CVE IDs______________________________________________________
+
 if __name__ == "__main__":
     print(f"\n{'='*60}")
     print(f"  Auto-CTI Scout Agent — {today_date}")
@@ -584,7 +573,7 @@ if __name__ == "__main__":
     report_filename = os.path.join(results_dir, 'cti_report.json')
 
     try:
-        pydantic_output = result.pydantic  # type: ignore
+        pydantic_output = result.pydantic # type: ignore
         if pydantic_output:
             final_data = pydantic_output.model_dump()
             new_data = final_data.get("vulnerabilities", [])
@@ -617,11 +606,6 @@ if __name__ == "__main__":
 
     print(f"\nReport saved safely to: {report_filename}")
 
-    # ============================================================
-    # Update MAMORE with the CVE IDs collected in this run, so that
-    # future runs will exclude them and never repeat the same CVE
-    # across two different daily reports.
-    # ============================================================
     if isinstance(new_data, list):
         seen_ids = load_seen_cve_ids()
         new_ids = {item.get("cve_id") for item in new_data if item.get("cve_id")}

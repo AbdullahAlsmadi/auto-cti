@@ -8,8 +8,8 @@ import sys
 import csv
 import io
 from crewai import Agent, Task, Crew, LLM
-from cvss import CVSS3
-from bs4 import BeautifulSoup
+from cvss import CVSS3 
+from bs4 import BeautifulSoup 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -51,7 +51,7 @@ os.makedirs(output_dir, exist_ok=True)
 triage_llm = LLM(
     model="gemini/gemini-3.5-flash-lite",
     api_key=os.getenv("GEMINI_API_KEY"),
-    max_retries=5
+    max_retries=5 # type: ignore
 )
 
 def fetch_nvd_cvss(cve_id: str):
@@ -289,12 +289,12 @@ def enforce_authoritative_cvss(entry: dict, source_info: dict) -> dict:
     cvss_source = source_info["cvss_source"]
     vector = source_info.get("vector", "N/A")
     if cvss_source not in ("nvd_verified", "cna_official", "tenable_verified", "opencve_verified", "cve_org_official") or not vector or vector == "N/A":
-        return None
+        return None # type: ignore
     entry["CVSS_Vector"] = vector
     entry["CVSS_Breakdown"] = parse_cvss_vector(vector)
     try:
         c = CVSS3(vector)
-        entry["CVSS_Score"] = float(c.base_score)
+        entry["CVSS_Score"] = float(c.base_score) # type: ignore
         entry["CVSS_Severity"] = c.severities()[0].capitalize()
     except Exception:
         entry["CVSS_Score"] = source_info.get("score", entry.get("CVSS_Score"))
@@ -524,14 +524,14 @@ def fetch_exploitdb_matches(cve_id: str) -> list:
             headers = {"User-Agent": "Auto-CTI-Agent/1.0"}
             r = requests.get(url, timeout=30, headers=headers)
             if r.status_code == 200:
-                _EXPLOITDB_CSV_CACHE["data"] = r.text
+                _EXPLOITDB_CSV_CACHE["data"] = r.text # type: ignore
                 print("   Exploit-DB CSV loaded successfully.")
             else:
                 print(f"   Exploit-DB CSV fetch failed with status {r.status_code}")
-                _EXPLOITDB_CSV_CACHE["data"] = ""
+                _EXPLOITDB_CSV_CACHE["data"] = "" # type: ignore
         except Exception as e:
             print(f"   Exploit-DB CSV fetch failed: {e}")
-            _EXPLOITDB_CSV_CACHE["data"] = ""
+            _EXPLOITDB_CSV_CACHE["data"] = "" # type: ignore
     csv_text = _EXPLOITDB_CSV_CACHE["data"]
     if not csv_text:
         return []
@@ -681,7 +681,7 @@ def fetch_sploitus_exploits(cve_id: str) -> list:
             link = result.find('a', class_='title')
             if link and link.get('href'):
                 href = link['href']
-                if href.startswith('/'):
+                if href.startswith('/'): # type: ignore
                     href = f"https://sploitus.com{href}"
                 if href not in refs:
                     refs.append(href)
@@ -1024,7 +1024,7 @@ if __name__ == "__main__":
                 entry = recalculate_score_from_vector(entry)
             entry = verify_and_correct_cvss(entry)
             entry = ensure_severity(entry)
-            entry = recalculate_urgency_score(entry, raw_threat_data)
+            entry = recalculate_urgency_score(entry, raw_threat_data) # type: ignore
             entry = enhance_poc(entry)
             print(f"AFTER RECALC: {entry['CVE_ID']} -> score={entry['CVSS_Score']} vector={entry['CVSS_Vector']}")
             entry["References"] = build_verified_references(cve_id)

@@ -416,7 +416,7 @@ class TenableSearchTool(BaseTool):
         "Pass a JSON string containing 'cve_id', 'nist_score', and 'nist_vector'."
     )
 
-    def _run(self, query: str) -> str:
+    def _run(self, query: str) -> str: # type: ignore
         try:
             try:
                 params = json.loads(query)
@@ -460,7 +460,7 @@ tenable_tool = TenableSearchTool()
 scout_llm = LLM(
     model="gemini/gemini-3.5-flash-lite",
     api_key=os.getenv("GEMINI_API_KEY"),
-    max_retries=5
+    max_retries=5 # type: ignore
 )
 
 scout_agent = Agent(
@@ -516,7 +516,7 @@ if __name__ == "__main__":
     report_filename = os.path.join(results_dir, 'cti_report.json')
 
     try:
-        pydantic_output = result.pydantic
+        pydantic_output = result.pydantic # type: ignore
         if pydantic_output:
             final_data = pydantic_output.model_dump()
             new_data = final_data.get("vulnerabilities", [])

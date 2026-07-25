@@ -34,7 +34,7 @@
 
 ## 📄 Publication & Abstract
 
-**Paper Title:** *Auto-CTI: An Autonomous Multi-Agent Framework for Cyber Threat Intelligence Triage and Reporting* (Pending Publication)
+**Paper Title:** *Auto-CTI: An Autonomous Multi-Agent Framework for Cyber Threat Intelligence Triage and Reporting* (Pending Publication) <br>
 **DOI:** [To be added upon publication]
 
 **Abstract:**

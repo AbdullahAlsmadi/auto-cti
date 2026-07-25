@@ -39,10 +39,11 @@ THEMES = {
 
 # Updated paths – agents are now inside src/
 PIPELINE_STAGES = [
-    {"name": "Scout", "script": "src/scout_agent.py"},
-    {"name": "Triage", "script": "src/triage_agent.py"},
-    {"name": "Publisher", "script": "src/publisher_agent.py"},
+    {"name": "Scout", "script": "scout_agent.py"},
+    {"name": "Triage", "script": "triage_agent.py"},
+    {"name": "Publisher", "script": "publisher_agent.py"},
 ]
+
 
 # Project root (where src/ lives)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

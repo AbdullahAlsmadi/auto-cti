@@ -8,7 +8,7 @@ version = "1.0.0"
 description = "Autonomous Cyber Threat Intelligence Pipeline"
 requires-python = ">=3.11,<3.12"
 dependencies = [
-    "crewai",
+    "crewai[google-genai]",
     "langchain-community",
     "streamlit",
     "pandas",

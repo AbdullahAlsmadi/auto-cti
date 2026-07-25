@@ -1,2 +1,9 @@
-crewai
+crewai[google-genai]
 langchain-community
+streamlit
+pandas
+requests
+fpdf2
+beautifulsoup4
+cvss
+python-dotenv

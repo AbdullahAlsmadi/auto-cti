@@ -91,7 +91,7 @@ elif [ "$1" == "triage" ]; then
 elif [ "$1" == "publish" ]; then
     python src/publisher_agent.py
 elif [ "$1" == "dashboard" ]; then
-    python src/dashboard.py
+    python -m streamlit run src/dashboard.py
 elif [ "$1" == "full" ]; then
     python src/scout_agent.py && python src/triage_agent.py && python src/publisher_agent.py
 elif [ "$1" == "uninstall" ]; then

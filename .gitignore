@@ -11,3 +11,5 @@ __pycache__/
 MAMORE
 .venv
 .vscode
+.gitignore
+

@@ -44,9 +44,8 @@ PIPELINE_STAGES = [
     {"name": "Publisher", "script": "publisher_agent.py"},
 ]
 
-
-# Project root (where src/ lives)
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Project root = the same folder this file lives in (flat layout under pipx)
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 DATA_DIR = os.path.expanduser("~/.auto-cti/data")
 os.makedirs(DATA_DIR, exist_ok=True)

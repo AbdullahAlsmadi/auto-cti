@@ -97,7 +97,7 @@ elif [ "$1" == "full" ]; then
 elif [ "$1" == "uninstall" ]; then
     "$HOME/.auto-cti/uninstall.sh"
 else
-    echo "🚀 Auto-CTI Command Guide:"
+    echo "🛡️ Auto-CTI Command Guide:"
     echo "   auto-cti dashboard  - Launch interactive dashboard"
     echo "   auto-cti scout      - Run Scout Agent"
     echo "   auto-cti triage     - Run Triage Agent"

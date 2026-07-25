@@ -82,7 +82,7 @@ The system is fully automated — a single command runs the entire pipeline end-
                     └────────────────────┘
 ```
 
-The pipeline is orchestrated by `main_system.py` using **CrewAI Flow**, which enforces sequential execution with dependency checks between stages.
+The pipeline is orchestrated by `src/main_system.py` using **CrewAI Flow**, which enforces sequential execution with dependency checks between stages.
 
 ---
 
@@ -199,7 +199,7 @@ The dashboard provides a live SOC console with:
 ## Project Structure
 
 ```
-Auto-CTI/
+Auto_CTI/
 │
 ├── src/
 │   ├── __init__.py
@@ -209,7 +209,8 @@ Auto-CTI/
 │   ├── scout_agent.py                # Stage 1: CVE collection
 │   ├── triage_agent.py               # Stage 2: CVSS/CWE/MITRE/PoC analysis
 │   ├── publisher_agent.py            # Stage 3: JSON + PDF report generation
-│   └── dashboard.py                  # Streamlit SOC dashboard
+│   ├── dashboard.py                  # Streamlit SOC dashboard
+│   └── main_system.py                # CrewAI Flow orchestration (Scout → Triage → Publisher)
 │
 ├── install.sh                        # One-command Linux installer
 ├── uninstall.sh                       # Clean removal script
@@ -347,15 +348,16 @@ Then open your browser at `http://localhost:8501` and click **INITIALIZE SYSTEM*
 
 ### Option B — Command Line (Full Pipeline)
 
-Runs all three agents sequentially:
+Runs all three agents sequentially via CrewAI Flow:
 
 ```bash
-# After installation:
-auto-cti full
+python src/main_system.py
 
-# Or manually:
-python src/scout_agent.py && python src/triage_agent.py && python src/publisher_agent.py
+# Or after installation:
+auto-cti full
 ```
+
+Both invoke the same three-stage sequence (Scout → Triage → Publisher) with dependency checks between stages.
 
 ### Option C — Run Agents Individually
 
@@ -363,6 +365,11 @@ python src/scout_agent.py && python src/triage_agent.py && python src/publisher_
 auto-cti scout      # Step 1: Fetch CVEs
 auto-cti triage     # Step 2: Analyze threats (requires scout output)
 auto-cti publish    # Step 3: Generate reports (requires triage output)
+
+# Or manually:
+python src/scout_agent.py
+python src/triage_agent.py
+python src/publisher_agent.py
 ```
 
 ---

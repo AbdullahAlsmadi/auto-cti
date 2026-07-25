@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "auto-cti"
+version = "1.0.0"
+description = "Autonomous Cyber Threat Intelligence Pipeline"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "crewai",
+    "langchain-community",
+    "streamlit",
+    "pandas",
+    "requests",
+    "fpdf2",
+    "beautifulsoup4",
+    "cvss",
+    "python-dotenv",
+]
+
+[project.scripts]
+auto-cti = "cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = [
+    "cli",
+    "scout_agent",
+    "triage_agent",
+    "publisher_agent",
+    "dashboard",
+    "main_system",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

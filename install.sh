@@ -71,7 +71,7 @@ cp requirements.txt "$INSTALL_DIR/"
 
 # 7. Create virtual environment and install dependencies
 echo "📦 Creating virtual environment and installing dependencies..."
-python3 -m venv "$INSTALL_DIR/venv"
+python3.12 -m venv "$INSTALL_DIR/venv"
 source "$INSTALL_DIR/venv/bin/activate"
 pip install --upgrade pip
 pip install -r "$INSTALL_DIR/requirements.txt"

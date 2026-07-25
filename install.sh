@@ -97,7 +97,13 @@ elif [ "$1" == "full" ]; then
 elif [ "$1" == "uninstall" ]; then
     "$HOME/.auto-cti/uninstall.sh"
 else
-    echo "Usage: auto-cti {scout|triage|publish|dashboard|full|uninstall}"
+    echo "🛡️ Auto-CTI Command Guide:"
+    echo "   auto-cti dashboard  - Launch interactive dashboard"
+    echo "   auto-cti scout      - Run Scout Agent"
+    echo "   auto-cti triage     - Run Triage Agent"
+    echo "   auto-cti publish    - Run Publisher Agent"
+    echo "   auto-cti full       - Run full pipeline"
+    echo "   auto-cti uninstall  - Remove Auto-CTI completely"
 fi
 EOF
 chmod +x "$HOME/.local/bin/auto-cti"

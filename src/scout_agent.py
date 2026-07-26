@@ -14,21 +14,18 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils.secure_config import init_config
 
-# Initialize secure configuration (prompts for missing API keys)
 init_config()
 
-sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
+sys.stdout.reconfigure(encoding='utf-8')
 
 today_date = datetime.datetime.now().strftime("%B %d, %Y")
 print(f"Scout Agent started. Today: {today_date}")
 print(f"Gemini API Key loaded: {bool(os.getenv('GEMINI_API_KEY'))}")
 print(f"NVD API Key loaded: {bool(os.getenv('NVD_API_KEY'))}")
 
-# Data directory
 DATA_DIR = os.path.expanduser("~/.auto-cti/data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# MAMORE tracking (for deduplication)
 MAMORE_DIR = os.path.join(DATA_DIR, "MAMORE")
 SEEN_CVES_PATH = os.path.join(MAMORE_DIR, "seen_cve_ids.json")
 os.makedirs(MAMORE_DIR, exist_ok=True)
@@ -391,7 +388,7 @@ class TenableSearchTool(BaseTool):
         "Pass a JSON string containing 'cve_id', 'nist_score', and 'nist_vector'."
     )
 
-    def _run(self, query: str) -> str: # type: ignore
+    def _run(self, query: str) -> str:
         try:
             try:
                 params = json.loads(query)
@@ -434,7 +431,7 @@ tenable_tool = TenableSearchTool()
 scout_llm = LLM(
     model="gemini/gemini-3.5-flash-lite",
     api_key=os.getenv("GEMINI_API_KEY"),
-    max_retries=5 # type: ignore
+    max_retries=5
 )
 
 scout_agent = Agent(
@@ -476,7 +473,6 @@ cyber_crew = Crew(
     verbose=True
 )
 
-# --- NATIVE PYTHON FAST OTX ENRICHMENT ---
 def fetch_otx_native(item: dict) -> dict:
     cve_id = item.get("cve_id")
     item["alienvault_pulse_count"] = 0
@@ -504,7 +500,7 @@ if __name__ == "__main__":
     report_filename = os.path.join(results_dir, 'cti_report.json')
 
     try:
-        pydantic_output = result.pydantic # type: ignore
+        pydantic_output = result.pydantic
         if pydantic_output:
             final_data = pydantic_output.model_dump()
             new_data = final_data.get("vulnerabilities", [])
@@ -528,7 +524,6 @@ if __name__ == "__main__":
         except json.JSONDecodeError:
             new_data = []
 
-    # ⚡ Run Native OTX Enrichment
     if isinstance(new_data, list) and new_data:
         print(f"\n⚡ [Fast Mode] Enriching {len(new_data)} CVEs with AlienVault OTX pulses natively...")
         enriched_data = []

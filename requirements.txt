@@ -7,3 +7,4 @@ fpdf2
 beautifulsoup4
 cvss
 python-dotenv
+matplotlib>=3.7.0

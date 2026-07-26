@@ -4,6 +4,9 @@ import datetime
 import re
 import sys
 import time
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from crewai import Agent, Task, Crew, LLM
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
@@ -13,7 +16,7 @@ from utils.secure_config import init_config
 
 init_config()
 
-sys.stdout.reconfigure(encoding='utf-8') # type: ignore
+sys.stdout.reconfigure(encoding='utf-8')
 
 today_date = datetime.datetime.now().strftime("%B %d, %Y")
 
@@ -121,7 +124,7 @@ corrected_count = total_cves - verified_count
 publisher_llm = LLM(
     model="gemini/gemini-3.5-flash-lite",
     api_key=os.getenv("GEMINI_API_KEY"),
-    max_retries=5 # type: ignore
+    max_retries=5
 )
 
 publisher_agent = Agent(
@@ -266,6 +269,53 @@ def collapse_string_newlines(text: str) -> str:
         result_chars.append(ch)
     return ''.join(result_chars)
 
+def generate_academic_charts(severity_stats, poc_found, total_cves, output_dir):
+    os.makedirs(output_dir, exist_ok=True)
+    
+    severities = ['Critical', 'High', 'Medium', 'Low']
+    counts = [
+        severity_stats.get('Critical', 0),
+        severity_stats.get('High', 0),
+        severity_stats.get('Medium', 0),
+        severity_stats.get('Low', 0)
+    ]
+    
+    colors = ['#9900CC', '#FF0033', '#FFC000', '#33FF00']
+    
+    plt.figure(figsize=(8, 4))
+    bars = plt.bar(severities, counts, color=colors, edgecolor='black', linewidth=1)
+    
+    plt.title('Figure 1: Vulnerability Severity Distribution', fontsize=11, fontweight='bold', pad=10)
+    plt.ylabel('Number of CVEs', fontsize=10)
+    plt.grid(axis='y', linestyle='--', alpha=0.6)
+    
+    for bar in bars:
+        yval = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width()/2, yval + 0.5, int(yval), ha='center', va='bottom', fontsize=9, fontweight='bold')
+                 
+    plt.tight_layout()
+    bar_chart_path = os.path.join(output_dir, 'severity_chart.png')
+    plt.savefig(bar_chart_path, dpi=300, bbox_inches='tight')
+    plt.close()
+
+    poc_missing = total_cves - poc_found
+    labels = ['PoC Found', 'No PoC Found']
+    sizes = [poc_found, poc_missing]
+    colors_pie = ['#1f77b4', '#d62728']
+    
+    plt.figure(figsize=(5, 5))
+    plt.pie(sizes, labels=labels, colors=colors_pie, autopct='%1.1f%%', 
+            startangle=90, textprops={'fontsize': 10},
+            wedgeprops={'edgecolor': 'black', 'linewidth': 1, 'width': 0.4})
+            
+    plt.title('Figure 2: Proof-of-Concept (PoC) Discovery Rate', fontsize=11, fontweight='bold', pad=10)
+    plt.tight_layout()
+    pie_chart_path = os.path.join(output_dir, 'poc_chart.png')
+    plt.savefig(pie_chart_path, dpi=300, bbox_inches='tight')
+    plt.close()
+
+    return bar_chart_path, pie_chart_path
+
 CLASSIFICATION = "TLP:AMBER - FOR INTERNAL DISTRIBUTION ONLY"
 
 class CTIReportPDF(FPDF):
@@ -355,7 +405,7 @@ def render_cvss_breakdown_table(pdf: FPDF, breakdown: dict, vector: str):
             pdf.set_font("Helvetica", '', 8)
             pdf.set_text_color(50, 50, 50)
             pdf.set_fill_color(243, 244, 246)
-            pdf.cell(col_label_w, row_h, text=clean_for_pdf(right_label), # type: ignore
+            pdf.cell(col_label_w, row_h, text=clean_for_pdf(right_label),
                      border=1, fill=True, new_x=XPos.RIGHT, new_y=YPos.TOP)
             pdf.set_font("Helvetica", 'B', 8)
             pdf.set_text_color(*rc)
@@ -369,6 +419,10 @@ def render_cvss_breakdown_table(pdf: FPDF, breakdown: dict, vector: str):
 def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_path: str,
                           total_cves: int, poc_found: int, poc_rate: float,
                           verified_count: int, corrected_count: int, start_time: datetime.datetime) -> None:
+    
+    charts_dir = os.path.join(DATA_DIR, "charts")
+    bar_path, pie_path = generate_academic_charts(stats, poc_found, total_cves, charts_dir)
+    
     pdf = CTIReportPDF()
     pdf.set_auto_page_break(auto=True, margin=22)
     pdf.add_page()
@@ -409,6 +463,9 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
         pdf.cell(col_w, 10, text=str(value), border=1, fill=True, align='C',
                  new_x=XPos.RIGHT, new_y=YPos.TOP)
     pdf.ln(14)
+    
+    pdf.image(bar_path, x=25, w=160)
+    pdf.ln(5)
 
     section_header(pdf, "2", "Executive Summary")
     pdf.set_font("Helvetica", '', 11)
@@ -477,6 +534,12 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
         "All referenced exploits and PoC materials were verified from authoritative sources (NVD, GitHub, Exploit-DB, Packet Storm, and others)."
     ))
     pdf.ln(4)
+    
+    current_y = pdf.get_y()
+    if current_y > 200:
+        pdf.add_page()
+    pdf.image(pie_path, x=45, w=120)
+    pdf.ln(5)
 
     section_header(pdf, "4.2", "CVSS Score Validation")
     pdf.set_font("Helvetica", '', 10)

@@ -11,5 +11,7 @@ __pycache__/
 MAMORE
 .venv
 .vscode
-
+# Ignore generated charts and images
+charts/
+*.png
 

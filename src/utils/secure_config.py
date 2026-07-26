@@ -17,6 +17,8 @@ REQUIRED_KEYS = {
     "GITHUB_TOKEN": "https://github.com/settings/tokens",
     "VULNERS_API_KEY": "https://vulners.com/register",
     "OTX_API_KEY": "https://otx.alienvault.com/",
+    "GOOGLE_SEARCH_API_KEY": "https://developers.google.com/custom-search/v1/overview",
+    "GOOGLE_SEARCH_CX": "https://programmablesearchengine.google.com/about/",
     "OPENCVE_USERNAME": "https://www.opencve.io/register",
     "OPENCVE_PASSWORD": "https://www.opencve.io/register",
 }

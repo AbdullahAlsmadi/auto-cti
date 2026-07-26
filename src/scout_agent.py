@@ -8,6 +8,7 @@ from crewai import Agent, Task, Crew, LLM
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 from typing import List
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -23,7 +24,7 @@ print(f"Scout Agent started. Today: {today_date}")
 print(f"Gemini API Key loaded: {bool(os.getenv('GEMINI_API_KEY'))}")
 print(f"NVD API Key loaded: {bool(os.getenv('NVD_API_KEY'))}")
 
-# Data directory (replaces JoFile)
+# Data directory
 DATA_DIR = os.path.expanduser("~/.auto-cti/data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -159,7 +160,7 @@ class CVEEntry(BaseModel):
     cvss_source: str = Field(..., description="The source database of the CVSS score")
     cvss_vector: str = Field(..., description="The standard CVSS vector string or N/A")
     cwe_id: str = Field(..., description="The associated CWE ID")
-    alienvault_pulses: str = Field(..., description="Threat intelligence pulse findings from AlienVault")
+    alienvault_pulse_count: int = Field(0, description="Set this to 0. Python will update it natively.")
 
 class ScoutReport(BaseModel):
     vulnerabilities: List[CVEEntry]
@@ -382,32 +383,6 @@ class NISTSearchTool(BaseTool):
 
         return "Failed to fetch CVEs from all sources."
 
-class AlienVaultOTXTool(BaseTool):
-    name: str = "AlienVault OTX Search Tool"
-    description: str = (
-        "Search AlienVault OTX for active threat pulses for a given CVE ID. "
-        "Pass the CVE ID as the query."
-    )
-
-    def _run(self, query: str) -> str:
-        try:
-            api_key = os.getenv("OTX_API_KEY")
-            if not api_key:
-                return "No active threat pulses found."
-            url = f"https://otx.alienvault.com/api/v1/search/pulses?q={query}&limit=10"
-            headers = {"X-OTX-API-KEY": api_key}
-            response = requests.get(url, headers=headers, timeout=20)
-            if response.status_code != 200:
-                return "No active threat pulses found."
-            results = []
-            for pulse in response.json().get("results", []):
-                pulse_name = pulse.get("name", "N/A")
-                tags = ", ".join(pulse.get("tags", []))
-                results.append(f"Pulse: {pulse_name} | Tags: {tags}")
-            return "\n".join(results) if results else "No active threat pulses found."
-        except Exception:
-            return "No active threat pulses found."
-
 class TenableSearchTool(BaseTool):
     name: str = "Tenable CVE Search Tool"
     description: str = (
@@ -454,7 +429,6 @@ class TenableSearchTool(BaseTool):
             return f"Error during Tenable verification: {str(e)}"
 
 nist_tool = NISTSearchTool()
-alienvault_tool = AlienVaultOTXTool()
 tenable_tool = TenableSearchTool()
 
 scout_llm = LLM(
@@ -477,7 +451,7 @@ scout_agent = Agent(
     ),
     verbose=True,
     llm=scout_llm,
-    tools=[nist_tool, alienvault_tool, tenable_tool],
+    tools=[nist_tool, tenable_tool],
     allow_delegation=False
 )
 
@@ -487,12 +461,10 @@ live_task = Task(
     STEP 1: Call the NIST NVD tool with query "recent".
             It will return recent CVEs with their scores and vectors.
 
-    STEP 2: For EACH CVE ID returned, call AlienVault OTX to check for active pulses.
-
-    STEP 3: For EACH CVE ID, run the Tenable CVE Verification Tool by passing the CVE ID, current score, and vector.
+    STEP 2: For EACH CVE ID, run the Tenable CVE Verification Tool by passing the CVE ID, current score, and vector.
             If Tenable returns a status of "OVERRIDDEN", you MUST update the fields with the trusted score, vector, and severity provided by Tenable.
 
-    STEP 4: Populate the required data structures strictly according to the Pydantic schema provided.''',
+    STEP 3: Populate the required data structures strictly according to the Pydantic schema provided.''',
     expected_output='A structured object containing verified and cross-referenced CVE threat records.',
     agent=scout_agent,
     output_pydantic=ScoutReport
@@ -503,6 +475,22 @@ cyber_crew = Crew(
     tasks=[live_task],
     verbose=True
 )
+
+# --- NATIVE PYTHON FAST OTX ENRICHMENT ---
+def fetch_otx_native(item: dict) -> dict:
+    cve_id = item.get("cve_id")
+    item["alienvault_pulse_count"] = 0
+    api_key = os.getenv("OTX_API_KEY")
+    if not cve_id or not api_key:
+        return item
+    try:
+        url = f"https://otx.alienvault.com/api/v1/search/pulses?q={cve_id}&limit=1"
+        r = requests.get(url, headers={"X-OTX-API-KEY": api_key}, timeout=5)
+        if r.status_code == 200:
+            item["alienvault_pulse_count"] = r.json().get("count", 0)
+    except Exception:
+        pass
+    return item
 
 if __name__ == "__main__":
     print(f"\n{'='*60}")
@@ -536,21 +524,22 @@ if __name__ == "__main__":
             raw_result = raw_result[:-3]
         raw_result = raw_result.strip()
         try:
-            new_data = json.loads(raw_result)
+            new_data = json.loads(raw_result).get("vulnerabilities", [])
         except json.JSONDecodeError:
-            new_data = {"error": "Invalid JSON returned", "raw_text": raw_result}
+            new_data = []
 
-    all_reports = {today_date: new_data}
+    # ⚡ Run Native OTX Enrichment
+    if isinstance(new_data, list) and new_data:
+        print(f"\n⚡ [Fast Mode] Enriching {len(new_data)} CVEs with AlienVault OTX pulses natively...")
+        enriched_data = []
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_item = {executor.submit(fetch_otx_native, item): item for item in new_data}
+            for future in as_completed(future_to_item):
+                enriched_data.append(future.result())
+        new_data = enriched_data
+
+    all_reports = {today_date: {"vulnerabilities": new_data}}
     with open(report_filename, 'w', encoding='utf-8') as f:
         json.dump(all_reports, f, indent=4, ensure_ascii=False)
 
     print(f"\nReport saved safely to: {report_filename}")
-
-    if isinstance(new_data, list):
-        seen_ids = load_seen_cve_ids()
-        new_ids = {item.get("cve_id") for item in new_data if item.get("cve_id")}
-        seen_ids.update(new_ids)
-        save_seen_cve_ids(seen_ids)
-        print(f"DEBUG - Added {len(new_ids)} new CVE IDs to MAMORE tracking.")
-    else:
-        print("DEBUG - new_data was not a list; skipping MAMORE update for this run.")

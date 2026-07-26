@@ -162,10 +162,49 @@ def fetch_tenable_live_cvss(cve_id: str):
                 score = 0.0
         severity_match = re.search(r'Severity\s*(Critical|High|Medium|Low|None)', text, re.IGNORECASE)
         severity = severity_match.group(1).capitalize() if severity_match else "Unknown"
-        return {"score": score, "vector": vector, "severity": severity}
+        # --- CHANGE 1: return the scraped page text so it can be verified downstream ---
+        return {"score": score, "vector": vector, "severity": severity, "page_text": text}
     except Exception as e:
         print(f"   Tenable scraping error for {cve_id}: {e}")
         return None
+
+# --- CHANGE 2: new integrity check on Tenable-scraped data ---
+def verify_tenable_result(cve_id: str, tenable_data: dict, page_text: str) -> bool:
+    """
+    Secondary sanity check on Tenable-scraped data before it is trusted
+    and tagged 'tenable_verified'. Rejects the result if:
+      1. The CVE ID does not actually appear on the scraped page
+         (protects against Tenable serving a generic/related page instead
+         of a clean 404).
+      2. The scraped score is not mathematically consistent with the
+         scraped vector (protects against the regex grabbing the score
+         and vector from two different, unrelated sections of the page,
+         e.g. a CVSS v2 score next to a CVSS v3 vector, or a score
+         belonging to a linked/related CVE mentioned on the same page).
+    """
+    if not tenable_data:
+        return False
+
+    vector = tenable_data.get("vector")
+    scraped_score = tenable_data.get("score")
+
+    if cve_id not in page_text:
+        print(f"   ⚠️ Tenable check REJECTED for {cve_id}: CVE ID not present on the scraped page.")
+        return False
+
+    try:
+        c = CVSS3(vector)
+        recomputed_score = float(c.base_score)
+    except Exception as e:
+        print(f"   ⚠️ Tenable check REJECTED for {cve_id}: vector '{vector}' invalid ({e}).")
+        return False
+
+    if abs(recomputed_score - float(scraped_score)) > 0.2:
+        print(f"   ⚠️ Tenable check REJECTED for {cve_id}: "
+              f"scraped score {scraped_score} != vector-derived score {recomputed_score}.")
+        return False
+
+    return True
 
 print("\nDEBUG - Enriching ALL CVEs with authoritative data (NVD -> OpenCVE -> CVE.org)...")
 if isinstance(raw_threat_data, list):
@@ -238,7 +277,12 @@ def verify_and_correct_cvss(entry: dict) -> dict:
                 print(f"   ✅ {cve_id}: Found on CVE.org (score={official_data['score']})")
             else:
                 tenable_data = fetch_tenable_live_cvss(cve_id)
-                if tenable_data and tenable_data.get("vector") and tenable_data.get("vector") != "N/A":
+                # --- CHANGE 3: the Tenable branch now also requires verify_tenable_result() ---
+                # to pass before the result is accepted. If it fails, control falls through
+                # to the same "not found / keep estimated values" path used for every other
+                # source, so the fallback behaviour stays identical to before.
+                if (tenable_data and tenable_data.get("vector") and tenable_data.get("vector") != "N/A"
+                        and verify_tenable_result(cve_id, tenable_data, tenable_data.get("page_text", ""))):
                     official_data = tenable_data
                     source = "tenable_verified"
                     print(f"   ✅ {cve_id}: Found on Tenable (score={official_data['score']})")

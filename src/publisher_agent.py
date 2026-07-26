@@ -492,9 +492,18 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
     section_header(pdf, "4.3", "System Performance Metrics")
     pdf.set_font("Helvetica", '', 10)
     pdf.set_text_color(30, 30, 30)
-    runtime = (datetime.datetime.now() - start_time).total_seconds()
+    pipeline_start = os.getenv("PIPELINE_START_TIME")
+    if pipeline_start:
+        total_seconds = time.time() - float(pipeline_start)
+    else:
+        total_seconds = (datetime.datetime.now() - start_time).total_seconds()
+        
+    mins = int(total_seconds // 60)
+    secs = int(total_seconds % 60)
+    runtime_str = f"{mins} minutes and {secs} seconds" if mins > 0 else f"{secs} seconds"
+
     pdf.multi_cell(0, 6, text=clean_for_pdf(
-        f"• Total processing time: {int(runtime)} seconds\n"
+        f"• Total processing time: {runtime_str}\n"
         f"• Number of PoC/exploit sources queried: 8\n"
         f"• Sources consulted: NVD, GitHub (curated + general), Vulners, Packet Storm, inTheWild, Sploitus, 0day.today, Exploit-DB\n"
         f"• PoC discovery success rate: {poc_rate:.1f}%\n"

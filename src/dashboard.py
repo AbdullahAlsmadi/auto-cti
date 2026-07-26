@@ -65,7 +65,7 @@ def inject_custom_css(T):
     [data-testid="stSidebar"] { display: none; }
     header { visibility: hidden; }
     #MainMenu { visibility: hidden; }
-    footer { visibility: hidden; }
+    footerc2 { visibility: hidden; }
     .tlp-banner {
         background: #091018;
         border: 1px solid #243248;
@@ -560,9 +560,10 @@ def main():
         st.markdown("<br>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns([1, 2, 1])
         with c2:
-            if st.button("🚀  INITIALIZE SYSTEM", use_container_width=True):
+            if st.button("🛡️ INITIALIZE SYSTEM", use_container_width=True):
                 st.session_state.running = True
                 st.session_state.console_log = []
+                os.environ["PIPELINE_START_TIME"] = str(time.time())
                 st.rerun()
         display_report_history(T)
 

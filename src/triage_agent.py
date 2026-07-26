@@ -1035,7 +1035,38 @@ CRITICAL OUTPUT RULES:
 - The JSON must be parseable by Python json.loads() without any cleanup.
 
 For EACH CVE, you MUST write a 3-sentence professional description. Do NOT omit this.
-''')
+''',
+    expected_output=f'''A raw valid JSON array containing exactly {cve_count} objects:
+[
+  {{
+    "CVE_ID": "CVE-2026-XXXXX",
+    "Finding_Name": "Remote Code Execution in Example Component",
+    "Description": "Professional 3-sentence explanation.",
+    "CVSS_Score": 9.8,
+    "CVSS_Severity": "Critical",
+    "CVSS_Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    "CVSS_Breakdown": {{
+      "Attack_Vector": "Network",
+      "Attack_Complexity": "Low",
+      "Privileges_Required": "None",
+      "User_Interaction": "None",
+      "Scope": "Unchanged",
+      "Confidentiality": "High",
+      "Integrity": "High",
+      "Availability": "High"
+    }},
+    "CWE_ID": "CWE-89",
+    "MITRE_Mappings": ["T1190", "T1059"],
+    "Urgency_Score": 95,
+    "PoC": "An unauthenticated remote attacker targets the vulnerable endpoint. The attacker sends a POST request to /api/example with a crafted payload containing injected DQL syntax. The server passes the input directly to the query engine without sanitization, executing the attacker-controlled query. This results in unauthorized extraction of all stored user credentials from the database.",
+    "References": []
+  }}
+]
+The array MUST contain {cve_count} entries. Do NOT include a "Score_Source" field
+yourself — it is added automatically afterwards based on the original cvss_source.''',
+    agent=triage_agent,
+    output_file=output_file_path
+)
 
 triage_crew = Crew(
     agents=[triage_agent],

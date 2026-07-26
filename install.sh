@@ -84,17 +84,17 @@ cat > "$HOME/.local/bin/auto-cti" << 'EOF'
 export PYTHONPATH="$HOME/.auto-cti:$PYTHONPATH"
 source "$HOME/.auto-cti/venv/bin/activate"
 cd "$HOME/.auto-cti"
-if [ "$1" == "scout" ]; then
+if [ "$1" == "-s" ]; then
     python src/scout_agent.py
-elif [ "$1" == "triage" ]; then
+elif [ "$1" == "-t" ]; then
     python src/triage_agent.py
-elif [ "$1" == "publish" ]; then
+elif [ "$1" == "-p" ]; then
     python src/publisher_agent.py
-elif [ "$1" == "dashboard" ]; then
+elif [ "$1" == "-d" ]; then
     python -m streamlit run src/dashboard.py
-elif [ "$1" == "full" ]; then
+elif [ "$1" == "-f" ]; then
     python src/scout_agent.py && python src/triage_agent.py && python src/publisher_agent.py
-elif [ "$1" == "uninstall" ]; then
+elif [ "$1" == "-u" ]; then
     "$HOME/.auto-cti/uninstall.sh"
 else
     echo "🛡️ Auto-CTI Command Guide:"

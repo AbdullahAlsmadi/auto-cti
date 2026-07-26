@@ -143,11 +143,11 @@ echo
 echo "✅ Installation complete!"
 echo
 echo "🚀 You can now run:"
-echo "   auto-cti dashboard  - Launch interactive dashboard"
-echo "   auto-cti scout      - Run Scout Agent"
-echo "   auto-cti triage     - Run Triage Agent"
-echo "   auto-cti publish    - Run Publisher Agent"
-echo "   auto-cti full       - Run full pipeline"
+echo "   auto-cti -d  - Launch interactive dashboard"
+echo "   auto-cti -s  - Run Scout Agent"
+echo "   auto-cti -t  - Run Triage Agent"
+echo "   auto-cti -p  - Run Publisher Agent"
+echo "   auto-cti -f  - Run full pipeline"
 echo
 echo "🔑 On first run, you will be prompted for API keys."
 echo "   Keys are stored securely in ~/.auto-cti/config/.env"

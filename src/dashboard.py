@@ -334,11 +334,25 @@ def render_console(T, log_lines, height=300):
         </div>
     </div>
     <script>
-        var el = document.getElementById('smart-console');
-        if (el) el.scrollTop = el.scrollHeight;
+        const el1 = document.getElementById('smart-console');
+        if (el1) {{
+            const savedScroll1 = sessionStorage.getItem('smartConsoleScroll');
+            if (savedScroll1 !== null) {{
+                el1.scrollTop = parseInt(savedScroll1, 10);
+                if ((el1.scrollHeight - el1.clientHeight) - parseInt(savedScroll1, 10) <= 50) {{
+                    el1.scrollTop = el1.scrollHeight;
+                }}
+            }} else {{
+                el1.scrollTop = el1.scrollHeight;
+            }}
+            el1.addEventListener('scroll', () => {{
+                sessionStorage.setItem('smartConsoleScroll', el1.scrollTop);
+            }});
+        }}
     </script>
     """
     components.html(html, height=height + 55, scrolling=False)
+    
     if log_lines:
         st.markdown(f"<div style='height:0.6rem;'></div>", unsafe_allow_html=True)
         raw_text = "\n".join(log_lines[-300:])
@@ -368,8 +382,21 @@ def render_console(T, log_lines, height=300):
             </div>
         </div>
         <script>
-            var el = document.getElementById('raw-console');
-            if (el) el.scrollTop = el.scrollHeight;
+            const el2 = document.getElementById('raw-console');
+            if (el2) {{
+                const savedScroll2 = sessionStorage.getItem('rawConsoleScroll');
+                if (savedScroll2 !== null) {{
+                    el2.scrollTop = parseInt(savedScroll2, 10);
+                    if ((el2.scrollHeight - el2.clientHeight) - parseInt(savedScroll2, 10) <= 50) {{
+                        el2.scrollTop = el2.scrollHeight;
+                    }}
+                }} else {{
+                    el2.scrollTop = el2.scrollHeight;
+                }}
+                el2.addEventListener('scroll', () => {{
+                    sessionStorage.setItem('rawConsoleScroll', el2.scrollTop);
+                }});
+            }}
         </script>
         """
         components.html(raw_html, height=315, scrolling=False)

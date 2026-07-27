@@ -14,4 +14,5 @@ MAMORE
 # Ignore generated charts and images
 charts/
 *.png
-
+data/
+Reports/

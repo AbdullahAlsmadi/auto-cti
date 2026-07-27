@@ -489,6 +489,7 @@ def fetch_otx_native(item: dict) -> dict:
     return item
 
 if __name__ == "__main__":
+    scout_start_time = time.time()
     print(f"\n{'='*60}")
     print(f"  Auto-CTI Scout Agent — {today_date}")
     print(f"{'='*60}\n")
@@ -533,7 +534,17 @@ if __name__ == "__main__":
                 enriched_data.append(future.result())
         new_data = enriched_data
 
-    all_reports = {today_date: {"vulnerabilities": new_data}}
+    # Calculate Scout Agent execution time
+    scout_execution_time = time.time() - scout_start_time
+
+    all_reports = {
+        today_date: {
+            "vulnerabilities": new_data,
+            "metadata": {
+                "execution_time": scout_execution_time
+            }
+        }
+    }
     with open(report_filename, 'w', encoding='utf-8') as f:
         json.dump(all_reports, f, indent=4, ensure_ascii=False)
 

@@ -23,6 +23,16 @@ today_date = datetime.datetime.now().strftime("%B %d, %Y")
 DATA_DIR = os.path.expanduser("~/.auto-cti/data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
+scout_time = 0.0
+scout_file_path = os.path.join(DATA_DIR, "Scout_Agent_Results", "cti_report.json")
+if os.path.exists(scout_file_path):
+    try:
+        with open(scout_file_path, 'r', encoding='utf-8') as sf:
+            scout_data = json.load(sf)
+            scout_time = scout_data.get(today_date, {}).get("metadata", {}).get("execution_time", 0.0)
+    except Exception:
+        pass
+
 triage_dir = os.path.join(DATA_DIR, "triage_agent_result")
 list_of_files = [os.path.join(triage_dir, f) for f in os.listdir(triage_dir) if f.endswith(".json")]
 if not list_of_files:
@@ -31,6 +41,7 @@ if not list_of_files:
 
 latest_file = max(list_of_files, key=os.path.getctime)
 
+triage_time = 0.0
 try:
     with open(latest_file, 'r', encoding='utf-8') as f:
         file_content = f.read()
@@ -40,6 +51,7 @@ try:
         triage_data = json.loads(file_content)
         if isinstance(triage_data, dict):
             report_date = triage_data.get("date", today_date)
+            triage_time = triage_data.get("metadata", {}).get("execution_time", 0.0)
             triage_data = triage_data.get("report", triage_data.get("vulnerabilities", []))
             if isinstance(triage_data, str):
                 triage_data = json.loads(triage_data)
@@ -418,7 +430,8 @@ def render_cvss_breakdown_table(pdf: FPDF, breakdown: dict, vector: str):
 
 def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_path: str,
                           total_cves: int, poc_found: int, poc_rate: float,
-                          verified_count: int, corrected_count: int, start_time: datetime.datetime) -> None:
+                          verified_count: int, corrected_count: int, start_time: datetime.datetime,
+                          scout_time: float, triage_time: float) -> None:
     
     charts_dir = os.path.join(DATA_DIR, "charts")
     bar_path, pie_path = generate_academic_charts(stats, poc_found, total_cves, charts_dir)
@@ -555,11 +568,13 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
     section_header(pdf, "4.3", "System Performance Metrics")
     pdf.set_font("Helvetica", '', 10)
     pdf.set_text_color(30, 30, 30)
+    
     pipeline_start = os.getenv("PIPELINE_START_TIME")
     if pipeline_start:
         total_seconds = time.time() - float(pipeline_start)
     else:
-        total_seconds = (datetime.datetime.now() - start_time).total_seconds()
+        publisher_time = (datetime.datetime.now() - start_time).total_seconds()
+        total_seconds = scout_time + triage_time + publisher_time
         
     mins = int(total_seconds // 60)
     secs = int(total_seconds % 60)
@@ -737,7 +752,8 @@ if __name__ == "__main__":
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         pdf_output_path = os.path.join(reports_dir, f"AutoCTI_Report_{timestamp}.pdf")
         generate_pdf_briefing(parsed, cve_summary, severity_stats, pdf_output_path,
-                              total_cves, poc_found, poc_rate, verified_count, corrected_count, start_time)
+                              total_cves, poc_found, poc_rate, verified_count, corrected_count, start_time,
+                              scout_time, triage_time)
         print(f"PDF Report saved at: {pdf_output_path}")
     except json.JSONDecodeError as e:
         print(f"\nWarning: Could not parse LLM output as clean JSON: {e}")

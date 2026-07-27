@@ -1075,13 +1075,18 @@ triage_crew = Crew(
 )
 
 if __name__ == "__main__":
+    triage_start_time = time.time()
     print(f"Waking up the Triage Agent to analyze threats for {today_date}...")
+    
+    
     result = triage_crew.kickoff()
+    
     print("\n================================================")
     print("Triage Analysis Complete!")
     print("================================================")
 
     raw_result = str(result).strip()
+
     if raw_result.startswith("```json"):
         raw_result = raw_result[7:]
     if raw_result.startswith("```"):
@@ -1207,8 +1212,18 @@ if __name__ == "__main__":
             }, f, indent=2, ensure_ascii=False)
         print(f"DEBUG - PoC gap report saved: {gap_report_path} ({len(poc_gaps)}/{len(fixed_entries)} unmatched)")
 
+        triage_execution_time = time.time() - triage_start_time
+        
+        final_output = {
+            "date": today_date,
+            "report": fixed_entries,
+            "metadata": {
+                "execution_time": triage_execution_time
+            }
+        }
+
         with open(output_file_path, 'w', encoding='utf-8') as f:
-            json.dump(fixed_entries, f, indent=2, ensure_ascii=False)
+            json.dump(final_output, f, indent=2, ensure_ascii=False)
         print(f"Triage report saved: {output_file_path}")
         print(f"Total CVEs triaged: {len(fixed_entries)}")
 

@@ -23,6 +23,7 @@ import sys
 import csv
 import io
 import threading
+from urllib.parse import urlparse
 from crewai import Agent, Task, Crew, LLM
 from cvss import CVSS3 
 from bs4 import BeautifulSoup 
@@ -750,7 +751,13 @@ def fetch_patch_diff(cve_id: str) -> str:
             cna = r.json().get("containers", {}).get("cna", {})
             for ref in cna.get("references", []):
                 url = ref.get("url", "")
-                if "github.com" in url and "/commit/" in url:
+                parsed = urlparse(url)
+                host = (parsed.hostname or "").lower()
+                if (
+                    parsed.scheme in ("http", "https")
+                    and (host == "github.com" or host.endswith(".github.com"))
+                    and "/commit/" in parsed.path
+                ):
                     diff_url = url + ".diff"
                     diff_req = requests.get(diff_url, timeout=10)
                     if diff_req.status_code == 200:

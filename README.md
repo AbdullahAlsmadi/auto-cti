@@ -309,7 +309,30 @@ OPENCVE_PASSWORD=your_opencve_password
 
 ## Running the System
 
-After successful installation and configuration, you can execute the pipeline. Ensure you are in the root directory of the project.
+After running `install.sh`, the `auto-cti` command is available globally (via `~/.local/bin`) and is the **recommended way to run the system** — no need to activate the virtual environment or `cd` into the project directory manually.
+
+**Usage:**
+```bash
+auto-cti
+```
+```
+🛡️ Auto-CTI Command Guide:
+   auto-cti -d  - Launch interactive dashboard
+   auto-cti -s  - Run Scout Agent
+   auto-cti -t  - Run Triage Agent
+   auto-cti -p  - Run Publisher Agent
+   auto-cti -f  - Run full pipeline
+   auto-cti -u  - Remove Auto-CTI completely
+```
+
+- `auto-cti -d` — Launches the Streamlit SOC dashboard at `http://localhost:8501` (recommended for most users).
+- `auto-cti -s` / `-t` / `-p` — Run an individual agent in isolation (useful for debugging one stage).
+- `auto-cti -f` — Runs the full Scout → Triage → Publisher pipeline sequentially in the terminal, without the dashboard.
+- `auto-cti -u` — Uninstalls Auto-CTI completely (equivalent to running `uninstall.sh`).
+
+### Manual / Development Mode
+
+If you're working from a cloned repo rather than the installed version, you can still run each stage directly:
 
 **1. Activate the virtual environment:**
 ```bash
@@ -321,7 +344,7 @@ source ~/.auto-cti/venv/bin/activate
 python src/main_system.py
 ```
 
-**3. Launch the Live Dashboard (recommended):**
+**3. Launch the Live Dashboard:**
 ```bash
 streamlit run src/dashboard.py
 ```

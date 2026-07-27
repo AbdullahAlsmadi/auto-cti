@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software in your research, please cite it as below."
+authors:
+  - family-names: "Al Smadi"
+    given-names: "Abdullah"
+    affiliation: "Düzce University"
+title: "Auto-CTI: Autonomous Cyber Threat Intelligence Triage & Reporting Network"
+version: 1.0.0
+date-released: 2026-07-27
+repository-code: "https://github.com/AbdullahAlsmadi/Auto_CTI"
+license: "Apache-2.0"
+keywords:
+  - Cyber Threat Intelligence
+  - LLM
+  - Autonomous Agents
+  - CVSS
+  - Cybersecurity

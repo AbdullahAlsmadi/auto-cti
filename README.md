@@ -58,7 +58,7 @@ The system is fully automated — a single command runs the entire pipeline end-
 ## Key Features
 
 - ✅ **Fully automated pipeline** — from data collection to executive report generation
-- ✅ **100% CVSS score verification** — all scores cross-verified against NVD, CVE.org, and Tenable
+- ✅ **CVSS score cross-verification** — every score checked against NVD, CVE.org, and Tenable, with a per-CVE Score Provenance label distinguishing authoritative-source scores from model-estimated ones when no official score exists
 - ✅ **8+ PoC/exploit sources** — NVD, GitHub (curated + general), Vulners, Packet Storm, inTheWild, Sploitus, 0day.today, Exploit-DB
 - ✅ **Professional PDF reports** — TLP:AMBER classified, with clickable hyperlinks to official references
 - ✅ **Secure API key storage** — keys stored safely in `~/.auto-cti/.env`
@@ -346,7 +346,7 @@ The system automatically computes and reports the following validation metrics i
 |---|---|---|
 | PoC Discovery Rate | Percentage of CVEs with external exploit/PoC references | 25–65% |
 | CVSS Verification Rate | Percentage of scores confirmed against authoritative sources | 100% |
-| Total Processing Time | Time from start to finish | ~2–3 minutes for 100 CVEs |
+| Total Processing Time | Time from start to finish | 10–15 minutes for 100 CVEs (n=3 runs) |
 | Sources Queried | Number of PoC/exploit sources checked | 8 sources |
 
 ---

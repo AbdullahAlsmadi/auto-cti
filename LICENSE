@@ -7,7 +7,7 @@ authors:
 title: "Auto-CTI: Autonomous Cyber Threat Intelligence Triage & Reporting Network"
 version: 1.0.0
 date-released: 2026-07-27
-repository-code: "https://github.com/AbdullahAlsmadi/Auto_CTI"
+repository-code: "https://github.com/AbdullahAlsmadi/auto-cti"
 license: "Apache-2.0"
 keywords:
   - Cyber Threat Intelligence

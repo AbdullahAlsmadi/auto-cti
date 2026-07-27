@@ -534,7 +534,13 @@ if __name__ == "__main__":
                 enriched_data.append(future.result())
         new_data = enriched_data
 
-    # Calculate Scout Agent execution time
+    print("\n[+] Saving newly discovered CVEs to MAMORE database...")
+    current_seen_ids = load_seen_cve_ids()
+    for item in new_data:
+        if "cve_id" in item:
+            current_seen_ids.add(item["cve_id"])
+    save_seen_cve_ids(current_seen_ids)
+
     scout_execution_time = time.time() - scout_start_time
 
     all_reports = {

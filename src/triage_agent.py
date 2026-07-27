@@ -12,7 +12,7 @@ from crewai import Agent, Task, Crew, LLM
 from cvss import CVSS3 
 from bs4 import BeautifulSoup 
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+ 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils.secure_config import init_config
 
@@ -49,7 +49,11 @@ print(f"DEBUG - CVEs received from Scout: {cve_count}")
 output_dir = os.path.join(DATA_DIR, "triage_agent_result")
 os.makedirs(output_dir, exist_ok=True)
 
-CACHE_FILE = os.path.join(DATA_DIR, "triage_cache.json")
+MAMORE_DIR = os.path.join(DATA_DIR, "MAMORE")
+os.makedirs(MAMORE_DIR, exist_ok=True)
+
+CACHE_FILE = os.path.join(MAMORE_DIR, "triage_cache.json")
+
 cache_lock = threading.Lock()
 
 def load_cache():

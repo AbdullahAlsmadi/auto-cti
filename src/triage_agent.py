@@ -24,6 +24,7 @@ import sys
 import csv
 import io
 import threading
+import litellm
 from crewai import Agent, Task, Crew, LLM
 from cvss import CVSS3 
 from bs4 import BeautifulSoup 
@@ -784,7 +785,6 @@ def fetch_patch_diff(cve_id: str) -> str:
     return ""
 
 def analyze_diff_with_llm(cve_id: str, diff_text: str) -> str:
-    llm = triage_llm   # defined at top of file
     prompt = f"""You are a senior reverse engineer. Analyze this Git patch diff for {cve_id}.
 Write exactly 4 sentences explaining the technical vulnerability and a theoretical
 attack vector based on what was changed in the code.
@@ -793,10 +793,12 @@ Focus on the specific functions, variables, and logic modified. Do not include e
 Diff:
 {diff_text}"""
     try:
-        # ✅ Correct CrewAI method – .generate() with a list of messages
-        response = llm.generate([{"role": "user", "content": prompt}])
-        # CrewAI returns a GenerationResult; extract the text
-        report_text = response.generations[0][0].text
+        response = litellm.completion(
+            model="gemini/gemini-3.5-flash-lite",
+            messages=[{"role": "user", "content": prompt}],
+            api_key=os.getenv("GEMINI_API_KEY")
+        )
+        report_text = response.choices[0].message.content
         return report_text.strip()
     except Exception as e:
         print(f"   [LLM Error] Diff analysis failed for {cve_id}: {e}")

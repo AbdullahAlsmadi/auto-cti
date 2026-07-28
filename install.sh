@@ -143,7 +143,7 @@ chmod +x "$INSTALL_DIR/uninstall.sh"
 # 11. Create sample .env (will be overwritten by the app if missing)
 # Write the .env template directly to the location used by secure_config.py
 if [ ! -f "$INSTALL_DIR/.env" ]; then
-    ccat > "$INSTALL_DIR/.env" << 'EOF'
+    cat > "$INSTALL_DIR/.env" << 'EOF'
 # ============================================================
 # Auto-CTI Environment Configuration
 # ============================================================

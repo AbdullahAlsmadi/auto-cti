@@ -80,10 +80,14 @@ mkdir -p "$INSTALL_DIR"
 mkdir -p "$INSTALL_DIR/config"
 mkdir -p "$INSTALL_DIR/data"
 
-# 6. Copy source files
+# 6. Copy source files and documentation
 echo "📦 Installing Auto-CTI to $INSTALL_DIR..."
 cp -r src/ "$INSTALL_DIR/"
 cp requirements.txt "$INSTALL_DIR/"
+cp LICENSE "$INSTALL_DIR/" 2>/dev/null || true
+cp NOTICE "$INSTALL_DIR/" 2>/dev/null || true
+cp SECURITY.md "$INSTALL_DIR/" 2>/dev/null || true
+cp CITATION.cff "$INSTALL_DIR/" 2>/dev/null || true
 
 # 7. Create virtual environment and install dependencies
 echo "📦 Creating virtual environment and installing dependencies..."

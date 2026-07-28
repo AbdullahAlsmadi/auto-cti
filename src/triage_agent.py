@@ -793,9 +793,10 @@ Focus on the specific functions, variables, and logic modified. Do not include e
 Diff:
 {diff_text}"""
     try:
-        response = llm(prompt)   # ✅ Correct method
-        # CrewAI's LLM may return a string or an object with .content
-        report_text = response.content if hasattr(response, 'content') else str(response)
+        # ✅ Correct CrewAI method – .generate() with a list of messages
+        response = llm.generate([{"role": "user", "content": prompt}])
+        # CrewAI returns a GenerationResult; extract the text
+        report_text = response.generations[0][0].text
         return report_text.strip()
     except Exception as e:
         print(f"   [LLM Error] Diff analysis failed for {cve_id}: {e}")

@@ -1234,8 +1234,8 @@ if __name__ == "__main__":
                 continue
             for line in entry.get("PoC", "").splitlines():
                 stripped = line.strip()
-                if stripped.startswith("- [https://github.com/](https://github.com/)"):
-                    repo_url = stripped[2:].strip()
+                if stripped.startswith("- https://github.com/"):
+                    repo_url = stripped[2:].strip()   # now correctly extracts the URL
                     repo_to_cves.setdefault(repo_url, set()).add(entry["CVE_ID"])
 
         SUSPICIOUS_THRESHOLD = 2
@@ -1253,12 +1253,12 @@ if __name__ == "__main__":
             removed_any = False
             for line in lines:
                 stripped = line.strip()
-                if stripped.startswith("- https://github.com/")and stripped[2:].strip() in suspicious_repos:
+                if stripped.startswith("- https://github.com/") and stripped[2:].strip() in suspicious_repos:
                     removed_any = True
                     continue
                 kept_lines.append(line)
             if removed_any:
-                remaining_refs = [l for l in kept_lines if l.strip().startswith("- [https://github.com/](https://github.com/)")]
+                remaining_refs = [l for l in kept_lines if l.strip().startswith("- https://github.com/")]
                 if remaining_refs:
                     entry["PoC"] = "\n".join(kept_lines)
                 else:
@@ -1310,4 +1310,3 @@ if __name__ == "__main__":
         with open(output_file_path, 'w', encoding='utf-8') as f:
             f.write(raw_result)
         print(f"Raw output saved: {output_file_path}")
-

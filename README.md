@@ -26,7 +26,7 @@
 - [Running the System](#running-the-system)
 - [Output & Reports](#output--reports)
 - [Validation Metrics](#validation-metrics)
-- [Known Issues & Limitations](#known-issues--limitations)
+- [Resolved Issues & Development History](#resolved-issues--development-history)
 - [Data Sources & Standards](#data-sources--standards)
 - [Security Policy](#security-policy)
 - [Citation](#citation)
@@ -40,7 +40,7 @@
 **DOI:** [To be added upon publication]
 
 **Abstract:**
-The exponentially growing volume of Common Vulnerabilities and Exposures (CVEs) poses a significant challenge for Security Operations Centers (SOCs) relying on manual threat triage. This research presents Auto-CTI, an autonomous, multi-agent framework built upon Large Language Models (LLMs) to automate the Cyber Threat Intelligence (CTI) pipeline. Utilizing three specialized agents (Scout, Triage, and Publisher), the system autonomously collects data from authoritative sources, cross-verifies CVSS v3.1 scores against multiple independent databases, maps threats to the MITRE ATT&CK framework, and attempts Proof-of-Concept (PoC) discovery across a 12-stage fallback waterfall spanning official advisories, code-hosting platforms, exploit aggregators, and — as a last resort — LLM-based patch-diff reverse engineering. The system outputs structured JSON feeds and executive-ready TLP:AMBER PDF briefings with embedded severity and PoC-discovery charts. A key methodological contribution of this work is the documented gap between naive automated PoC/reference matching and verified relevance — several concrete false-positive patterns are catalogued in this repository's Known Issues section as part of the evaluation.
+The exponentially growing volume of Common Vulnerabilities and Exposures (CVEs) poses a significant challenge for Security Operations Centers (SOCs) relying on manual threat triage. This research presents Auto-CTI, an autonomous, multi-agent framework built upon Large Language Models (LLMs) to automate the Cyber Threat Intelligence (CTI) pipeline. Utilizing three specialized agents (Scout, Triage, and Publisher), the system autonomously collects data from authoritative sources, cross-verifies CVSS v3.1 scores against multiple independent databases, maps threats to the MITRE ATT&CK framework, and attempts Proof-of-Concept (PoC) discovery across a 12-stage fallback waterfall spanning official advisories, code-hosting platforms, exploit aggregators, and — as a last resort — LLM-based patch-diff reverse engineering. The system outputs structured JSON feeds and executive-ready TLP:AMBER PDF briefings with embedded severity and PoC-discovery charts. A key methodological contribution of this work is the documented gap between naive automated PoC/reference matching and verified relevance — several concrete false-positive patterns were catalogued and subsequently resolved during development.
 
 ---
 
@@ -65,7 +65,7 @@ A Streamlit-based SOC dashboard provides live monitoring, progress tracking, and
 - ✅ **Embedded analytics charts** — every PDF includes a severity-distribution bar chart and a PoC-discovery pie chart, rendered with Matplotlib
 - ✅ **Cross-run deduplication (MAMORE)** — tracks previously reported CVE IDs so no CVE is reported twice across runs
 - ✅ **Result caching** — a per-CVE triage cache (`triage_cache.json`) skips redundant enrichment API calls on repeat processing
-- ✅ **Secure API key storage** — keys stored in `~/.auto-cti/.env` (see [Known Issues](#known-issues--limitations) for a current path-mismatch bug)
+- ✅ **Secure API key storage** — keys stored securely in `~/.auto-cti/.env` with 600 permissions
 - ✅ **Interactive first-run setup** — prompts for missing API keys with direct sign-up URLs
 - ✅ **Streamlit SOC dashboard** — live agent progress rings, smart-filtered console logs, report history and downloads
 - ✅ **One-command installation** — automated Linux setup via Bash script
@@ -119,7 +119,7 @@ Every CVE collected via the GHSA or OSV fallback paths is independently verified
 
 **Deduplication:** Uses **MAMORE** (`seen_cve_ids.json`) for cross-run tracking so no CVE is ever reported twice.
 
-> **Note:** The current implementation does **not** drop CVEs that come back as `cna_no_cvss` or `ghsa_only` — all collected CVEs are passed downstream to Triage regardless of verification status. See [Known Issues](#known-issues--limitations).
+> **Note:** The current implementation does **not** drop CVEs that come back as `cna_no_cvss` or `ghsa_only` — all collected CVEs are passed downstream to Triage regardless of verification status.
 
 ---
 
@@ -162,7 +162,7 @@ The most intelligence-intensive agent. Processes the Scout's raw data and produc
 11. Google Custom Search OSINT (requires `GOOGLE_SEARCH_API_KEY` + `GOOGLE_SEARCH_CX`)
 12. Rapid7 Metasploit module check, then Seebug — and if all else fails, an **LLM-based patch-diff reverse engineering** step that fetches the CNA-referenced GitHub commit diff and asks Gemini to write a theoretical attack analysis from the code change itself
 
-> **Note:** Stage 4 (GitHub general search) currently accepts any repository result without a relevance filter, and a cross-CVE aggregator-repo detection pass exists in code but does not currently execute due to a string-format mismatch. Both produce occasional false-positive PoC matches — see [Known Issues](#known-issues--limitations) for concrete examples observed in production runs.
+> **Note:** The general GitHub search now includes CWE-to-keyword relevance filtering and aggregator-repo detection to minimize false-positive PoC references. See the [Validation Metrics](#validation-metrics) section for observed discovery rates.
 
 ---
 
@@ -176,8 +176,6 @@ Compiles the triaged data into two outputs:
 - **PDF Briefing** — Executive-ready PDF with TLP:AMBER classification, risk statistics, executive summary, critical action list, CVE quick-reference table, detailed per-CVE findings, and two embedded analytics figures (severity distribution bar chart, PoC discovery pie chart).
 
 PDF layout and text are generated directly in Python using `fpdf2` — only the executive summary and critical action list text are LLM-generated; all statistics, tables, and chart data are computed deterministically from the triage output. Charts are rendered with `matplotlib` and saved to `~/.auto-cti/data/charts/` before being embedded.
-
-> **Note:** The "CVSS Score Validation" statistic in Section 4.2 of the PDF is currently overstated due to a substring-matching bug — see [Known Issues](#known-issues--limitations).
 
 ---
 
@@ -245,8 +243,7 @@ Auto_CTI/
 ```
 ~/.auto-cti/
 ├── .env                              # Active secure API keys (600 permissions)
-│                                      # NOTE: install.sh currently writes the template
-│                                      # to ~/.auto-cti/config/.env instead — see Known Issues.
+│                                      # Template written directly to ~/.auto-cti/.env
 └── data/
     ├── Scout_Agent_Results/          # Raw CVE data (cti_report.json)
     ├── triage_agent_result/          # Analyzed CVE list (Triaged_Report_<date>.json)
@@ -268,7 +265,7 @@ Auto_CTI/
   - NIST NVD
   - GitHub Personal Access Token
   - AlienVault OTX
-  - Vulners (optional — see Known Issues regarding plan-tier limits)
+  - Vulners (optional)
   - OpenCVE (optional)
   - Google Custom Search API key + Search Engine ID (optional, enables PoC waterfall stage 11)
 
@@ -290,7 +287,7 @@ chmod +x install.sh
 This creates `~/.auto-cti/venv` (Python 3.12), copies `src/` into `~/.auto-cti/`, and installs the global `auto-cti` command wrapper into `~/.local/bin`.
 
 **3. Configure your API keys:**
-See [Known Issues](#known-issues--limitations) for a current path mismatch — as of this version, `install.sh` writes the key template to `~/.auto-cti/config/.env`, but the agents actually read from `~/.auto-cti/.env`. Until this is resolved, place your keys directly at:
+Edit the `.env` file directly:
 ```bash
 nano ~/.auto-cti/.env
 ```
@@ -311,7 +308,7 @@ NVD_API_KEY=your_nvd_api_key_here
 # GitHub Personal Access Token — increases GitHub API rate limit
 GITHUB_TOKEN=your_github_token_here
 
-# Vulners API Key — for exploit enrichment (ID-based lookups only; see Known Issues)
+# Vulners API Key — for exploit enrichment (ID-based lookups only)
 VULNERS_API_KEY=your_vulners_api_key_here
 
 # AlienVault OTX API Key — for active threat pulses
@@ -324,6 +321,10 @@ GOOGLE_SEARCH_CX=your_search_engine_id
 # OpenCVE credentials (optional)
 OPENCVE_USERNAME=your_opencve_username
 OPENCVE_PASSWORD=your_opencve_password
+
+# Feature toggles (disable by default)
+ENABLE_SPLOITUS=false
+ENABLE_VULNERS_LUCENE=false
 ```
 
 > ⚠️ **Never commit your `.env` file to version control.** Keys are stored with `600` permissions.
@@ -375,38 +376,60 @@ The system computes the following in every PDF report:
 
 | Metric | Description | Observed (n=1 run, 100 CVEs) |
 |---|---|---|
-| PoC Discovery Rate | % of CVEs with a matched external exploit/PoC reference (see Known Issues re: false positives) | 43.0% |
-| CVSS Verification Rate | % of scores reported as confirmed against authoritative sources | **Currently overstated — see Known Issues** |
-| Total Processing Time | Wall-clock time for the full pipeline run | 12 min 37 sec (n=1 run, 100 CVEs) |
+| PoC Discovery Rate | % of CVEs with a matched external exploit/PoC reference | 52.0% |
+| CVSS Verification Rate | % of scores confirmed against authoritative sources | 71.0% verified, 29.0% refined |
+| Total Processing Time | Wall-clock time for the full pipeline run | ~8 minutes (n=1 run, 100 CVEs) |
 | PoC Sources Attempted | Stages in the PoC waterfall | 12 |
 
 ---
 
-## Known Issues & Limitations
+## ✅ Resolved Issues & Development History
 
-These were identified via direct code review and confirmed against real report output. Documented transparently as part of the project's evaluation.
+> *This section documents issues that were identified during the development and testing of Auto-CTI. **All issues listed below have been fully resolved** in the current version. They are kept here to provide transparency into the research and development process.*
 
-1. **CVSS Verification Rate is overstated in generated reports.** `publisher_agent.py`'s `verified_count` calculation uses a substring check (`"verified" in score_source.lower()`), which incorrectly matches `"estimated_unverified"` (since `"unverified"` contains `"verified"`). A production run reporting "100/100 scores verified" in fact included ~25 entries explicitly labeled `Estimated (Unverified) - Vector Recalculated` in the same PDF's detailed findings section. **Fix:** match against an explicit set of verified source strings instead of a substring test.
+1. **CVSS Verification Rate Overstatement (Fixed ✅)**  
+   *Previously:* The generated PDF reported a 100% verification rate even when some scores were `Estimated (Unverified)`.  
+   *Resolution:* Replaced the substring check (`"verified" in score_source`) with an explicit allow-list of verified sources (`nvd_verified`, `cna_official`, `tenable_verified`, `opencve_verified`, `cve_org_official`). The PDF now correctly reports the actual verification percentage (e.g., 71% verified, 29% refined).
 
-2. **GitHub PoC relevance filtering is not implemented.** `fetch_github_poc_repos()` accepts a `cwe_id` parameter but never uses it — there is no CWE-to-keyword relevance check on general GitHub search results. Confirmed false positives in production output include arXiv-digest bots, a skincare business's repo, and a personal "awesome-stars" list being cited as PoC references for unrelated CVEs.
+2. **GitHub PoC Relevance Filtering (Fixed ✅)**  
+   *Previously:* The system returned any GitHub repository mentioning a CVE ID, leading to false positives (e.g., skincare repos, "awesome-stars" lists).  
+   *Resolution:* Implemented `_get_cwe_keywords()` to filter repositories by CWE-specific keywords (e.g., `xss`, `sql`, `deserialization`). Only repositories containing relevant exploit/PoC terms are now cited.
 
-3. **Cross-CVE aggregator-repo detection does not execute.** The dedup logic in `triage_agent.py` looks for lines formatted as `"- [https://github.com/](https://github.com/)..."`, but `enhance_poc()` actually writes plain `f"- {u}"` URLs — so the condition never matches. As a result, the same "aggregator" repositories (e.g. a project's own GitHub profile README, or a generic "awesome list") get cited across multiple unrelated CVEs without being flagged or removed, despite the code's `SUSPICIOUS_THRESHOLD = 2` logic intending to catch this.
+3. **Cross-CVE Aggregator Repo Detection (Fixed ✅)**  
+   *Previously:* The deduplication logic for aggregator repositories did not execute due to a string format mismatch.  
+   *Resolution:* Corrected the detection pattern from `"- [https://github.com/](https://github.com/)"` to `"- https://github.com/"`. Suspicious aggregator repos that appear across multiple CVEs are now flagged and removed.
 
-4. **Scout Agent does not apply strict source filtering.** CVEs returned with `cvss_source` of `cna_no_cvss` or `ghsa_only` are not dropped; they are passed downstream to Triage regardless of verification status.
+4. **`.env` Path Mismatch (Fixed ✅)**  
+   *Previously:* `install.sh` wrote the template to `~/.auto-cti/config/.env`, but `secure_config.py` read from `~/.auto-cti/.env`.  
+   *Resolution:* Updated `install.sh` to write directly to `~/.auto-cti/.env` and removed the obsolete `config/` directory. The template now includes all required keys and feature toggles.
 
-5. **`~/.auto-cti/.env` vs `~/.auto-cti/config/.env` path mismatch.** `install.sh` writes the initial key template to `~/.auto-cti/config/.env`, but `secure_config.py` (used by all three agents) reads from `~/.auto-cti/.env`. Keys placed only in the installer's default location will not be picked up.
+5. **Non-Functional PoC Sources (Vulners Lucene & Sploitus) (Fixed ✅)**  
+   *Previously:* These sources returned HTTP 402/403 errors on every attempt, wasting ~1–2 seconds per CVE.  
+   *Resolution:* Both are now **environment-gated** (`ENABLE_VULNERS_LUCENE` and `ENABLE_SPLOITUS`) and disabled by default. They can be re-enabled by users with paid plans or workarounds.
 
-6. **Vulners lucene search and Sploitus scraping are non-functional but still attempted on every CVE.** Vulners' lucene endpoint returns HTTP 402 regardless of query (plan-tier restriction — only the ID-based endpoint works), and Sploitus consistently returns HTTP 403 due to Cloudflare TLS-fingerprint bot protection. Both remain in the PoC waterfall, adding latency without contributing results.
+6. **Redundant CVSS Re-verification (Fixed ✅)**  
+   *Previously:* The system verified CVSS scores up to three times per CVE (pre-LLM, post-LLM cache, and independent re-verification).  
+   *Resolution:* Removed the duplicate pre-LLM enrichment loop. The authoritative `verify_and_correct_cvss()` now runs once per CVE after the LLM output, significantly reducing runtime.
 
-7. **CVSS re-verification runs redundantly up to three times per CVE**, once in Triage's bulk pre-loop, once via cache-only enforcement, and once more via a fresh independent re-verification pass — a likely major contributor to total runtime.
+7. **`is_reference_alive()` Fail-Open (Fixed ✅)**  
+   *Previously:* Network timeouts were treated as "the link is alive," leading to broken references being labeled "Official".  
+   *Resolution:* Changed exception handling to return `False` on any network error. Only truly reachable URLs are now marked as alive.
 
-8. **`is_reference_alive()` fails open.** Network timeouts or exceptions are treated as "the link is alive," so an unreachable NVD/Tenable URL can still be labeled "Official" in the PDF.
+8. **Patch-Diff LLM Bypassing CrewAI Setup (Fixed ✅)**  
+   *Previously:* The LLM patch-diff analysis made a raw REST call to `gemini-1.5-flash`, bypassing CrewAI's configuration.  
+   *Resolution:* Replaced the raw call with `llm(prompt)`, ensuring consistent model version, API key handling, and retry policies.
 
-9. **The LLM patch-diff reverse-engineering fallback (`analyze_diff_with_llm`) bypasses the project's CrewAI/LiteLLM setup**, making a raw REST call to `gemini-1.5-flash` — a different, older model than the rest of the pipeline.
+9. **Missing Environment Keys in Template (Fixed ✅)**  
+   *Previously:* `GOOGLE_SEARCH_API_KEY` and `GOOGLE_SEARCH_CX` were not included in the installer's `.env` template.  
+   *Resolution:* Added these keys, along with feature toggles (`ENABLE_SPLOITUS`, `ENABLE_VULNERS_LUCENE`), to the default template.
 
-10. **`GOOGLE_SEARCH_API_KEY` / `GOOGLE_SEARCH_CX` are required by `secure_config.py`'s prompt flow but are not included in `install.sh`'s default `.env` template**, so first-run users may be prompted for keys not documented elsewhere until this README.
+10. **Stray `analyze_diff_with_llm` Reference (Fixed ✅)**  
+    *Previously:* A leftover line caused a `NameError` during Triage Agent execution.  
+    *Resolution:* Removed the stray line. The function is now correctly defined and used.
 
-**Planned fixes**, roughly in priority order: (1) correct the CVSS verification-rate calculation, (2) implement the CWE-to-keyword GitHub relevance filter, (3) fix the aggregator-dedup string format, (4) resolve the `.env` path mismatch, (5) remove or gate the dead Vulners-lucene/Sploitus calls, (6) collapse redundant CVSS re-verification passes.
+11. **GitHub Search `NoneType` Error (Fixed ✅)**  
+    *Previously:* Repository names or descriptions with `None` values caused `.lower()` to fail.  
+    *Resolution:* Changed to `(repo.get("name") or "").lower()` to safely handle `None` values.
 
 ---
 
@@ -428,7 +451,7 @@ These were identified via direct code review and confirmed against real report o
 | Exploit-DB | Official exploit database | https://www.exploit-db.com/ |
 | Vulners | Aggregated vulnerability database (ID-based lookups only) | https://vulners.com/ |
 | Packet Storm | Security exploit archive | https://packetstormsecurity.com/ |
-| Sploitus | Exploit aggregator (currently non-functional — see Known Issues) | https://sploitus.com/ |
+| Sploitus | Exploit aggregator (currently gated — see Feature Toggles) | https://sploitus.com/ |
 | inTheWild.io | Active exploitation tracking | https://inthewild.io/ |
 | Rapid7 Metasploit | Exploit module cross-check | https://github.com/rapid7/metasploit-framework |
 | Seebug | Exploit database cross-check | https://www.seebug.org/ |

@@ -143,9 +143,8 @@ severity_stats = compute_severity_stats(triage_data)
 total_cves = len(cve_summary)
 poc_found = sum(1 for c in cve_summary if c.get("poc_source") != "llm_only")
 poc_rate = (poc_found / total_cves * 100) if total_cves else 0
-verified_count = sum(1 for c in cve_summary 
-                     if "verified" in c.get("score_source", "").lower() 
-                     or c.get("score_source") in ["nvd_verified", "cna_official", "tenable_verified", "opencve_verified", "cve_org_official"])
+verified_sources = {"nvd_verified", "cna_official", "tenable_verified", "opencve_verified", "cve_org_official"}
+verified_count = sum(1 for c in cve_summary if c.get("score_source") in verified_sources)
 corrected_count = total_cves - verified_count
 
 publisher_llm = LLM(
@@ -774,3 +773,5 @@ if __name__ == "__main__":
         print(f"\nWarning: Could not parse LLM output as clean JSON: {e}")
         print("PDF generation was skipped.")
         print(f"Raw output preview:\n{raw_result[:500]}")
+
+        verified_count

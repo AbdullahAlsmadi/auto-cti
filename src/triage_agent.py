@@ -17,6 +17,7 @@ import os
 import json
 import re
 import time
+from unittest import result
 import requests
 import datetime
 import sys
@@ -27,7 +28,7 @@ from crewai import Agent, Task, Crew, LLM
 from cvss import CVSS3 
 from bs4 import BeautifulSoup 
 from concurrent.futures import ThreadPoolExecutor, as_completed
- 
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils.secure_config import init_config
 
@@ -220,40 +221,6 @@ def verify_tenable_result(cve_id: str, tenable_data: dict, page_text: str) -> bo
         return False
     return True
 
-print("\nDEBUG - Enriching ALL CVEs with authoritative data (NVD -> OpenCVE -> CVE.org)...")
-if isinstance(raw_threat_data, list):
-    for item in raw_threat_data:
-        cid = item.get("cve_id")
-        if not cid:
-            continue
-        nvd_data = fetch_nvd_cvss(cid)
-        if nvd_data and nvd_data.get("vector") and nvd_data.get("vector") != "N/A":
-            item["cvss_score"] = nvd_data["score"]
-            item["cvss_vector"] = nvd_data["vector"]
-            item["cvss_severity"] = nvd_data["severity"]
-            item["cvss_source"] = "nvd_verified"
-            print(f" --> [NVD] Updated {cid}")
-            time.sleep(0.3)
-            continue
-        opencve_data = fetch_opencve_cvss(cid)
-        if opencve_data and opencve_data.get("vector") and opencve_data.get("vector") != "N/A":
-            item["cvss_score"] = opencve_data["score"]
-            item["cvss_vector"] = opencve_data["vector"]
-            item["cvss_severity"] = opencve_data["severity"]
-            item["cvss_source"] = "opencve_verified"
-            print(f" --> [OpenCVE] Updated {cid}")
-            time.sleep(0.3)
-            continue
-        cveorg_data = fetch_cve_org_cvss(cid)
-        if cveorg_data and cveorg_data.get("vector") and cveorg_data.get("vector") != "N/A":
-            item["cvss_score"] = cveorg_data["score"]
-            item["cvss_vector"] = cveorg_data["vector"]
-            item["cvss_severity"] = cveorg_data["severity"]
-            item["cvss_source"] = "cve_org_official"
-            print(f" --> [CVE.org] Updated {cid}")
-        time.sleep(0.3)
-print("DEBUG - Enrichment Complete.\n")
-
 cve_source_lookup = {}
 if isinstance(raw_threat_data, list):
     for item in raw_threat_data:
@@ -411,12 +378,10 @@ def is_reference_alive(url: str) -> bool:
     try:
         r = requests.get(url, timeout=10, allow_redirects=True, stream=True)
         r.close()
-        if r.status_code == 404:
-            return False
-        return True
+        return r.status_code != 404   
     except Exception:
-        return True
-
+        return False   
+    
 def build_verified_references(cve_id: str) -> list:
     candidates = [
         f"https://nvd.nist.gov/vuln/detail/{cve_id}",
@@ -492,6 +457,8 @@ def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
         if gh_token:
             headers["Authorization"] = f"Bearer {gh_token}"
         results = []
+        
+        # 1. Curated repositories (high confidence)
         curated_repos = [
             "nomi-sec/PoC-in-GitHub",
             "trickest/cve",
@@ -512,6 +479,7 @@ def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
         if results:
             return results[:5]
         
+        # 2. GitHub Advisory Database
         url = f"https://api.github.com/advisories/{cve_id}"
         r = requests.get(url, headers=headers, timeout=15)
         if r.status_code == 200:
@@ -526,27 +494,78 @@ def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
             if references:
                 return references
         
+        # 3. General repository search (with CWE relevance filtering)
+        cwe_keywords = _get_cwe_keywords(cwe_id)   # CWE -> keyword mapping
+        
         query = f'{cve_id} in:name,description,readme'
         url = "https://api.github.com/search/repositories"
-        r2 = requests.get(url, headers=headers, params={"q": query, "sort": "stars", "order": "desc", "per_page": 5}, timeout=15)
+        r2 = requests.get(url, headers=headers, params={"q": query, "sort": "stars", "order": "desc", "per_page": 20}, timeout=15)
         if r2.status_code == 200:
-            for repo in r2.json().get("items", []):
+            items = r2.json().get("items", [])
+            filtered_repos = []
+            for repo in items:
                 repo_url = repo.get("html_url")
                 if not repo_url or repo_url in results:
                     continue
-                results.append(repo_url)
-        if not results:
+                name = (repo.get("name") or "").lower()
+                desc = (repo.get("description") or "").lower()
+                relevant = False
+                if not cwe_keywords:
+                    if "poc" in desc or "exploit" in desc or "proof of concept" in desc:
+                        relevant = True
+                else:
+                    if any(kw in name or kw in desc for kw in cwe_keywords):
+                        relevant = True
+                    if not relevant and ("poc" in desc or "exploit" in desc):
+                        relevant = True
+                if relevant:
+                    filtered_repos.append(repo_url)
+            results.extend(filtered_repos[:5])
+
+        # 4. Code search fallback
+        if len(results) < 3:
             code_query = f'{cve_id} in:file'
-            r3 = requests.get("https://api.github.com/search/code", headers=headers, params={"q": code_query, "per_page": 5}, timeout=15)
+            r3 = requests.get("https://api.github.com/search/code", headers=headers, params={"q": code_query, "per_page": 10}, timeout=15)
             if r3.status_code == 200:
                 for item in r3.json().get("items", []):
                     file_url = item.get("html_url")
-                    if file_url and file_url not in results:
+                    if not file_url or file_url in results:
+                        continue
+                    path = item.get("path", "").lower()
+                    if any(ext in path for ext in ["poc", "exploit", "cve", "payload", "rce", "proof"]):
                         results.append(file_url)
+                        if len(results) >= 5:
+                            break
+
         return results[:5]
+
     except Exception as e:
-        print(f"   GitHub PoC search error for {cve_id}: {e}")
+        print(f"   GitHub PoC repo search failed for {cve_id}: {e}")
         return []
+
+
+# --- CWE-to-keyword mapping for relevance filtering ---
+def _get_cwe_keywords(cwe_id: str) -> list:
+    if not cwe_id or cwe_id == "N/A":
+        return []
+    cwe_map = {
+        "CWE-79":  ["xss", "cross-site", "injection"],
+        "CWE-89":  ["sql", "injection", "sqli"],
+        "CWE-502": ["deserialization", "gadget", "serialization"],
+        "CWE-119": ["buffer overflow", "memory corruption"],
+        "CWE-120": ["buffer overflow", "buffer copy"],
+        "CWE-190": ["integer overflow", "overflow"],
+        "CWE-787": ["out-of-bounds", "heap overflow"],
+        "CWE-416": ["use-after-free", "uaf"],
+        "CWE-918": ["ssrf", "request forgery"],
+        "CWE-94":  ["code injection", "eval", "rce"],
+        "CWE-78":  ["command injection", "os command"],
+        "CWE-22":  ["path traversal", "directory traversal"],
+        "CWE-862": ["authorization bypass", "access control"],
+        "CWE-269": ["privilege escalation", "eop"],
+        "CWE-287": ["authentication bypass", "auth bypass"],
+    }
+    return cwe_map.get(cwe_id, [])
 
 _EXPLOITDB_CSV_CACHE = {"data": None}
 
@@ -612,19 +631,24 @@ def fetch_vulners_exploits(cve_id: str) -> list:
                             exploits.append(href)
         if exploits:
             return exploits
-        search_url = "https://vulners.com/api/v3/search/lucene/"
-        query = f'cve:"{cve_id}" AND type:exploit'
-        search_payload = {"query": query, "size": 10}
-        r2 = requests.post(search_url, json=search_payload, headers=headers, timeout=15)
-        if r2.status_code == 200:
-            data2 = r2.json()
-            if data2.get("result") == "OK":
-                hits = data2.get("data", {}).get("search", [])
-                for hit in hits:
-                    source = hit.get("_source", {})
-                    href = source.get("href") or source.get("vhref")
-                    if href:
-                        exploits.append(href)
+
+        # --- Lucene search is gated by environment variable ---
+        # To enable, set ENABLE_VULNERS_LUCENE=true in ~/.auto-cti/.env
+        if os.getenv("ENABLE_VULNERS_LUCENE", "false").lower() == "true":
+            search_url = "https://vulners.com/api/v3/search/lucene/"
+            query = f'cve:"{cve_id}" AND type:exploit'
+            search_payload = {"query": query, "size": 10}
+            r2 = requests.post(search_url, json=search_payload, headers=headers, timeout=15)
+            if r2.status_code == 200:
+                data2 = r2.json()
+                if data2.get("result") == "OK":
+                    hits = data2.get("data", {}).get("search", [])
+                    for hit in hits:
+                        source = hit.get("_source", {})
+                        href = source.get("href") or source.get("vhref")
+                        if href:
+                            exploits.append(href)
+        # If disabled, simply return whatever we have (likely empty)
         return exploits
     except Exception:
         return []
@@ -760,38 +784,25 @@ def fetch_patch_diff(cve_id: str) -> str:
     return ""
 
 def analyze_diff_with_llm(cve_id: str, diff_text: str) -> str:
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        return "No public exploit code is currently available. The theoretical attack path below is derived from vulnerability mechanics:"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-    prompt = (
-        f"You are a senior reverse engineer. Analyze this Git patch diff for {cve_id}.\n"
-        f"Write exactly 4 sentences explaining the technical vulnerability and a theoretical "
-        f"attack vector based on what was changed in the code.\n"
-        f"Focus on the specific functions, variables, and logic modified. Do not include exploit code.\n\n"
-        f"Diff:\n{diff_text}"
-    )
-    payload = {"contents": [{"parts":[{"text": prompt}]}]}
-    headers = {"Content-Type": "application/json"}
+    llm = triage_llm   # defined at top of file
+    prompt = f"""You are a senior reverse engineer. Analyze this Git patch diff for {cve_id}.
+Write exactly 4 sentences explaining the technical vulnerability and a theoretical
+attack vector based on what was changed in the code.
+Focus on the specific functions, variables, and logic modified. Do not include exploit code.
+
+Diff:
+{diff_text}"""
     try:
-        r = requests.post(url, json=payload, headers=headers, timeout=20)
-        data = r.json()
-        report_text = data['candidates'][0]['content']['parts'][0]['text'].strip()
-
-        bad_phrase_1 = "Theoretical analysis failed."
-        bad_phrase_2 = "Theoretical analysis failed"
-        professional_fallback = "No public exploit code is currently available. The theoretical attack path below is derived from vulnerability mechanics:"
-
-        if bad_phrase_1 in report_text or bad_phrase_2 in report_text:
-            report_text = report_text.replace(bad_phrase_1, professional_fallback)
-            report_text = report_text.replace(bad_phrase_2, professional_fallback)
-        
-        return report_text
+        response = llm(prompt)   # ✅ Correct method
+        # CrewAI's LLM may return a string or an object with .content
+        report_text = response.content if hasattr(response, 'content') else str(response)
+        return report_text.strip()
     except Exception as e:
         print(f"   [LLM Error] Diff analysis failed for {cve_id}: {e}")
         return "No public exploit code is currently available. The theoretical attack path below is derived from vulnerability mechanics:"
-
+    
 def enhance_poc(entry: dict) -> dict:
+    import os  # ensure os is available (it should already be imported at top)
     poc = entry.get("PoC", "")
     cve_id = entry.get("CVE_ID", "")
     print(f"\n🔎 Checking PoC / exploit references for {cve_id}...")
@@ -834,43 +845,87 @@ def enhance_poc(entry: dict) -> dict:
                     if exploit_refs:
                         print(f"   ✅ {cve_id}: Found {len(exploit_refs)} reference(s) on inTheWild.io.")
                     else:
-                        print(f"   [6/12] Searching Sploitus (aggregator) for exploits...")
-                        exploit_refs = fetch_sploitus_exploits(cve_id) if cve_id else []
-                        source_label = "sploitus_exploit"
-                        if exploit_refs:
-                            print(f"   ✅ {cve_id}: Found {len(exploit_refs)} exploit(s) on Sploitus.")
+                        # --- Sploitus is gated by environment variable ---
+                        # To enable Sploitus, set ENABLE_SPLOITUS=true in ~/.auto-cti/.env
+                        if os.getenv("ENABLE_SPLOITUS", "false").lower() == "true":
+                            print(f"   [6/12] Searching Sploitus (aggregator) for exploits...")
+                            exploit_refs = fetch_sploitus_exploits(cve_id) if cve_id else []
+                            source_label = "sploitus_exploit"
+                            if exploit_refs:
+                                print(f"   ✅ {cve_id}: Found {len(exploit_refs)} exploit(s) on Sploitus.")
+                            else:
+                                print(f"   [7/12] Sploitus found nothing. Checking 0day.today archive...")
+                                exploit_refs = fetch_0daytoday_exploits(cve_id) if cve_id else []
+                                source_label = "zeroday_exploit"
+                                if exploit_refs:
+                                    print(f"   ✅ {cve_id}: Found {len(exploit_refs)} exploit(s) in 0day.today archive.")
+                                else:
+                                    print(f"   [8/12] Falling back to Exploit-DB index...")
+                                    exploit_refs = fetch_exploitdb_matches(cve_id) if cve_id else []
+                                    source_label = "exploitdb_verified"
+                                    if exploit_refs:
+                                        print(f"   ✅ {cve_id}: Found {len(exploit_refs)} Exploit-DB entry(ies).")
+                                    else:
+                                        print(f"   [9/12] Checking Live OSINT (Google Custom Search)...")
+                                        exploit_refs = fetch_google_osint_poc(cve_id) if cve_id else []
+                                        source_label = "google_osint_live"
+                                        if exploit_refs:
+                                            print(f"   ✅ {cve_id}: Found {len(exploit_refs)} live OSINT reference(s).")
+                                        else:
+                                            print(f"   [10/12] Checking Rapid7 Metasploit database...")
+                                            exploit_refs = check_rapid7_db(cve_id) if cve_id else []
+                                            source_label = "rapid7_metasploit"
+                                            if exploit_refs:
+                                                print(f"   ✅ {cve_id}: Found Rapid7 module.")
+                                            else:
+                                                print(f"   [11/12] Checking Seebug database...")
+                                                exploit_refs = check_seebug(cve_id) if cve_id else []
+                                                source_label = "seebug_exploit"
+                                                if exploit_refs:
+                                                    print(f"   ✅ {cve_id}: Found reference on Seebug.")
+                                                else:
+                                                    print(f"   [12/12] No external PoC. Attempting Patch Diffing / Reverse Engineering...")
+                                                    diff_text = fetch_patch_diff(cve_id) if cve_id else ""
+                                                    if diff_text:
+                                                        print(f"   ✅ {cve_id}: Found GitHub commit diff. Analyzing root cause via Gemini...")
+                                                        analysis = analyze_diff_with_llm(cve_id, diff_text)
+                                                        entry["PoC"] = analysis + "\n\n**Theoretical Attack Vector (Reverse-Engineered from Patch)**"
+                                                        entry["PoC_Source"] = "patch_reverse_engineering"
+                                                        entry["_poc_gap"] = False
+                                                        return entry
                         else:
-                            print(f"   [7/12] Checking 0day.today archive for exploits...")
+                            # Sploitus is disabled – skip directly to 0day.today
+                            print(f"   [6/12] Skipping Sploitus (disabled). Checking 0day.today archive...")
                             exploit_refs = fetch_0daytoday_exploits(cve_id) if cve_id else []
                             source_label = "zeroday_exploit"
                             if exploit_refs:
                                 print(f"   ✅ {cve_id}: Found {len(exploit_refs)} exploit(s) in 0day.today archive.")
                             else:
-                                print(f"   [8/12] Falling back to Exploit-DB index...")
+                                print(f"   [7/12] Falling back to Exploit-DB index...")
                                 exploit_refs = fetch_exploitdb_matches(cve_id) if cve_id else []
                                 source_label = "exploitdb_verified"
                                 if exploit_refs:
                                     print(f"   ✅ {cve_id}: Found {len(exploit_refs)} Exploit-DB entry(ies).")
                                 else:
-                                    print(f"   [9/12] Checking Live OSINT (Google Custom Search)...")
+                                    print(f"   [8/12] Checking Live OSINT (Google Custom Search)...")
                                     exploit_refs = fetch_google_osint_poc(cve_id) if cve_id else []
                                     source_label = "google_osint_live"
                                     if exploit_refs:
                                         print(f"   ✅ {cve_id}: Found {len(exploit_refs)} live OSINT reference(s).")
                                     else:
-                                        print(f"   [10/12] Checking Rapid7 Metasploit database...")
+                                        print(f"   [9/12] Checking Rapid7 Metasploit database...")
                                         exploit_refs = check_rapid7_db(cve_id) if cve_id else []
                                         source_label = "rapid7_metasploit"
                                         if exploit_refs:
                                             print(f"   ✅ {cve_id}: Found Rapid7 module.")
                                         else:
-                                            print(f"   [11/12] Checking Seebug database...")
+                                            print(f"   [10/12] Checking Seebug database...")
                                             exploit_refs = check_seebug(cve_id) if cve_id else []
                                             source_label = "seebug_exploit"
                                             if exploit_refs:
                                                 print(f"   ✅ {cve_id}: Found reference on Seebug.")
                                             else:
-                                                print(f"   [12/12] No external PoC. Attempting Patch Diffing / Reverse Engineering...")
+                                                print(f"   [11/12] No external PoC. Attempting Patch Diffing / Reverse Engineering...")
                                                 diff_text = fetch_patch_diff(cve_id) if cve_id else ""
                                                 if diff_text:
                                                     print(f"   ✅ {cve_id}: Found GitHub commit diff. Analyzing root cause via Gemini...")
@@ -1195,7 +1250,7 @@ if __name__ == "__main__":
             removed_any = False
             for line in lines:
                 stripped = line.strip()
-                if stripped.startswith("- [https://github.com/](https://github.com/)") and stripped[2:].strip() in suspicious_repos:
+                if stripped.startswith("- https://github.com/")and stripped[2:].strip() in suspicious_repos:
                     removed_any = True
                     continue
                 kept_lines.append(line)
@@ -1252,3 +1307,4 @@ if __name__ == "__main__":
         with open(output_file_path, 'w', encoding='utf-8') as f:
             f.write(raw_result)
         print(f"Raw output saved: {output_file_path}")
+

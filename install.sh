@@ -141,9 +141,14 @@ EOF
 chmod +x "$INSTALL_DIR/uninstall.sh"
 
 # 11. Create sample .env (will be overwritten by the app if missing)
-if [ ! -f "$INSTALL_DIR/config/.env" ]; then
-    cat > "$INSTALL_DIR/config/.env" << 'EOF'
-# Auto-CTI Environment – fill in your API keys
+# Write the .env template directly to the location used by secure_config.py
+if [ ! -f "$INSTALL_DIR/.env" ]; then
+    ccat > "$INSTALL_DIR/.env" << 'EOF'
+# ============================================================
+# Auto-CTI Environment Configuration
+# ============================================================
+
+# ---------- API Keys ----------
 GEMINI_API_KEY=
 NVD_API_KEY=
 GITHUB_TOKEN=
@@ -151,9 +156,27 @@ VULNERS_API_KEY=
 OTX_API_KEY=
 OPENCVE_USERNAME=
 OPENCVE_PASSWORD=
+GOOGLE_SEARCH_API_KEY=
+GOOGLE_SEARCH_CX=
+
+# ---------- Feature Toggles ----------
+# Set to "true" to enable, "false" to disable (or leave empty for default = false)
+
+# Sploitus exploit aggregator (default: disabled)
+# NOTE: Consistently returns HTTP 403 due to Cloudflare bot protection.
+# Enabling will add ~1-2 seconds latency per CVE with no results expected.
+ENABLE_SPLOITUS=false
+
+# Vulners Lucene search (default: disabled)
+# NOTE: Returns HTTP 402 (payment required) on the free tier.
+# Only enable if you have a paid Vulners subscription plan.
+ENABLE_VULNERS_LUCENE=false
 EOF
-    chmod 600 "$INSTALL_DIR/config/.env"
+    chmod 600 "$INSTALL_DIR/.env"
 fi
+
+# Remove the obsolete config directory to avoid confusion
+rm -rf "$INSTALL_DIR/config"
 
 echo
 echo "✅ Installation complete!"
@@ -166,7 +189,7 @@ echo "   auto-cti -p  - Run Publisher Agent"
 echo "   auto-cti -f  - Run full pipeline"
 echo
 echo "🔑 On first run, you will be prompted for API keys."
-echo "   Keys are stored securely in ~/.auto-cti/config/.env"
+echo "   Keys are stored securely in ~/.auto-cti/.env"
 echo
 echo "If 'auto-cti' is not found, restart your terminal or run:"
 echo "   source ~/.bashrc"

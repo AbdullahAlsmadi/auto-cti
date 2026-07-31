@@ -251,7 +251,7 @@ class NISTSearchTool(BaseTool):
         try:
             print("DEBUG - Trying GitHub Advisory Database (GraphQL, paginated)...")
             TARGET_COUNT = DESIRED_CVE_COUNT
-            MAX_PAGES = 10
+            MAX_PAGES = 30
             verified_cves = []
             seen_cve_ids = set()
             cursor = None
@@ -266,7 +266,7 @@ class NISTSearchTool(BaseTool):
                 after_clause = f', after: "{cursor}"' if cursor else ""
                 query_body = f"""
                 {{
-                  securityAdvisories(first: 50, orderBy: {{field: PUBLISHED_AT, direction: DESC}}{after_clause}) {{
+                  securityAdvisories(first: 100, orderBy: {{field: PUBLISHED_AT, direction: DESC}}{after_clause}) {{
                     pageInfo {{ hasNextPage endCursor }}
                     nodes {{
                       ghsaId

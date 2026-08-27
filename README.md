@@ -22,6 +22,10 @@
 - [Project Structure](#project-structure)
 - [Prerequisites](#prerequisites)
 - [Installation & Setup](#installation--setup)
+  - [Linux (native)](#-linux-native)
+  - [macOS](#-macos)
+  - [Windows — Plain WSL terminal](#-windows--plain-wsl-terminal)
+  - [Windows — VS Code (WSL extension)](#-windows--vs-code-wsl-extension)
 - [Configuration](#configuration)
 - [Running the System](#running-the-system)
 - [Output & Reports](#output--reports)
@@ -258,7 +262,7 @@ Auto_CTI/
 
 ## Prerequisites
 
-- **Operating System:** Linux (`install.sh`/`uninstall.sh` are Bash-based; tested on Arch Linux)
+- **Operating System:** Linux (`install.sh`/`uninstall.sh` are Bash-based; tested on Arch Linux) or macOS. **Windows users:** run everything inside **WSL2** (plain WSL terminal or VS Code's WSL-connected terminal) — see the [Installation & Setup](#installation--setup) guides below. Native cmd.exe/PowerShell is not supported.
 - **Python Version:** `install.sh` currently invokes `python3.12` explicitly for the venv — ensure Python 3.12 is installed, independent of your system's default `python3`
 - **API Keys:** Required for full functionality:
   - Google Gemini API (free tier available)
@@ -273,24 +277,203 @@ Auto_CTI/
 
 ## Installation & Setup
 
-**1. Clone the repository:**
+Pick the guide that matches your system. Every path ends with the same three things: **Git installed → repo cloned → `install.sh` run.**
+
+- [🐧 Linux (native)](#-linux-native)
+- [🍎 macOS](#-macos)
+- [🪟 Windows — Plain WSL terminal](#-windows--plain-wsl-terminal)
+- [🪟 Windows — VS Code (WSL extension)](#-windows--vs-code-wsl-extension)
+
+---
+
+### 🐧 Linux (native)
+
+**Step 1 — Check if Git is already installed:**
+```bash
+git --version
+```
+If you see a version number, skip to Step 2. If you get "command not found", install Git first:
+```bash
+# Debian/Ubuntu
+sudo apt update && sudo apt install -y git
+
+# Fedora
+sudo dnf install -y git
+
+# Arch
+sudo pacman -S --noconfirm git
+```
+
+**Step 2 — Clone the repository:**
 ```bash
 git clone https://github.com/AbdullahAlsmadi/auto-cti.git
 cd auto-cti
 ```
 
-**2. Run the installation script:**
+**Step 3 — Run the installer:**
 ```bash
 chmod +x install.sh
 ./install.sh
 ```
-This creates `~/.auto-cti/venv` (Python 3.12), copies `src/` into `~/.auto-cti/`, and installs the global `auto-cti` command wrapper into `~/.local/bin`.
+This creates `~/.auto-cti/venv` (Python 3.12), copies `src/` into `~/.auto-cti/`, and installs the global `auto-cti` command into `~/.local/bin`.
 
-**3. Configure your API keys:**
-Edit the `.env` file directly:
+**Step 4 — Add your API keys:**
 ```bash
 nano ~/.auto-cti/.env
 ```
+
+**Step 5 — Run it:**
+```bash
+auto-cti -d      # launch the dashboard
+```
+
+---
+
+### 🍎 macOS
+
+**Step 1 — Check if Git is already installed:**
+```bash
+git --version
+```
+If macOS prompts you to install the **Xcode Command Line Tools**, click Install — this includes Git. Alternatively, if you use [Homebrew](https://brew.sh/):
+```bash
+brew install git
+```
+
+**Step 2 — Clone the repository:**
+```bash
+git clone https://github.com/AbdullahAlsmadi/auto-cti.git
+cd auto-cti
+```
+
+**Step 3 — Run the installer:**
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+> Note: `install.sh` auto-detects `apt`/`dnf`/`pacman` for package installation, which don't exist on macOS. If it can't install a missing dependency (e.g. `gcc`, `bc`), install it manually with `brew install <package>` and re-run `./install.sh`.
+
+**Step 4 — Add your API keys:**
+```bash
+nano ~/.auto-cti/.env
+```
+
+**Step 5 — Run it:**
+```bash
+auto-cti -d
+```
+
+---
+
+### 🪟 Windows — Plain WSL terminal
+
+`install.sh` / `uninstall.sh` are Bash scripts that depend on a real Linux kernel (`apt`, `gcc`, `make`, etc.), so **native `cmd.exe` or PowerShell will not work.** You need WSL2 (Windows Subsystem for Linux). Follow every step below in order — no prior WSL or Git experience assumed.
+
+**Step 1 — Install WSL2:**
+Open **PowerShell as Administrator** (right-click the Start button → "Terminal (Admin)" or "PowerShell (Admin)") and run:
+```powershell
+wsl --install
+```
+This installs WSL2 with Ubuntu by default. **Restart your PC** if prompted.
+
+**Step 2 — Open your Linux terminal:**
+After restarting, open the Start Menu and launch **"Ubuntu"**. The first time, it will ask you to create a Linux username and password — this is separate from your Windows login, pick anything you'll remember.
+
+You're now inside a real Linux shell running on Windows. All following commands go here, not in PowerShell/cmd.
+
+**Step 3 — Install Git (usually already included, but confirm):**
+```bash
+git --version
+```
+If missing:
+```bash
+sudo apt update
+sudo apt install -y git
+```
+
+**Step 4 — Clone the repository:**
+```bash
+git clone https://github.com/AbdullahAlsmadi/auto-cti.git
+cd auto-cti
+```
+
+**Step 5 — Run the installer:**
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+**Step 6 — Add your API keys:**
+```bash
+nano ~/.auto-cti/.env
+```
+(In `nano`: type your keys, then press `Ctrl+O` then `Enter` to save, and `Ctrl+X` to exit.)
+
+**Step 7 — Run it:**
+```bash
+auto-cti -d
+```
+Streamlit prints a URL like `http://localhost:8501` — WSL2 auto-forwards `localhost`, so just open that link in your normal Windows browser (Chrome/Edge).
+
+---
+
+### 🪟 Windows — VS Code (WSL extension)
+
+This is the same install as above, but done through VS Code so you get a full code editor, file explorer, and debugger pointed at your Linux files — recommended if you're going to modify the source code.
+
+**Prerequisite:** Complete **Step 1** and **Step 2** from the WSL guide above first (install WSL2 + launch Ubuntu once so it's set up).
+
+**Step 1 — Install VS Code on Windows:**
+Download and install it from [code.visualstudio.com](https://code.visualstudio.com/) if you don't already have it.
+
+**Step 2 — Install the WSL extension:**
+Open VS Code → click the Extensions icon in the left sidebar (or `Ctrl+Shift+X`) → search **"WSL"** → install the official **"WSL"** extension by Microsoft (part of the Remote Development pack).
+
+**Step 3 — Connect VS Code to WSL:**
+Click the green `><` icon in the bottom-left corner of VS Code → choose **"Connect to WSL"** (or `Ctrl+Shift+P` → type `WSL: Connect to WSL` → Enter). A new VS Code window opens — the bottom-left corner will now say **"WSL: Ubuntu"**, confirming you're inside Linux.
+
+**Step 4 — Open the integrated terminal:**
+Press `` Ctrl+` `` (backtick) to open the terminal panel. This terminal runs Bash inside WSL, not PowerShell/cmd — you can tell because the prompt looks like `username@machine:~$`.
+
+**Step 5 — Confirm Git, then clone the repository:**
+```bash
+git --version
+# if missing: sudo apt update && sudo apt install -y git
+
+git clone https://github.com/AbdullahAlsmadi/auto-cti.git
+cd auto-cti
+```
+
+**Step 6 — Open the cloned folder in VS Code:**
+```bash
+code .
+```
+This reopens VS Code (still WSL-connected) with the `auto-cti` folder loaded in the file explorer.
+
+**Step 7 — Run the installer (from the same integrated terminal):**
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+**Step 8 — Add your API keys:**
+You can now edit `~/.auto-cti/.env` directly in the VS Code editor (File → Open File → type the path), or from the terminal:
+```bash
+nano ~/.auto-cti/.env
+```
+
+**Step 9 — Run it:**
+```bash
+auto-cti -d
+```
+Open the printed `http://localhost:8501` link in your Windows browser.
+
+> ⚠️ **Do not** run `install.sh` from Git Bash, MSYS2, or WSL1 — it depends on `apt`/`pacman`/`dnf` and a real Linux kernel (for `gcc`/`make` builds), which only WSL2 provides. Native Windows Python virtual environments are not supported by this installer.
+
+---
+
+## Configuration
 
 ---
 

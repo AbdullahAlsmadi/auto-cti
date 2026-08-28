@@ -19,6 +19,7 @@ import datetime
 import re
 import sys
 import time
+from urllib.parse import urlparse
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -261,7 +262,8 @@ def score_source_label(source: str) -> str:
 def reference_label(url: str) -> str:
     if "github.com/advisories?query=" in url:
         return "Fallback Search"
-    if "tenable.com" in url:
+    host = urlparse(url).hostname
+    if host and (host == "tenable.com" or host.endswith(".tenable.com")):
         return "Third-Party Verified (Tenable)"
     return "Official"
 

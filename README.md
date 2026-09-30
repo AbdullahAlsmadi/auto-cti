@@ -222,6 +222,9 @@ Provides:
 ```
 Auto_CTI/
 ├── src/                      # Core system modules and agents
+│   ├── tools/
+│   │   ├── __init__.py
+│   │   └── verify_urgency.py # Urgency Score verification tool
 │   ├── utils/
 │   │   ├── __init__.py
 │   │   └── secure_config.py  # Environment and key management
@@ -528,12 +531,14 @@ auto-cti
    auto-cti -t  - Run Triage Agent
    auto-cti -p  - Run Publisher Agent
    auto-cti -f  - Run full pipeline
+   auto-cti -v  - Verify Urgency Score formula
    auto-cti -u  - Remove Auto-CTI completely
 ```
 
 - `auto-cti -d` — Launches the Streamlit SOC dashboard at `http://localhost:8501`.
 - `auto-cti -s` / `-t` / `-p` — Run an individual agent in isolation.
 - `auto-cti -f` — Runs Scout → Triage → Publisher sequentially in the terminal.
+- `auto-cti -v` — Recomputes the Urgency Score of the latest triage report and checks it against the stored values. Pass a folder path to verify a batch of runs (e.g., `auto-cti -v "/path/to/runs"`).
 - `auto-cti -u` — Uninstalls Auto-CTI completely.
 
 ### Manual / Development Mode

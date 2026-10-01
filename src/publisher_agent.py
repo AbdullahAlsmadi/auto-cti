@@ -22,7 +22,7 @@ import time
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from crewai import Agent, Task, Crew, LLM
+from crewai import Agent, Task, Crew, LLM # type: ignore
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
 
@@ -31,7 +31,7 @@ from utils.secure_config import init_config
 
 init_config()
 
-sys.stdout.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8') # type: ignore
 
 today_date = datetime.datetime.now().strftime("%B %d, %Y")
 
@@ -317,7 +317,7 @@ def generate_academic_charts(severity_stats, poc_found, total_cves, output_dir):
     
     for bar in bars:
         yval = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width()/2, yval + 0.5, int(yval), ha='center', va='bottom', fontsize=9, fontweight='bold')
+        plt.text(bar.get_x() + bar.get_width()/2, yval + 0.5, int(yval), ha='center', va='bottom', fontsize=9, fontweight='bold') # type: ignore
                  
     plt.tight_layout()
     bar_chart_path = os.path.join(output_dir, 'severity_chart.png')
@@ -431,7 +431,7 @@ def render_cvss_breakdown_table(pdf: FPDF, breakdown: dict, vector: str):
             pdf.set_font("Helvetica", '', 8)
             pdf.set_text_color(50, 50, 50)
             pdf.set_fill_color(243, 244, 246)
-            pdf.cell(col_label_w, row_h, text=clean_for_pdf(right_label),
+            pdf.cell(col_label_w, row_h, text=clean_for_pdf(right_label), # type: ignore
                      border=1, fill=True, new_x=XPos.RIGHT, new_y=YPos.TOP)
             pdf.set_font("Helvetica", 'B', 8)
             pdf.set_text_color(*rc)

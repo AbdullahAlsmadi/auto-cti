@@ -20,9 +20,9 @@ import glob
 import time
 import datetime
 import subprocess
-import streamlit as st
+import streamlit as st # type: ignore
 import pandas as pd
-import streamlit.components.v1 as components
+import streamlit.components.v1 as components # type: ignore
 
 # Ensure we can import utils from src/
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -179,7 +179,7 @@ def get_severity_stats():
         df = pd.DataFrame(triage_data)
         total = len(df)
         if "CVSS_Severity" in df.columns:
-            sev = df["CVSS_Severity"].astype(str).str.lower()
+            sev = df["CVSS_Severity"].astype(str).str.lower() # type: ignore
             return total, sev.eq("critical").sum(), sev.eq("high").sum(), sev.eq("medium").sum()
         return total, "-", "-", "-"
     return "-", "-", "-", "-"
@@ -489,7 +489,7 @@ def display_statistics(T):
         }
         display_cols = [c for c in rename_map if c in df.columns]
         st.dataframe(
-            df[display_cols].rename(columns=rename_map),
+            df[display_cols].rename(columns=rename_map), # type: ignore
             use_container_width=True,
             hide_index=True
         )

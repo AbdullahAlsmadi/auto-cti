@@ -17,7 +17,7 @@ import sys
 import os
 import time
 import subprocess
-from crewai.flow.flow import Flow, start, listen
+from crewai.flow.flow import Flow, start, listen # type: ignore
 
 # ⏱️ Record the exact start time of the entire pipeline
 os.environ["PIPELINE_START_TIME"] = str(time.time())

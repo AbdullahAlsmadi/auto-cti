@@ -24,10 +24,10 @@ import sys
 import csv
 import io
 import threading
-import litellm
-from crewai import Agent, Task, Crew, LLM
-from cvss import CVSS3 
-from bs4 import BeautifulSoup 
+import litellm # type: ignore
+from crewai import Agent, Task, Crew, LLM # type: ignore
+from cvss import CVSS3  # type: ignore
+from bs4 import BeautifulSoup  # type: ignore
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -35,7 +35,7 @@ from utils.secure_config import init_config
 
 init_config()
 
-sys.stdout.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8') # type: ignore
 
 today_date = datetime.datetime.now().strftime("%B %d, %Y")
 
@@ -216,7 +216,7 @@ def verify_tenable_result(cve_id: str, tenable_data: dict, page_text: str) -> bo
     except Exception as e:
         print(f"   ⚠️ Tenable check REJECTED for {cve_id}: vector '{vector}' invalid ({e}).")
         return False
-    if abs(recomputed_score - float(scraped_score)) > 0.2:
+    if abs(recomputed_score - float(scraped_score)) > 0.2: # type: ignore
         print(f"   ⚠️ Tenable check REJECTED for {cve_id}: "
               f"scraped score {scraped_score} != vector-derived score {recomputed_score}.")
         return False
@@ -311,7 +311,7 @@ def enforce_authoritative_cvss(entry: dict, source_info: dict) -> dict:
     cvss_source = source_info["cvss_source"]
     vector = source_info.get("vector", "N/A")
     if cvss_source not in ("nvd_verified", "cna_official", "tenable_verified", "opencve_verified", "cve_org_official") or not vector or vector == "N/A":
-        return None
+        return None # type: ignore
     entry["CVSS_Vector"] = vector
     entry["CVSS_Breakdown"] = parse_cvss_vector(vector)
     try:
@@ -577,11 +577,11 @@ def fetch_exploitdb_matches(cve_id: str) -> list:
             headers = {"User-Agent": "Auto-CTI-Agent/1.0"}
             r = requests.get(url, timeout=30, headers=headers)
             if r.status_code == 200:
-                _EXPLOITDB_CSV_CACHE["data"] = r.text
+                _EXPLOITDB_CSV_CACHE["data"] = r.text # type: ignore
             else:
-                _EXPLOITDB_CSV_CACHE["data"] = ""
+                _EXPLOITDB_CSV_CACHE["data"] = "" # type: ignore
         except Exception:
-            _EXPLOITDB_CSV_CACHE["data"] = ""
+            _EXPLOITDB_CSV_CACHE["data"] = "" # type: ignore
     csv_text = _EXPLOITDB_CSV_CACHE["data"]
     if not csv_text:
         return []
@@ -1202,7 +1202,7 @@ if __name__ == "__main__":
                 entry = recalculate_score_from_vector(entry)
             entry = verify_and_correct_cvss(entry)
             entry = ensure_severity(entry)
-            entry = recalculate_urgency_score(entry, raw_threat_data)
+            entry = recalculate_urgency_score(entry, raw_threat_data) # type: ignore
             entry = enhance_poc(entry)
             print(f"AFTER RECALC: {entry['CVE_ID']} -> score={entry['CVSS_Score']} vector={entry['CVSS_Vector']}")
             entry["References"] = build_verified_references(cve_id)

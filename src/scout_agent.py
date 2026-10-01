@@ -19,9 +19,9 @@ import re
 import time
 import requests
 import datetime
-from crewai import Agent, Task, Crew, LLM
-from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
+from crewai import Agent, Task, Crew, LLM # type: ignore
+from crewai.tools import BaseTool # type: ignore
+from pydantic import BaseModel, Field # type: ignore
 from typing import List
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import sys
@@ -31,7 +31,7 @@ from utils.secure_config import init_config
 
 init_config()
 
-sys.stdout.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8') # type: ignore
 
 today_date = datetime.datetime.now().strftime("%B %d, %Y")
 print(f"Scout Agent started. Today: {today_date}")
@@ -403,7 +403,7 @@ class TenableSearchTool(BaseTool):
         "Pass a JSON string containing 'cve_id', 'nist_score', and 'nist_vector'."
     )
 
-    def _run(self, query: str) -> str:
+    def _run(self, query: str) -> str: # type: ignore
         try:
             try:
                 params = json.loads(query)

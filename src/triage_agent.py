@@ -405,6 +405,7 @@ def recalculate_urgency_score(entry: dict, raw_threat_data: list) -> dict:
         return entry
     raw_entry = next((item for item in raw_threat_data if item.get("cve_id") == cve_id), {})
     pulse_count = raw_entry.get("alienvault_pulse_count", 0)
+    entry["OTX_Pulse_Count"] = pulse_count   # persist the formula input with the result
     base = cvss * 9
     if base > 90:
         base = 90

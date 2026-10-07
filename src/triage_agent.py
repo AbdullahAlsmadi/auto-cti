@@ -39,6 +39,16 @@ sys.stdout.reconfigure(encoding='utf-8') # type: ignore
 
 today_date = datetime.datetime.now().strftime("%B %d, %Y")
 
+def repair_json_escapes(text: str) -> str:
+    """Fix invalid backslash escapes in LLM-generated JSON (e.g. \\d, \\., C:\\path).
+
+    Valid JSON escapes (\\" \\\\ \\/ \\b \\f \\n \\r \\t \\uXXXX) are kept as they are;
+    any other lone backslash is doubled so json.loads() can parse the text.
+    """
+    return re.sub(r'(\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4}))|\\',
+                  lambda m: m.group(1) or "\\\\", text)
+
+
 DATA_DIR = os.path.expanduser("~/.auto-cti/data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -1180,7 +1190,13 @@ if __name__ == "__main__":
     raw_result = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', raw_result)
 
     try:
-        parsed = json.loads(raw_result)
+        try:
+            parsed = json.loads(raw_result)
+        except json.JSONDecodeError as first_err:
+            # LLM output may contain invalid backslash escapes: repair and retry once
+            print(f"Note: JSON parse failed ({first_err}). Repairing invalid escapes and retrying...")
+            parsed = json.loads(repair_json_escapes(raw_result))
+            print("Note: JSON repaired successfully.")
 
         def process_entry(entry):
             cve_id = entry.get("CVE_ID") or entry.get("cve_id") or ""
@@ -1316,3 +1332,4 @@ if __name__ == "__main__":
         with open(output_file_path, 'w', encoding='utf-8') as f:
             f.write(raw_result)
         print(f"Raw output saved: {output_file_path}")
+        sys.exit(1)   # signal failure so the dashboard / pipeline stops here

@@ -759,6 +759,11 @@ def check_rapid7_db(cve_id: str) -> list:
     return []
 
 def check_seebug(cve_id: str) -> list:
+    # Disabled by default: the "ssv-" substring check produced false positives
+    # (a search-page URL was reported as a PoC). To enable, set
+    # ENABLE_SEEBUG=true in ~/.auto-cti/.env after fixing the match logic.
+    if os.getenv("ENABLE_SEEBUG", "false").lower() != "true":
+        return []
     search_url = f"https://www.seebug.org/search/?keyword={cve_id}"
     headers = {"User-Agent": "Mozilla/5.0"}
     try:

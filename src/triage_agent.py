@@ -40,10 +40,17 @@ sys.stdout.reconfigure(encoding='utf-8') # type: ignore
 today_date = datetime.datetime.now().strftime("%B %d, %Y")
 
 def repair_json_escapes(text: str) -> str:
+<<<<<<< HEAD
     """Fix invalid backslash escapes in LLM-generated JSON (e.g. \\d, \\., C:\\path).
 
     Valid JSON escapes (\\" \\\\ \\/ \\b \\f \\n \\r \\t \\uXXXX) are kept as they are;
     any other lone backslash is doubled so json.loads() can parse the text.
+=======
+    """Fix invalid backslash escapes in LLM-generated JSON.
+
+    Valid JSON escapes are kept; any other lone backslash is doubled
+    so that json.loads() can parse the text.
+>>>>>>> 8e2d29a (update)
     """
     return re.sub(r'(\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4}))|\\',
                   lambda m: m.group(1) or "\\\\", text)

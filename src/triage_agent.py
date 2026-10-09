@@ -462,65 +462,88 @@ def fetch_exploit_references(cve_id: str) -> list:
             print(f"   Exploit-ref CVE.org lookup failed for {cve_id}: {e}")
     return found
 
+def _cve_in_text(cve_id: str, text: str) -> bool:
+    """True if the exact CVE ID appears in text (not as a prefix of a longer ID)."""
+    return re.search(re.escape(cve_id) + r'(?!\d)', text or "", re.IGNORECASE) is not None
+
+
+# Repositories that only mirror or aggregate CVE data: they hold a page for almost
+# every CVE and therefore say nothing about the existence of a proof of concept.
+_AGGREGATOR_REPOS = {"trickest/cve", "olbat/nvdcve"}
+
+
+def _readme_mentions_cve(full_name: str, cve_id: str, headers: dict) -> bool:
+    """Check whether a repository README contains the exact CVE ID."""
+    try:
+        h = dict(headers)
+        h["Accept"] = "application/vnd.github.raw+json"
+        r = requests.get(f"https://api.github.com/repos/{full_name}/readme", headers=h, timeout=15)
+        if r.status_code == 200:
+            return _cve_in_text(cve_id, r.text[:200000])
+    except Exception:
+        pass
+    return False
+
+
 def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
+    """Find public PoC material on GitHub. Every result must mention the exact CVE ID.
+
+    Changes from the first version (false-positive fixes):
+      - aggregator repos (trickest/cve, olbat/nvdcve) are no longer queried or accepted;
+      - GitHub Advisory references are no longer returned (they are not PoC material);
+      - repository search results are kept only if the exact CVE ID appears in the
+        repository name, description or README;
+      - code-search results are kept only if the file path contains the exact CVE ID.
+    """
     try:
         headers = {"Accept": "application/vnd.github+json"}
         gh_token = os.getenv("GITHUB_TOKEN")
         if gh_token:
             headers["Authorization"] = f"Bearer {gh_token}"
         results = []
-        
-        # 1. Curated repositories (high confidence)
+
+        # 1. Curated PoC indexes: the matching file name must contain the exact CVE ID
         curated_repos = [
             "nomi-sec/PoC-in-GitHub",
-            "trickest/cve",
             "sirius306/CVE-PoC-Hub",
             "openpoc/openpoc",
             "muratayusuke/known-exploits"
         ]
         for repo in curated_repos:
             query = f'repo:{repo} {cve_id}'
-            url = "https://api.github.com/search/code"
-            r = requests.get(url, headers=headers, params={"q": query, "per_page": 3}, timeout=15)
+            r = requests.get("https://api.github.com/search/code", headers=headers,
+                             params={"q": query, "per_page": 3}, timeout=15)
             if r.status_code == 200:
                 for item in r.json().get("items", []):
                     file_url = item.get("html_url")
-                    if file_url and file_url not in results:
+                    if file_url and file_url not in results and _cve_in_text(cve_id, item.get("path", "")):
                         results.append(file_url)
             time.sleep(0.2)
         if results:
             return results[:5]
-        
-        # 2. GitHub Advisory Database
-        url = f"https://api.github.com/advisories/{cve_id}"
-        r = requests.get(url, headers=headers, timeout=15)
-        if r.status_code == 200:
-            data = r.json()
-            references = []
-            advisory_url = data.get("html_url")
-            if advisory_url:
-                references.append(advisory_url)
-            for ref in data.get("references", []):
-                if ref.get("url"):
-                    references.append(ref.get("url"))
-            if references:
-                return references
-        
-        # 3. General repository search (with CWE relevance filtering)
+
+        # 2. General repository search (exact CVE ID required + CWE relevance filtering)
         cwe_keywords = _get_cwe_keywords(cwe_id)   # CWE -> keyword mapping
-        
         query = f'{cve_id} in:name,description,readme'
-        url = "https://api.github.com/search/repositories"
-        r2 = requests.get(url, headers=headers, params={"q": query, "sort": "stars", "order": "desc", "per_page": 20}, timeout=15)
+        r2 = requests.get("https://api.github.com/search/repositories", headers=headers,
+                          params={"q": query, "sort": "stars", "order": "desc", "per_page": 20}, timeout=15)
         if r2.status_code == 200:
-            items = r2.json().get("items", [])
+            readme_checks = 0
             filtered_repos = []
-            for repo in items:
+            for repo in r2.json().get("items", []):
                 repo_url = repo.get("html_url")
-                if not repo_url or repo_url in results:
+                full_name = (repo.get("full_name") or "")
+                if not repo_url or repo_url in results or full_name.lower() in _AGGREGATOR_REPOS:
                     continue
                 name = (repo.get("name") or "").lower()
                 desc = (repo.get("description") or "").lower()
+                # The exact CVE ID must be present (name/description first, README as fallback)
+                mentions = _cve_in_text(cve_id, name) or _cve_in_text(cve_id, desc)
+                if not mentions and readme_checks < 5:
+                    readme_checks += 1
+                    mentions = _readme_mentions_cve(full_name, cve_id, headers)
+                if not mentions:
+                    continue
                 relevant = False
                 if not cwe_keywords:
                     if "poc" in desc or "exploit" in desc or "proof of concept" in desc:
@@ -534,17 +557,20 @@ def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
                     filtered_repos.append(repo_url)
             results.extend(filtered_repos[:5])
 
-        # 4. Code search fallback
+        # 3. Code search fallback: the file path must contain the exact CVE ID
         if len(results) < 3:
-            code_query = f'{cve_id} in:file'
-            r3 = requests.get("https://api.github.com/search/code", headers=headers, params={"q": code_query, "per_page": 10}, timeout=15)
+            r3 = requests.get("https://api.github.com/search/code", headers=headers,
+                              params={"q": f'{cve_id} in:file', "per_page": 10}, timeout=15)
             if r3.status_code == 200:
                 for item in r3.json().get("items", []):
                     file_url = item.get("html_url")
                     if not file_url or file_url in results:
                         continue
+                    repo_name = ((item.get("repository") or {}).get("full_name") or "").lower()
                     path = item.get("path", "").lower()
-                    if any(ext in path for ext in ["poc", "exploit", "cve", "payload", "rce", "proof"]):
+                    if repo_name in _AGGREGATOR_REPOS or not _cve_in_text(cve_id, path):
+                        continue
+                    if any(ext in path for ext in ["poc", "exploit", "payload", "rce", "proof"]):
                         results.append(file_url)
                         if len(results) >= 5:
                             break

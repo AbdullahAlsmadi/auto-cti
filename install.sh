@@ -118,6 +118,8 @@ elif [ "$1" == "-u" ]; then
     "$HOME/.auto-cti/uninstall.sh"
 elif [ "$1" == "-v" ]; then
     python src/tools/verify_urgency.py "${@:2}"
+elif [ "$1" == "-b" ]; then
+    python src/tools/poc_breakdown.py "${@:2}"
 else
     echo "🛡️ Auto-CTI Command Guide:"
     echo "   auto-cti -d  - Launch interactive dashboard"
@@ -127,6 +129,7 @@ else
     echo "   auto-cti -f  - Run full pipeline"
     echo "   auto-cti -u  - Remove Auto-CTI completely"
     echo "   auto-cti -v  - Verify Urgency Score formula"
+    echo "   auto-cti -b  - PoC breakdown (external / patch-diff / none)"
 fi
 EOF
 chmod +x "$HOME/.local/bin/auto-cti"

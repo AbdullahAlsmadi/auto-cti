@@ -138,10 +138,48 @@ def compute_severity_stats(data: list) -> dict:
     return stats
 
 cve_summary = build_cve_summary(triage_data)
+
+# Refuse to build a briefing from an empty triage report
+if not cve_summary:
+    print("Error: the triage report contains 0 CVEs. Aborting: no briefing generated.")
+    sys.exit(1)
 severity_stats = compute_severity_stats(triage_data)
 
 total_cves = len(cve_summary)
-poc_found = sum(1 for c in cve_summary if c.get("poc_source") != "llm_only")
+# --- PoC breakdown: four honest categories instead of one "PoC found" figure ---
+_NON_POC_LINK = re.compile(
+    r"trickest/cve|olbat/nvdcve|/advisories|/security/advisories|/commit/|/pull/|"
+    r"seebug\.org/search|nvd\.nist\.gov|cve\.org|tenable\.com|sec-dojo-com/cve-poc",
+    re.IGNORECASE)
+
+def _is_non_poc_link(link: str) -> bool:
+    low = link.lower()
+    if _NON_POC_LINK.search(low):
+        return True
+    if "/blob/" in low:   # source files count only if they name a PoC/exploit or are in the nomi-sec index
+        return not (re.search(r"poc|exploit", low.split("/blob/", 1)[1])
+                    or "nomi-sec/poc-in-github" in low)
+    return False
+
+def classify_poc(entry: dict) -> str:
+    source = entry.get("poc_source", "llm_only")
+    if source == "llm_only":
+        return "no_poc"
+    if source == "patch_reverse_engineering":
+        return "patch_analysis"
+    links = [l[2:].strip() for l in str(entry.get("poc", "")).splitlines() if l.startswith("- http")]
+    return "external_plausible" if any(not _is_non_poc_link(l) for l in links) else "external_non_poc"
+
+POC_LABELS = {
+    "external_plausible": "external reference found, review manually",
+    "patch_analysis": "derived from patch analysis, no public exploit",
+    "external_non_poc": "no public exploit, non-PoC references only",
+    "no_poc": "no public exploit found",
+}
+poc_counts = {k: 0 for k in POC_LABELS}
+for _c in cve_summary:
+    poc_counts[classify_poc(_c)] += 1
+poc_found = poc_counts["external_plausible"]   # strict external PoC count
 poc_rate = (poc_found / total_cves * 100) if total_cves else 0
 verified_sources = {"nvd_verified", "cna_official", "tenable_verified", "opencve_verified", "cve_org_official"}
 verified_count = sum(1 for c in cve_summary if c.get("score_source") in verified_sources)
@@ -313,29 +351,33 @@ def generate_academic_charts(severity_stats, poc_found, total_cves, output_dir):
     
     plt.title('Figure 1: Vulnerability Severity Distribution', fontsize=11, fontweight='bold', pad=10)
     plt.ylabel('Number of CVEs', fontsize=10)
+    plt.ylim(0, max(counts + [1]) * 1.18)
     plt.grid(axis='y', linestyle='--', alpha=0.6)
     
     for bar in bars:
         yval = bar.get_height()
         plt.text(bar.get_x() + bar.get_width()/2, yval + 0.5, int(yval), ha='center', va='bottom', fontsize=9, fontweight='bold') # type: ignore
                  
-    plt.tight_layout()
     bar_chart_path = os.path.join(output_dir, 'severity_chart.png')
     plt.savefig(bar_chart_path, dpi=300, bbox_inches='tight')
     plt.close()
 
     poc_missing = total_cves - poc_found
-    labels = ['PoC Found', 'No PoC Found']
-    sizes = [poc_found, poc_missing]
-    colors_pie = ['#1f77b4', '#d62728']
+    _cats = [('External PoC', poc_counts['external_plausible'], '#1f77b4'),
+             ('Patch analysis (LLM)', poc_counts['patch_analysis'], '#ff7f0e'),
+             ('Non-PoC refs only', poc_counts['external_non_poc'], '#9467bd'),
+             ('No PoC', poc_counts['no_poc'], '#d62728')]
+    _cats = [c for c in _cats if c[1] > 0]
+    labels = [c[0] for c in _cats]
+    sizes = [c[1] for c in _cats]
+    colors_pie = [c[2] for c in _cats]
     
     plt.figure(figsize=(5, 5))
-    plt.pie(sizes, labels=labels, colors=colors_pie, autopct='%1.1f%%', 
-            startangle=90, textprops={'fontsize': 10},
+    plt.pie(sizes, labels=labels, colors=colors_pie, autopct=lambda p: f'{p:.1f}%' if p >= 3 else '', 
+            startangle=90, pctdistance=0.8, textprops={'fontsize': 10},
             wedgeprops={'edgecolor': 'black', 'linewidth': 1, 'width': 0.4})
             
-    plt.title('Figure 2: Proof-of-Concept (PoC) Discovery Rate', fontsize=11, fontweight='bold', pad=10)
-    plt.tight_layout()
+    plt.title('Figure 2: PoC Discovery Breakdown', fontsize=11, fontweight='bold', pad=10)
     pie_chart_path = os.path.join(output_dir, 'poc_chart.png')
     plt.savefig(pie_chart_path, dpi=300, bbox_inches='tight')
     plt.close()
@@ -461,7 +503,7 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
     pdf.set_text_color(100, 116, 139)
     pdf.cell(0, 6, text=clean_for_pdf(f"Report Date: {briefing.get('report_date', today_date)}"),
              new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
-    pdf.cell(0, 6, text=f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')} UTC  |  Classification: TLP:AMBER",
+    pdf.cell(0, 6, text=f"Generated: {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC  |  Classification: TLP:AMBER",
              new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
     pdf.cell(0, 6, text="Prepared by: Auto-CTI Autonomous Threat Intelligence Pipeline",
              new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
@@ -556,9 +598,11 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
     poc_gap = total_cves - poc_found
     pdf.multi_cell(0, 6, text=clean_for_pdf(
         f"Total CVEs analyzed: {total_cves}\n"
-        f"CVEs with publicly available proof-of-concept or exploit references: {poc_found} ({poc_rate:.1f}%)\n"
-        f"CVEs without external references (typical for newly disclosed vulnerabilities): {poc_gap} ({100-poc_rate:.1f}%)\n"
-        "All referenced exploits and PoC materials were verified from authoritative sources (NVD, GitHub, Exploit-DB, Packet Storm, and others)."
+        f"External PoC or exploit reference found (review manually): {poc_counts['external_plausible']} ({poc_counts['external_plausible']/total_cves*100:.1f}%)\n"
+        f"Technical analysis derived from the vendor patch, no public exploit: {poc_counts['patch_analysis']} ({poc_counts['patch_analysis']/total_cves*100:.1f}%)\n"
+        f"Matched only non-PoC references (advisories, source files, aggregators): {poc_counts['external_non_poc']} ({poc_counts['external_non_poc']/total_cves*100:.1f}%)\n"
+        f"No public exploit or patch analysis available: {poc_counts['no_poc']} ({poc_counts['no_poc']/total_cves*100:.1f}%)\n"
+        "Patch-based analyses are model-generated technical narratives, not public exploits. External references are matched automatically and should be reviewed manually before operational use."
     ))
     pdf.ln(4)
     
@@ -572,9 +616,9 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
     pdf.set_font("Helvetica", '', 10)
     pdf.set_text_color(30, 30, 30)
     pdf.multi_cell(0, 6, text=clean_for_pdf(
-        f"All {total_cves} CVSS scores were cross-verified against the NVD, CVE.org, and Tenable databases.\n"
+        f"CVSS scores for {total_cves} CVEs were checked against authoritative sources in priority order (NVD, OpenCVE, CVE.org CNA record, Tenable).\n"
         f"{verified_count} scores ({(verified_count/total_cves*100):.1f}%) were confirmed directly from authoritative records.\n"
-        f"{corrected_count} scores ({(corrected_count/total_cves*100):.1f}%) were refined using complementary data sources to ensure accuracy.\n"
+        f"{corrected_count} scores ({(corrected_count/total_cves*100):.1f}%) had no authoritative score at collection time; they were estimated by the analysis model and recalculated deterministically from the CVSS vector.\n"
         "Each score is tagged with a 'Score Provenance' label for full traceability."
     ))
     pdf.ln(4)
@@ -596,9 +640,9 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
 
     pdf.multi_cell(0, 6, text=clean_for_pdf(
         f"• Total processing time: {runtime_str}\n"
-        f"• Number of PoC/exploit sources queried: 8\n"
-        f"• Sources consulted: NVD, GitHub (curated + general), Vulners, Packet Storm, inTheWild, Sploitus, 0day.today, Exploit-DB\n"
-        f"• PoC discovery success rate: {poc_rate:.1f}%\n"
+        f"• Number of PoC/exploit sources in the discovery waterfall: 12 (plus patch-diff analysis as final fallback)\n"
+        f"• Sources: NVD/CVE.org tagged references, GitHub, Vulners, Packet Storm, inTheWild, 0day.today, Exploit-DB, Google OSINT, Rapid7, Seebug (some sources are disabled by default)\n"
+        f"• External PoC rate (strict): {poc_counts['external_plausible']/total_cves*100:.1f}%  |  patch analyses: {poc_counts['patch_analysis']/total_cves*100:.1f}%\n"
         f"• System design: fully automated, multi-agent pipeline with graceful handling of API limits."
     ))
     pdf.ln(4)
@@ -609,9 +653,9 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
     pdf.multi_cell(0, 6, text=clean_for_pdf(
         "The current system provides comprehensive coverage of publicly disclosed vulnerabilities. "
         "The following areas are identified for continued improvement:\n"
-        "• Integration of additional free exploit databases (e.g., Rapid7, Seebug) to further increase PoC coverage.\n"
-        "• Implementation of a local result cache to reduce redundant API calls and speed up subsequent runs.\n"
-        "• Adoption of parallel processing to reduce total runtime.\n"
+        "• Manual review of automatically matched external PoC references before operational use.\n"
+        "• Recording of CVE publication dates to study how exploit availability evolves after disclosure.\n"
+        "• Broader CWE-to-keyword relevance mapping and additional exploit sources.\n"
         "• Ongoing monitoring of source API changes to maintain scraping reliability.\n"
         "These enhancements will be prioritised in the next development cycle."
     ))
@@ -667,9 +711,10 @@ def generate_pdf_briefing(briefing: dict, cve_list: list, stats: dict, output_pa
                        new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.ln(2)
         poc = entry.get("poc", "No proof of concept available.")
+        poc = poc.replace("**Verified Exploit / Technical References:**", "External references (review manually):").replace("**", "")
         pdf.set_font("Helvetica", 'B', 9)
         pdf.set_text_color(185, 28, 28)
-        pdf.cell(0, 6, text="Proof of Concept (PoC):", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.cell(0, 6, text=clean_for_pdf("Proof of Concept (PoC) - " + POC_LABELS[classify_poc(entry)] + ":"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.set_font("Helvetica", '', 10)
         pdf.set_text_color(30, 30, 30)
         pdf.set_fill_color(255, 248, 248)
@@ -756,6 +801,7 @@ if __name__ == "__main__":
         parsed = json.loads(raw_result)
         parsed["cve_summary"] = cve_summary
         parsed["severity_stats"] = severity_stats
+        parsed["poc_breakdown"] = poc_counts
         with open(json_output_path, 'w', encoding='utf-8') as f:
             json.dump(parsed, f, indent=4, ensure_ascii=False)
         print("\n================================================")
@@ -773,5 +819,3 @@ if __name__ == "__main__":
         print(f"\nWarning: Could not parse LLM output as clean JSON: {e}")
         print("PDF generation was skipped.")
         print(f"Raw output preview:\n{raw_result[:500]}")
-
-        verified_count

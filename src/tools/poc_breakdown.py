@@ -34,8 +34,22 @@ CACHE_PATH = os.path.expanduser("~/.auto-cti/data/MAMORE/triage_cache.json")
 NON_POC = re.compile(
     r"trickest/cve|olbat/nvdcve|/advisories|/security/advisories|"
     r"/blob/|/commit/|/pull/|seebug\.org/search|"
-    r"nvd\.nist\.gov|cve\.org|tenable\.com"
+    r"nvd\.nist\.gov|cve\.org|tenable\.com|sec-dojo-com/cve-poc"
 )
+
+
+def is_non_poc(link):
+    """Non-PoC reference? Source/commit links are non-PoC, except files whose path
+    names a PoC/exploit and entries of the nomi-sec PoC index."""
+    low = link.lower()
+    if re.search(r"trickest/cve|olbat/nvdcve|/advisories|/security/advisories|"
+                 r"/commit/|/pull/|seebug\.org/search|nvd\.nist\.gov|cve\.org|"
+                 r"tenable\.com|sec-dojo-com/cve-poc", low):
+        return True
+    if "/blob/" in low:
+        return not (re.search(r"poc|exploit", low.split("/blob/", 1)[1])
+                    or "nomi-sec/poc-in-github" in low)
+    return False
 
 
 def poc_links(entry):
@@ -51,7 +65,7 @@ def classify(entry):
         return "no_poc", []
     if source == "patch_reverse_engineering":
         return "patch_analysis", []
-    plausible = [l for l in poc_links(entry) if not NON_POC.search(l)]
+    plausible = [l for l in poc_links(entry) if not is_non_poc(l)]
     return ("external_plausible" if plausible else "external_non_poc"), plausible
 
 

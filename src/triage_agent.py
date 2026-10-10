@@ -469,7 +469,7 @@ def _cve_in_text(cve_id: str, text: str) -> bool:
 
 # Repositories that only mirror or aggregate CVE data: they hold a page for almost
 # every CVE and therefore say nothing about the existence of a proof of concept.
-_AGGREGATOR_REPOS = {"trickest/cve", "olbat/nvdcve"}
+_AGGREGATOR_REPOS = {"trickest/cve", "olbat/nvdcve", "sec-dojo-com/cve-poc"}
 
 
 def _readme_mentions_cve(full_name: str, cve_id: str, headers: dict) -> bool:
@@ -479,7 +479,12 @@ def _readme_mentions_cve(full_name: str, cve_id: str, headers: dict) -> bool:
         h["Accept"] = "application/vnd.github.raw+json"
         r = requests.get(f"https://api.github.com/repos/{full_name}/readme", headers=h, timeout=15)
         if r.status_code == 200:
-            return _cve_in_text(cve_id, r.text[:200000])
+            text = r.text[:200000]
+            if not _cve_in_text(cve_id, text):
+                return False
+            # A dedicated PoC repo mentions few CVEs; 'awesome' lists mention hundreds
+            distinct = {m.upper() for m in re.findall(r'CVE-\d{4}-\d{4,7}', text, re.IGNORECASE)}
+            return len(distinct) <= 3
     except Exception:
         pass
     return False
@@ -568,7 +573,7 @@ def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
                         continue
                     repo_name = ((item.get("repository") or {}).get("full_name") or "").lower()
                     path = item.get("path", "").lower()
-                    if repo_name in _AGGREGATOR_REPOS or not _cve_in_text(cve_id, path):
+                    if repo_name in _AGGREGATOR_REPOS or not _cve_in_text(cve_id, path) or path.endswith((".md", ".json", ".txt", ".csv")):
                         continue
                     if any(ext in path for ext in ["poc", "exploit", "payload", "rce", "proof"]):
                         results.append(file_url)

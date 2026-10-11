@@ -45,8 +45,8 @@ MAMORE_DIR = os.path.join(DATA_DIR, "MAMORE")
 SEEN_CVES_PATH = os.path.join(MAMORE_DIR, "seen_cve_ids.json")
 os.makedirs(MAMORE_DIR, exist_ok=True)
 
-DESIRED_CVE_COUNT = 500
-GITHUB_MAX_PAGES = 150
+DESIRED_CVE_COUNT = 100
+GITHUB_MAX_PAGES = 30
 
 # Deterministic metadata (publication date and collection source) recorded in Python,
 # so it never depends on the LLM copying it correctly.
@@ -236,7 +236,6 @@ class NISTSearchTool(BaseTool):
                 cvss_severity = cvss_data.get("baseSeverity", "N/A")
                 cvss_vector = cvss_data.get("vectorString", "N/A")
                 if not cvss_data.get("vectorString"):
-                    # NVD has not analysed this CVE yet: cross-verify via CNA record / OpenCVE / Tenable
                     if cve_id not in verify_cache:
                         verify_cache[cve_id] = verify_cvss(cve_id, "N/A", "N/A")
                         time.sleep(0.3)
@@ -245,7 +244,7 @@ class NISTSearchTool(BaseTool):
                         cvss_score, cvss_severity, cvss_vector, cvss_source = v_score, v_sev, v_vector, v_source
                     else:
                         cvss_score, cvss_severity, cvss_vector, cvss_source = 0.0, "N/A", "N/A", "nvd_no_vector"
-                published = cve.get("published", "")[:10]   # YYYY-MM-DD
+                published = cve.get("published", "")[:10]
                 PUBLISHED_LOOKUP[cve_id] = published
                 SOURCE_LOOKUP[cve_id] = "NVD"
                 records.append(
@@ -257,16 +256,12 @@ class NISTSearchTool(BaseTool):
             return records
 
         def fetch_nvd_window(days):
-            """Fetch every CVE published in the last <days> days (NVD 2.0 allows windows up to 120 days).
-
-            NVD does not support sorting by publication date (the old sortBy request returned 404),
-            so the window is downloaded and sorted locally.
-            """
+            """Fetch every CVE published in the last <days> days."""
             end = datetime.datetime.now(datetime.timezone.utc)
             start = end - datetime.timedelta(days=days)
             fmt = "%Y-%m-%dT%H:%M:%S.000"
             items, index = [], 0
-            pause = 0.7 if nvd_api_key else 6.5    # NVD rate limits: 50 req/30 s with a key, 5 without
+            pause = 0.7 if nvd_api_key else 6.5
             for _ in range(20):
                 params = {"pubStartDate": start.strftime(fmt), "pubEndDate": end.strftime(fmt),
                           "resultsPerPage": 2000, "startIndex": index}
@@ -284,7 +279,6 @@ class NISTSearchTool(BaseTool):
             return items
 
         try:
-            # Set SCOUT_SKIP_NVD=true in ~/.auto-cti/.env to start from GitHub Advisory instead
             if os.getenv("SCOUT_SKIP_NVD", "false").lower() == "true":
                 raise RuntimeError("skipped by SCOUT_SKIP_NVD=true")
             cves = []
@@ -595,7 +589,6 @@ if __name__ == "__main__":
         except json.JSONDecodeError:
             new_data = []
 
-    # Attach deterministic metadata (publication date, collection source) in Python
     if isinstance(new_data, list):
         for _item in new_data:
             if isinstance(_item, dict):

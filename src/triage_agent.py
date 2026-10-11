@@ -74,6 +74,7 @@ cve_count = len(raw_threat_data)
 print(f"DEBUG - CVEs received from Scout: {cve_count}")
 
 BATCH_SIZE = 20
+MAX_ENTRY_WORKERS = 8
 
 output_dir = os.path.join(DATA_DIR, "triage_agent_result")
 os.makedirs(output_dir, exist_ok=True)
@@ -84,6 +85,58 @@ os.makedirs(MAMORE_DIR, exist_ok=True)
 CACHE_FILE = os.path.join(MAMORE_DIR, "triage_cache.json")
 
 cache_lock = threading.Lock()
+
+# ---------------------------------------------------------------------------
+# Rate limiter for GitHub Search API (30 req/min authenticated)
+# ---------------------------------------------------------------------------
+
+class RateLimiter:
+    """Thread-safe token-bucket limiter. Ensures a minimum interval between
+    consecutive calls across all threads sharing the same instance."""
+
+    def __init__(self, calls_per_minute: int):
+        self.min_interval = 60.0 / max(1, calls_per_minute)
+        self.last_call = 0.0
+        self.lock = threading.Lock()
+
+    def wait(self):
+        with self.lock:
+            now = time.time()
+            elapsed = now - self.last_call
+            if elapsed < self.min_interval:
+                time.sleep(self.min_interval - elapsed)
+            self.last_call = time.time()
+
+
+# Conservative 20/min so we leave headroom for other GitHub API calls
+_gh_search_limiter = RateLimiter(20)
+
+
+def _gh_request_with_retry(url, headers, params=None, method="GET",
+                           json_body=None, max_retries=3, timeout=15):
+    """Perform a GitHub API request with 429/403 rate-limit backoff."""
+    for attempt in range(max_retries):
+        try:
+            if method == "POST":
+                r = requests.post(url, headers=headers, json=json_body, timeout=timeout)
+            else:
+                r = requests.get(url, headers=headers, params=params, timeout=timeout)
+            if r.status_code == 429:
+                wait = min(60 * (attempt + 1), 180)
+                print(f"   [GitHub] 429 rate limit, sleeping {wait}s (attempt {attempt+1})")
+                time.sleep(wait)
+                continue
+            if r.status_code == 403 and "rate limit" in r.text.lower():
+                wait = min(60 * (attempt + 1), 180)
+                print(f"   [GitHub] 403 rate limit, sleeping {wait}s (attempt {attempt+1})")
+                time.sleep(wait)
+                continue
+            return r
+        except requests.exceptions.RequestException as e:
+            print(f"   [GitHub] request error ({attempt+1}): {e}")
+            time.sleep(2)
+    return None
+
 
 def load_cache():
     if os.path.exists(CACHE_FILE):
@@ -108,7 +161,12 @@ def fetch_nvd_cvss(cve_id: str):
         nvd_api_key = os.getenv("NVD_API_KEY")
         if nvd_api_key:
             headers["apiKey"] = nvd_api_key
-        r = requests.get(url, timeout=10, headers=headers)
+        for attempt in range(3):
+            r = requests.get(url, timeout=10, headers=headers)
+            if r.status_code == 429:
+                time.sleep(10 * (attempt + 1))
+                continue
+            break
         if r.status_code != 200:
             return None
         data = r.json()
@@ -508,8 +566,8 @@ def _readme_mentions_cve(full_name: str, cve_id: str, headers: dict) -> bool:
     try:
         h = dict(headers)
         h["Accept"] = "application/vnd.github.raw+json"
-        r = requests.get(f"https://api.github.com/repos/{full_name}/readme", headers=h, timeout=15)
-        if r.status_code == 200:
+        r = _gh_request_with_retry(f"https://api.github.com/repos/{full_name}/readme", headers=h)
+        if r is not None and r.status_code == 200:
             text = r.text[:200000]
             if not _cve_in_text(cve_id, text):
                 return False
@@ -521,7 +579,10 @@ def _readme_mentions_cve(full_name: str, cve_id: str, headers: dict) -> bool:
 
 
 def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
-    """Find public PoC material on GitHub. Every result must mention the exact CVE ID."""
+    """Find public PoC material on GitHub. Every result must mention the exact CVE ID.
+
+    All GitHub Search API calls are throttled globally to avoid the 30/min limit.
+    """
     try:
         headers = {"Accept": "application/vnd.github+json"}
         gh_token = os.getenv("GITHUB_TOKEN")
@@ -536,23 +597,30 @@ def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
             "muratayusuke/known-exploits"
         ]
         for repo in curated_repos:
+            _gh_search_limiter.wait()
             query = f'repo:{repo} {cve_id}'
-            r = requests.get("https://api.github.com/search/code", headers=headers,
-                             params={"q": query, "per_page": 3}, timeout=15)
-            if r.status_code == 200:
+            r = _gh_request_with_retry(
+                "https://api.github.com/search/code",
+                headers=headers,
+                params={"q": query, "per_page": 3},
+            )
+            if r is not None and r.status_code == 200:
                 for item in r.json().get("items", []):
                     file_url = item.get("html_url")
                     if file_url and file_url not in results and _cve_in_text(cve_id, item.get("path", "")):
                         results.append(file_url)
-            time.sleep(0.2)
         if results:
             return results[:5]
 
         cwe_keywords = _get_cwe_keywords(cwe_id)
+        _gh_search_limiter.wait()
         query = f'{cve_id} in:name,description,readme'
-        r2 = requests.get("https://api.github.com/search/repositories", headers=headers,
-                          params={"q": query, "sort": "stars", "order": "desc", "per_page": 20}, timeout=15)
-        if r2.status_code == 200:
+        r2 = _gh_request_with_retry(
+            "https://api.github.com/search/repositories",
+            headers=headers,
+            params={"q": query, "sort": "stars", "order": "desc", "per_page": 20},
+        )
+        if r2 is not None and r2.status_code == 200:
             readme_checks = 0
             filtered_repos = []
             for repo in r2.json().get("items", []):
@@ -582,9 +650,13 @@ def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
             results.extend(filtered_repos[:5])
 
         if len(results) < 3:
-            r3 = requests.get("https://api.github.com/search/code", headers=headers,
-                              params={"q": f'{cve_id} in:file', "per_page": 10}, timeout=15)
-            if r3.status_code == 200:
+            _gh_search_limiter.wait()
+            r3 = _gh_request_with_retry(
+                "https://api.github.com/search/code",
+                headers=headers,
+                params={"q": f'{cve_id} in:file', "per_page": 10},
+            )
+            if r3 is not None and r3.status_code == 200:
                 for item in r3.json().get("items", []):
                     file_url = item.get("html_url")
                     if not file_url or file_url in results:
@@ -1338,7 +1410,7 @@ if __name__ == "__main__":
             return entry
 
         fixed_entries = []
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=MAX_ENTRY_WORKERS) as executor:
             future_to_entry = {executor.submit(process_entry, entry): entry for entry in parsed}
             for future in as_completed(future_to_entry):
                 try:

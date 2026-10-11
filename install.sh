@@ -127,18 +127,33 @@ elif [ "$1" == "-k" ]; then
 elif [ "$1" == "-e" ]; then
     python src/tools/edit_env.py
 else
-    echo "🛡️ Auto-CTI Command Guide:"
-    echo "   auto-cti -d  - Launch interactive dashboard"
-    echo "   auto-cti -s  - Run Scout Agent"
-    echo "   auto-cti -t  - Run Triage Agent"
-    echo "   auto-cti -p  - Run Publisher Agent"
-    echo "   auto-cti -f  - Run full pipeline"
-    echo "   auto-cti -u  - Remove Auto-CTI completely"
-    echo "   auto-cti -v  - Verify Urgency Score formula"
-    echo "   auto-cti -b  - PoC breakdown (external / patch-diff / none)"
-    echo "   auto-cti -a  - Archive current run"
-    echo "   auto-cti -k  - Check API keys"
-    echo "   auto-cti -e  - Edit .env file"
+    echo "🛡️  Auto-CTI Command Guide"
+    echo "============================================"
+    echo
+    echo "  CORE COMMANDS (pipeline):"
+    echo "    -d   Launch interactive dashboard"
+    echo "    -s   Run Scout Agent"
+    echo "    -t   Run Triage Agent"
+    echo "    -p   Run Publisher Agent"
+    echo "    -f   Run full pipeline (Scout → Triage → Publisher)"
+    echo
+    echo "  ANALYSIS TOOLS (verification):"
+    echo "    -v   Verify Urgency Score formula"
+    echo "    -b   PoC breakdown (external / patch-diff / none)"
+    echo "    -a   Archive the current run"
+    echo
+    echo "  CONFIGURATION:"
+    echo "    -k   Check API keys (live test, no secrets shown)"
+    echo "    -e   Edit .env file in your editor"
+    echo
+    echo "  MAINTENANCE:"
+    echo "    -u   Remove Auto-CTI completely"
+    echo
+    echo "  Examples:"
+    echo "    auto-cti -d              # start the SOC dashboard"
+    echo "    auto-cti -b --list       # list plausible PoC links"
+    echo "    auto-cti -v /path/to/runs  # verify a batch of archived runs"
+    echo
 fi
 EOF
 chmod +x "$HOME/.local/bin/auto-cti"
@@ -205,15 +220,16 @@ rm -rf "$INSTALL_DIR/config"
 echo
 echo "✅ Installation complete!"
 echo
-echo "🚀 You can now run:"
-echo "   auto-cti -d  - Launch interactive dashboard"
-echo "   auto-cti -s  - Run Scout Agent"
-echo "   auto-cti -t  - Run Triage Agent"
-echo "   auto-cti -p  - Run Publisher Agent"
-echo "   auto-cti -f  - Run full pipeline"
+echo "🚀 Quick start:"
+echo "   auto-cti -d    Launch the SOC dashboard"
+echo "   auto-cti -f    Run the full pipeline in the terminal"
+echo
+echo "🔧 Other commands:"
+echo "   auto-cti -k    Check your API keys"
+echo "   auto-cti -e    Edit ~/.auto-cti/.env"
 echo
 echo "🔑 On first run, you will be prompted for API keys."
-echo "   Keys are stored securely in ~/.auto-cti/.env"
+echo "   Keys are stored securely in ~/.auto-cti/.env (mode 600)."
 echo
 echo "If 'auto-cti' is not found, restart your terminal or run:"
 echo "   source ~/.bashrc"

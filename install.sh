@@ -91,7 +91,7 @@ cp CITATION.cff "$INSTALL_DIR/" 2>/dev/null || true
 
 # 7. Create virtual environment and install dependencies
 echo "📦 Creating virtual environment and installing dependencies..."
-python3.12 -m venv "$INSTALL_DIR/venv"
+python3 -m venv "$INSTALL_DIR/venv"
 source "$INSTALL_DIR/venv/bin/activate"
 pip install --upgrade pip
 pip install -r "$INSTALL_DIR/requirements.txt"
@@ -120,6 +120,12 @@ elif [ "$1" == "-v" ]; then
     python src/tools/verify_urgency.py "${@:2}"
 elif [ "$1" == "-b" ]; then
     python src/tools/poc_breakdown.py "${@:2}"
+elif [ "$1" == "-a" ]; then
+    python src/tools/archive_run.py
+elif [ "$1" == "-k" ]; then
+    python src/tools/check_keys.py
+elif [ "$1" == "-e" ]; then
+    python src/tools/edit_env.py
 else
     echo "🛡️ Auto-CTI Command Guide:"
     echo "   auto-cti -d  - Launch interactive dashboard"
@@ -130,6 +136,9 @@ else
     echo "   auto-cti -u  - Remove Auto-CTI completely"
     echo "   auto-cti -v  - Verify Urgency Score formula"
     echo "   auto-cti -b  - PoC breakdown (external / patch-diff / none)"
+    echo "   auto-cti -a  - Archive current run"
+    echo "   auto-cti -k  - Check API keys"
+    echo "   auto-cti -e  - Edit .env file"
 fi
 EOF
 chmod +x "$HOME/.local/bin/auto-cti"
@@ -158,29 +167,34 @@ if [ ! -f "$INSTALL_DIR/.env" ]; then
 # Auto-CTI Environment Configuration
 # ============================================================
 
-# ---------- API Keys ----------
+# ---------- Required ----------
+# Get from: https://ai.google.dev/gemini-api/docs/api-key
 GEMINI_API_KEY=
+
+# ---------- Recommended ----------
+# Get from: https://nvd.nist.gov/developers/request-an-api-key
 NVD_API_KEY=
+# Get from: https://github.com/settings/tokens
 GITHUB_TOKEN=
-VULNERS_API_KEY=
+# Get from: https://otx.alienvault.com/
 OTX_API_KEY=
+
+# ---------- Optional ----------
+# Get from: https://vulners.com/register
+VULNERS_API_KEY=
+# Get from: https://www.opencve.io/register
 OPENCVE_USERNAME=
 OPENCVE_PASSWORD=
+# Get from: https://developers.google.com/custom-search/v1/overview
 GOOGLE_SEARCH_API_KEY=
+# Get from: https://programmablesearchengine.google.com/about/
 GOOGLE_SEARCH_CX=
 
 # ---------- Feature Toggles ----------
-# Set to "true" to enable, "false" to disable (or leave empty for default = false)
-
-# Sploitus exploit aggregator (default: disabled)
-# NOTE: Consistently returns HTTP 403 due to Cloudflare bot protection.
-# Enabling will add ~1-2 seconds latency per CVE with no results expected.
+SCOUT_SKIP_NVD=false
 ENABLE_SPLOITUS=false
-
-# Vulners Lucene search (default: disabled)
-# NOTE: Returns HTTP 402 (payment required) on the free tier.
-# Only enable if you have a paid Vulners subscription plan.
 ENABLE_VULNERS_LUCENE=false
+ENABLE_SEEBUG=false
 EOF
     chmod 600 "$INSTALL_DIR/.env"
 fi

@@ -29,6 +29,9 @@ PROJECT_ENV = PROJECT_ROOT / ".env"
 
 REQUIRED_KEYS = {
     "GEMINI_API_KEY": "https://ai.google.dev/gemini-api/docs/api-key",
+}
+
+OPTIONAL_KEYS = {
     "NVD_API_KEY": "https://nvd.nist.gov/developers/request-an-api-key",
     "GITHUB_TOKEN": "https://github.com/settings/tokens",
     "VULNERS_API_KEY": "https://vulners.com/register",

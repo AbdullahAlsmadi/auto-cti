@@ -62,25 +62,18 @@ if [ "$MAJOR" -lt 3 ] || { [ "$MAJOR" -eq 3 ] && [ "$MINOR" -lt 9 ]; }; then
     exit 1
 fi
 
-# 3. Install bc if missing (for version comparison fallback, but we don't need it now)
-if ! command -v bc &> /dev/null; then
-    echo "📦 Installing bc (required for version checks)..."
-    install_packages bc
-fi
-
-# 4. Install GCC and make if missing (for building numpy)
+# 3. Install GCC and make if missing (for building numpy)
 if ! command -v gcc &> /dev/null || ! command -v make &> /dev/null; then
     echo "📦 Installing build tools (gcc, make)..."
     install_packages gcc make
 fi
 
-# 5. Create installation directory
+# 4. Create installation directory
 INSTALL_DIR="$HOME/.auto-cti"
 mkdir -p "$INSTALL_DIR"
-mkdir -p "$INSTALL_DIR/config"
 mkdir -p "$INSTALL_DIR/data"
 
-# 6. Copy source files and documentation
+# 5. Copy source files and documentation
 echo "📦 Installing Auto-CTI to $INSTALL_DIR..."
 cp -r src/ "$INSTALL_DIR/"
 cp requirements.txt "$INSTALL_DIR/"
@@ -89,15 +82,40 @@ cp NOTICE "$INSTALL_DIR/" 2>/dev/null || true
 cp SECURITY.md "$INSTALL_DIR/" 2>/dev/null || true
 cp CITATION.cff "$INSTALL_DIR/" 2>/dev/null || true
 
-# 7. Create virtual environment and install dependencies
-echo "📦 Creating virtual environment and installing dependencies..."
+# 6. Create virtual environment and install dependencies
+echo
+echo -e "\033[1;36m📦  Creating virtual environment…\033[0m"
 python3 -m venv "$INSTALL_DIR/venv"
 source "$INSTALL_DIR/venv/bin/activate"
-pip install --upgrade pip
-pip install -r "$INSTALL_DIR/requirements.txt"
+
+echo -e "\033[1;36m📦  Upgrading pip…\033[0m"
+pip install --upgrade pip --quiet --disable-pip-version-check 2>&1 | tail -1
+
+# Count packages so we can show progress
+TOTAL_PKGS=$(grep -cve '^\s*$' -e '^#' "$INSTALL_DIR/requirements.txt")
+echo
+echo -e "\033[1;36m📦  Installing $TOTAL_PKGS dependency groups (this may take a few minutes)…\033[0m"
+echo -e "\033[2m    (pip output is hidden; only the final status is shown)\033[0m"
+echo
+
+# Quiet install — hide the flood of "Collecting…/Downloading…" lines
+if pip install -r "$INSTALL_DIR/requirements.txt" \
+        --quiet \
+        --disable-pip-version-check \
+        --no-input \
+        2> /tmp/auto-cti-pip-error.log; then
+    echo -e "\033[1;32m✅  Dependencies installed successfully.\033[0m"
+else
+    echo -e "\033[1;31m❌  Dependency installation failed.\033[0m"
+    echo -e "\033[1;33m    Full log: /tmp/auto-cti-pip-error.log\033[0m"
+    echo
+    tail -20 /tmp/auto-cti-pip-error.log
+    exit 1
+fi
+
 deactivate
 
-# 8. Create global wrapper script
+# 7. Create global wrapper script
 mkdir -p "$HOME/.local/bin"
 cat > "$HOME/.local/bin/auto-cti" << 'EOF'
 #!/bin/bash
@@ -158,13 +176,13 @@ fi
 EOF
 chmod +x "$HOME/.local/bin/auto-cti"
 
-# 9. Add ~/.local/bin to PATH if not already
+# 8. Add ~/.local/bin to PATH if not already
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
     echo "✅ Added ~/.local/bin to PATH. Restart your shell or run: source ~/.bashrc"
 fi
 
-# 10. Create uninstall script
+# 9. Create uninstall script
 cat > "$INSTALL_DIR/uninstall.sh" << 'EOF'
 #!/bin/bash
 echo "🗑️  Uninstalling Auto-CTI..."
@@ -174,7 +192,7 @@ echo "✅ Auto-CTI removed completely."
 EOF
 chmod +x "$INSTALL_DIR/uninstall.sh"
 
-# 11. Create sample .env (will be overwritten by the app if missing)
+# 10. Create sample .env (will be overwritten by the app if missing)
 # Write the .env template directly to the location used by secure_config.py
 if [ ! -f "$INSTALL_DIR/.env" ]; then
     cat > "$INSTALL_DIR/.env" << 'EOF'
@@ -213,9 +231,6 @@ ENABLE_SEEBUG=false
 EOF
     chmod 600 "$INSTALL_DIR/.env"
 fi
-
-# Remove the obsolete config directory to avoid confusion
-rm -rf "$INSTALL_DIR/config"
 
 echo
 echo "✅ Installation complete!"

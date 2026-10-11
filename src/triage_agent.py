@@ -73,6 +73,8 @@ if not raw_threat_data:
 cve_count = len(raw_threat_data)
 print(f"DEBUG - CVEs received from Scout: {cve_count}")
 
+BATCH_SIZE = 20
+
 output_dir = os.path.join(DATA_DIR, "triage_agent_result")
 os.makedirs(output_dir, exist_ok=True)
 
@@ -415,7 +417,7 @@ def recalculate_urgency_score(entry: dict, raw_threat_data: list) -> dict:
         return entry
     raw_entry = next((item for item in raw_threat_data if item.get("cve_id") == cve_id), {})
     pulse_count = raw_entry.get("alienvault_pulse_count", 0)
-    entry["OTX_Pulse_Count"] = pulse_count   # persist the formula input with the result
+    entry["OTX_Pulse_Count"] = pulse_count
     base = cvss * 9
     if base > 90:
         base = 90
@@ -428,6 +430,37 @@ def recalculate_urgency_score(entry: dict, raw_threat_data: list) -> dict:
     urgency = int(round(urgency))
     urgency = max(1, min(100, urgency))
     entry["Urgency_Score"] = urgency
+    return entry
+
+# ---------------------------------------------------------------------------
+# LLM-vs-Authoritative CVSS agreement tracking
+# ---------------------------------------------------------------------------
+
+_AUTH_SOURCES = {"nvd_verified", "cna_official", "tenable_verified",
+                 "opencve_verified", "cve_org_official"}
+
+def _annotate_agreement(entry: dict) -> dict:
+    """Compare the LLM's raw CVSS score with the authoritative one.
+
+    Only meaningful when the final score came from an authoritative source
+    (NVD / CNA / Tenable / OpenCVE / CVE.org). When the score is estimated,
+    there is no ground truth, so the comparison fields are nulled.
+    """
+    source = str(entry.get("Score_Source", "")).split("_recalculated")[0]
+    is_auth = source in _AUTH_SOURCES
+    llm_raw = entry.get("LLM_CVSS_Score_Raw")
+    final = entry.get("CVSS_Score")
+    if is_auth and llm_raw is not None and final is not None:
+        try:
+            delta = round(float(final) - float(llm_raw), 2)
+            entry["LLM_vs_Authoritative_Delta"] = delta
+            entry["LLM_vs_Authoritative_Match"] = abs(delta) < 0.05
+        except (TypeError, ValueError):
+            entry["LLM_vs_Authoritative_Delta"] = None
+            entry["LLM_vs_Authoritative_Match"] = None
+    else:
+        entry["LLM_vs_Authoritative_Delta"] = None
+        entry["LLM_vs_Authoritative_Match"] = None
     return entry
 
 def fetch_exploit_references(cve_id: str) -> list:
@@ -467,8 +500,6 @@ def _cve_in_text(cve_id: str, text: str) -> bool:
     return re.search(re.escape(cve_id) + r'(?!\d)', text or "", re.IGNORECASE) is not None
 
 
-# Repositories that only mirror or aggregate CVE data: they hold a page for almost
-# every CVE and therefore say nothing about the existence of a proof of concept.
 _AGGREGATOR_REPOS = {"trickest/cve", "olbat/nvdcve", "sec-dojo-com/cve-poc"}
 
 
@@ -482,7 +513,6 @@ def _readme_mentions_cve(full_name: str, cve_id: str, headers: dict) -> bool:
             text = r.text[:200000]
             if not _cve_in_text(cve_id, text):
                 return False
-            # A dedicated PoC repo mentions few CVEs; 'awesome' lists mention hundreds
             distinct = {m.upper() for m in re.findall(r'CVE-\d{4}-\d{4,7}', text, re.IGNORECASE)}
             return len(distinct) <= 3
     except Exception:
@@ -491,15 +521,7 @@ def _readme_mentions_cve(full_name: str, cve_id: str, headers: dict) -> bool:
 
 
 def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
-    """Find public PoC material on GitHub. Every result must mention the exact CVE ID.
-
-    Changes from the first version (false-positive fixes):
-      - aggregator repos (trickest/cve, olbat/nvdcve) are no longer queried or accepted;
-      - GitHub Advisory references are no longer returned (they are not PoC material);
-      - repository search results are kept only if the exact CVE ID appears in the
-        repository name, description or README;
-      - code-search results are kept only if the file path contains the exact CVE ID.
-    """
+    """Find public PoC material on GitHub. Every result must mention the exact CVE ID."""
     try:
         headers = {"Accept": "application/vnd.github+json"}
         gh_token = os.getenv("GITHUB_TOKEN")
@@ -507,7 +529,6 @@ def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
             headers["Authorization"] = f"Bearer {gh_token}"
         results = []
 
-        # 1. Curated PoC indexes: the matching file name must contain the exact CVE ID
         curated_repos = [
             "nomi-sec/PoC-in-GitHub",
             "sirius306/CVE-PoC-Hub",
@@ -527,8 +548,7 @@ def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
         if results:
             return results[:5]
 
-        # 2. General repository search (exact CVE ID required + CWE relevance filtering)
-        cwe_keywords = _get_cwe_keywords(cwe_id)   # CWE -> keyword mapping
+        cwe_keywords = _get_cwe_keywords(cwe_id)
         query = f'{cve_id} in:name,description,readme'
         r2 = requests.get("https://api.github.com/search/repositories", headers=headers,
                           params={"q": query, "sort": "stars", "order": "desc", "per_page": 20}, timeout=15)
@@ -542,7 +562,6 @@ def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
                     continue
                 name = (repo.get("name") or "").lower()
                 desc = (repo.get("description") or "").lower()
-                # The exact CVE ID must be present (name/description first, README as fallback)
                 mentions = _cve_in_text(cve_id, name) or _cve_in_text(cve_id, desc)
                 if not mentions and readme_checks < 5:
                     readme_checks += 1
@@ -562,7 +581,6 @@ def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
                     filtered_repos.append(repo_url)
             results.extend(filtered_repos[:5])
 
-        # 3. Code search fallback: the file path must contain the exact CVE ID
         if len(results) < 3:
             r3 = requests.get("https://api.github.com/search/code", headers=headers,
                               params={"q": f'{cve_id} in:file', "per_page": 10}, timeout=15)
@@ -587,7 +605,6 @@ def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
         return []
 
 
-# --- CWE-to-keyword mapping for relevance filtering ---
 def _get_cwe_keywords(cwe_id: str) -> list:
     if not cwe_id or cwe_id == "N/A":
         return []
@@ -675,8 +692,6 @@ def fetch_vulners_exploits(cve_id: str) -> list:
         if exploits:
             return exploits
 
-        # --- Lucene search is gated by environment variable ---
-        # To enable, set ENABLE_VULNERS_LUCENE=true in ~/.auto-cti/.env
         if os.getenv("ENABLE_VULNERS_LUCENE", "false").lower() == "true":
             search_url = "https://vulners.com/api/v3/search/lucene/"
             query = f'cve:"{cve_id}" AND type:exploit'
@@ -691,7 +706,6 @@ def fetch_vulners_exploits(cve_id: str) -> list:
                         href = source.get("href") or source.get("vhref")
                         if href:
                             exploits.append(href)
-        # If disabled, simply return whatever we have (likely empty)
         return exploits
     except Exception:
         return []
@@ -800,9 +814,6 @@ def check_rapid7_db(cve_id: str) -> list:
     return []
 
 def check_seebug(cve_id: str) -> list:
-    # Disabled by default: the "ssv-" substring check produced false positives
-    # (a search-page URL was reported as a PoC). To enable, set
-    # ENABLE_SEEBUG=true in ~/.auto-cti/.env after fixing the match logic.
     if os.getenv("ENABLE_SEEBUG", "false").lower() != "true":
         return []
     search_url = f"https://www.seebug.org/search/?keyword={cve_id}"
@@ -852,7 +863,7 @@ Diff:
         return "No public exploit code is currently available. The theoretical attack path below is derived from vulnerability mechanics:"
     
 def enhance_poc(entry: dict) -> dict:
-    import os  # ensure os is available (it should already be imported at top)
+    import os
     poc = entry.get("PoC", "")
     cve_id = entry.get("CVE_ID", "")
     print(f"\n🔎 Checking PoC / exploit references for {cve_id}...")
@@ -895,8 +906,6 @@ def enhance_poc(entry: dict) -> dict:
                     if exploit_refs:
                         print(f"   ✅ {cve_id}: Found {len(exploit_refs)} reference(s) on inTheWild.io.")
                     else:
-                        # --- Sploitus is gated by environment variable ---
-                        # To enable Sploitus, set ENABLE_SPLOITUS=true in ~/.auto-cti/.env
                         if os.getenv("ENABLE_SPLOITUS", "false").lower() == "true":
                             print(f"   [6/12] Searching Sploitus (aggregator) for exploits...")
                             exploit_refs = fetch_sploitus_exploits(cve_id) if cve_id else []
@@ -944,7 +953,6 @@ def enhance_poc(entry: dict) -> dict:
                                                         entry["_poc_gap"] = False
                                                         return entry
                         else:
-                            # Sploitus is disabled – skip directly to 0day.today
                             print(f"   [6/12] Skipping Sploitus (disabled). Checking 0day.today archive...")
                             exploit_refs = fetch_0daytoday_exploits(cve_id) if cve_id else []
                             source_label = "zeroday_exploit"
@@ -1192,57 +1200,118 @@ yourself — it is added automatically afterwards based on the original cvss_sou
     output_file=output_file_path
 )
 
-triage_crew = Crew(
-    agents=[triage_agent],
-    tasks=[triage_task],
-    verbose=True
-)
-
 if __name__ == "__main__":
     triage_start_time = time.time()
     print(f"Waking up the Triage Agent to analyze threats for {today_date}...")
-    
-    
-    result = triage_crew.kickoff()
-    
-    print("\n================================================")
-    print("Triage Analysis Complete!")
+
+    all_parsed = []
+    total_batches = (len(raw_threat_data) + BATCH_SIZE - 1) // BATCH_SIZE
+
+    for i in range(0, len(raw_threat_data), BATCH_SIZE):
+        batch = raw_threat_data[i:i + BATCH_SIZE]
+        batch_size = len(batch)
+        batch_num = i // BATCH_SIZE + 1
+        print(f"\n🔍 Triage batch {batch_num}/{total_batches} ({batch_size} CVEs)...")
+
+        batch_summary = json.dumps([
+            {
+                "cve_id": it.get("cve_id"),
+                "description": it.get("description", "")[:150],
+                "cvss_score": it.get("cvss_score"),
+                "cvss_vector": it.get("cvss_vector", "N/A"),
+                "cvss_source": it.get("cvss_source", "ghsa_only"),
+            }
+            for it in batch
+        ], indent=2)
+
+        desc = triage_task.description
+        desc = desc.replace(summary_json, batch_summary)
+        desc = desc.replace(f"exactly {cve_count} CVE entries", f"exactly {batch_size} CVE entries")
+        desc = desc.replace(f"exactly {cve_count} objects", f"exactly {batch_size} objects")
+        desc = desc.replace(f"contain {cve_count} entries", f"contain {batch_size} entries")
+
+        exp = triage_task.expected_output
+        exp = exp.replace(f"exactly {cve_count} objects", f"exactly {batch_size} objects")
+        exp = exp.replace(f"contain {cve_count} entries", f"contain {batch_size} entries")
+
+        batch_task = Task(description=desc, expected_output=exp, agent=triage_agent)
+        batch_crew = Crew(agents=[triage_agent], tasks=[batch_task], verbose=True)
+
+        try:
+            batch_result = batch_crew.kickoff()
+        except Exception as e:
+            print(f"⚠️  Batch {batch_num} raised: {type(e).__name__}: {e}")
+            continue
+
+        batch_raw = str(batch_result).strip()
+        if batch_raw.startswith("```json"):
+            batch_raw = batch_raw[7:]
+        if batch_raw.startswith("```"):
+            batch_raw = batch_raw[3:]
+        if batch_raw.endswith("```"):
+            batch_raw = batch_raw[:-3]
+        batch_raw = batch_raw.strip()
+        batch_raw = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', batch_raw)
+
+        try:
+            batch_parsed = json.loads(batch_raw)
+        except json.JSONDecodeError:
+            try:
+                batch_parsed = json.loads(repair_json_escapes(batch_raw))
+            except json.JSONDecodeError as e:
+                print(f"⚠️  Batch {batch_num}: JSON parse failed: {e}")
+                print(f"     Preview: {batch_raw[:200]}")
+                continue
+
+        if not isinstance(batch_parsed, list):
+            print(f"⚠️  Batch {batch_num}: returned {type(batch_parsed).__name__}, skipping")
+            continue
+
+        print(f"   ✓ batch {batch_num}: {len(batch_parsed)} records")
+        all_parsed.extend(batch_parsed)
+
+    print(f"\n================================================")
+    print(f"Triage Analysis Complete! ({len(all_parsed)} records)")
     print("================================================")
 
-    raw_result = str(result).strip()
+    if not all_parsed:
+        print(f"\n❌ Triage Agent FAILED: 0 records collected across {total_batches} batches.")
+        print(f"   Expected {cve_count} CVEs from Scout.")
+        sys.exit(1)
 
-    if raw_result.startswith("```json"):
-        raw_result = raw_result[7:]
-    if raw_result.startswith("```"):
-        raw_result = raw_result[3:]
-    if raw_result.endswith("```"):
-        raw_result = raw_result[:-3]
-    raw_result = raw_result.strip()
-    raw_result = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', raw_result)
+    parsed = all_parsed
 
     try:
-        try:
-            parsed = json.loads(raw_result)
-        except json.JSONDecodeError as first_err:
-            # LLM output may contain invalid backslash escapes: repair and retry once
-            print(f"Note: JSON parse failed ({first_err}). Repairing invalid escapes and retrying...")
-            parsed = json.loads(repair_json_escapes(raw_result))
-            print("Note: JSON repaired successfully.")
-
         def process_entry(entry):
             cve_id = entry.get("CVE_ID") or entry.get("cve_id") or ""
             entry["CVE_ID"] = cve_id
-            
+
+            # Snapshot the LLM's raw CVSS output BEFORE any authoritative override.
+            # This lets us measure how often the LLM agrees with NVD / CNA / Tenable.
+            entry["LLM_CVSS_Score_Raw"] = entry.get("CVSS_Score")
+            entry["LLM_CVSS_Vector_Raw"] = entry.get("CVSS_Vector", "N/A")
+            entry["LLM_CVSS_Severity_Raw"] = entry.get("CVSS_Severity", "Unknown")
+
             with cache_lock:
                 cache = load_cache()
                 if cve_id in cache:
-                    print(f"   [+] CACHE HIT: Skipping enrichment API calls for {cve_id}")
-                    return cache[cve_id]
-            
+                    cached = dict(cache[cve_id])
+                    # Backfill the raw snapshot for entries written before this change.
+                    cached.setdefault("LLM_CVSS_Score_Raw", entry.get("CVSS_Score"))
+                    cached.setdefault("LLM_CVSS_Vector_Raw", entry.get("CVSS_Vector", "N/A"))
+                    cached.setdefault("LLM_CVSS_Severity_Raw", entry.get("CVSS_Severity", "Unknown"))
+                    _annotate_agreement(cached)
+                    cache[cve_id] = cached
+                    save_cache(cache)
+                    print(f"   [+] CACHE HIT (LLM raw saved): {cve_id}")
+                    return cached
+
             if not entry.get("Description") or entry["Description"] == "No description available.":
-                raw_desc = next((item.get("description") for item in raw_threat_data if item.get("cve_id") == cve_id), "")
+                raw_desc = next((item.get("description") for item in raw_threat_data
+                                 if item.get("cve_id") == cve_id), "")
                 if raw_desc:
                     entry["Description"] = raw_desc
+
             source_info = cve_source_lookup.get(
                 cve_id, {"cvss_source": "ghsa_only", "score": None, "vector": "N/A"}
             )
@@ -1254,17 +1323,18 @@ if __name__ == "__main__":
                 entry["Score_Source"] = map_source_to_score_source(cvss_source, True)
                 entry = recalculate_score_from_vector(entry)
             entry = verify_and_correct_cvss(entry)
+            _annotate_agreement(entry)
             entry = ensure_severity(entry)
-            entry = recalculate_urgency_score(entry, raw_threat_data) # type: ignore
+            entry = recalculate_urgency_score(entry, raw_threat_data)
             entry = enhance_poc(entry)
             print(f"AFTER RECALC: {entry['CVE_ID']} -> score={entry['CVSS_Score']} vector={entry['CVSS_Vector']}")
             entry["References"] = build_verified_references(cve_id)
-            
+
             with cache_lock:
                 cache = load_cache()
                 cache[cve_id] = entry
                 save_cache(cache)
-                
+
             return entry
 
         fixed_entries = []
@@ -1288,7 +1358,7 @@ if __name__ == "__main__":
             for line in entry.get("PoC", "").splitlines():
                 stripped = line.strip()
                 if stripped.startswith("- https://github.com/"):
-                    repo_url = stripped[2:].strip()   # now correctly extracts the URL
+                    repo_url = stripped[2:].strip()
                     repo_to_cves.setdefault(repo_url, set()).add(entry["CVE_ID"])
 
         SUSPICIOUS_THRESHOLD = 2
@@ -1343,7 +1413,7 @@ if __name__ == "__main__":
         print(f"DEBUG - PoC gap report saved: {gap_report_path} ({len(poc_gaps)}/{len(fixed_entries)} unmatched)")
 
         triage_execution_time = time.time() - triage_start_time
-        
+
         final_output = {
             "date": today_date,
             "report": fixed_entries,
@@ -1363,4 +1433,4 @@ if __name__ == "__main__":
         with open(output_file_path, 'w', encoding='utf-8') as f:
             f.write(raw_result)
         print(f"Raw output saved: {output_file_path}")
-        sys.exit(1)   # signal failure so the dashboard / pipeline stops here
+        sys.exit(1)

@@ -198,6 +198,8 @@ elif [ "$1" == "-v" ]; then
     python src/tools/verify_urgency.py "${@:2}"
 elif [ "$1" == "-b" ]; then
     python src/tools/poc_breakdown.py "${@:2}"
+elif [ "$1" == "-g" ]; then
+    python src/tools/llm_agreement.py "${@:2}"
 elif [ "$1" == "-a" ]; then
     python src/tools/archive_run.py
 elif [ "$1" == "-k" ]; then
@@ -218,6 +220,7 @@ else
     echo "  ANALYSIS TOOLS (verification):"
     echo "    -v   Verify Urgency Score formula"
     echo "    -b   PoC breakdown (external / patch-diff / none)"
+    echo "    -g   LLM vs authoritative CVSS agreement"
     echo "    -a   Archive the current run"
     echo
     echo "  CONFIGURATION:"
@@ -231,6 +234,7 @@ else
     echo "    auto-cti -d              # start the SOC dashboard"
     echo "    auto-cti -b --list       # list plausible PoC links"
     echo "    auto-cti -v /path/to/runs  # verify a batch of archived runs"
+    echo "    auto-cti -g              # LLM agreement with authoritative sources"
     echo
 fi
 EOF

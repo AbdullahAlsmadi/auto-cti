@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# dashboard.py — Streamlit SOC console for live pipeline monitoring,
-# report history, tool execution, and PDF/JSON downloads.
+# dashboard.py — Auto-CTI Threat Console.
 import os
 import sys
 import json
@@ -22,135 +21,722 @@ import datetime
 import subprocess
 import streamlit as st  # type: ignore
 import pandas as pd
-import streamlit.components.v1 as components  # type: ignore
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils.secure_config import get_missing_keys, save_env, load_env
 
 load_env()
 
-st.set_page_config(page_title="Auto-CTI | SOC Console", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(
+    page_title="Auto-CTI · Threat Console",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 
-CLASSIFICATION = "TLP:AMBER  —  FOR INTERNAL DISTRIBUTION ONLY"
-
-THEMES = {
-    "dark": {
-        "BG": "#0a0e17", "CARD": "#111927", "BORDER": "#243248",
-        "TEXT": "#e6edf7", "TEXT_DIM": "#7d8da3",
-        "ACCENT_BLUE": "#3b82f6", "ACCENT_CYAN": "#22d3ee", "SUCCESS": "#10b981",
-        "DANGER": "#ef4444", "WARN": "#f59e0b", "WHITE": "#ffffff",
-    },
-    "light": {
-        "BG": "#eef2f8", "CARD": "#ffffff", "BORDER": "#d7dee8",
-        "TEXT": "#0f172a", "TEXT_DIM": "#5b6b85",
-        "ACCENT_BLUE": "#1d4ed8", "ACCENT_CYAN": "#0891b2", "SUCCESS": "#059669",
-        "DANGER": "#dc2626", "WARN": "#d97706", "WHITE": "#0f172a",
-    },
-}
+CLASSIFICATION = "TLP:AMBER · FOR INTERNAL DISTRIBUTION ONLY"
+ENV_PATH = os.path.expanduser("~/.auto-cti/.env")
 
 PIPELINE_STAGES = [
-    {"name": "Scout", "script": "scout_agent.py"},
-    {"name": "Triage", "script": "triage_agent.py"},
-    {"name": "Publisher", "script": "publisher_agent.py"},
+    {"name": "Scout",     "script": "scout_agent.py",     "desc": "Collection", "num": "01"},
+    {"name": "Triage",    "script": "triage_agent.py",    "desc": "Analysis",   "num": "02"},
+    {"name": "Publisher", "script": "publisher_agent.py", "desc": "Report",     "num": "03"},
+]
+
+TOGGLES = [
+    ("SCOUT_SKIP_NVD",        "Skip NVD",       "Begin collection from GitHub Advisory instead of NVD."),
+    ("ENABLE_SPLOITUS",       "Sploitus",       "Exploit aggregator. Frequently returns HTTP 403."),
+    ("ENABLE_VULNERS_LUCENE", "Vulners Lucene", "Requires a paid Vulners subscription."),
+    ("ENABLE_SEEBUG",         "Seebug",         "Chinese exploit index. Disabled by default."),
+]
+
+KEY_GROUPS = [
+    ("Required", [
+        ("GEMINI_API_KEY", "Google Gemini API key", True),
+    ]),
+    ("Recommended", [
+        ("NVD_API_KEY",  "NIST NVD API key",      True),
+        ("GITHUB_TOKEN", "GitHub Personal Token", True),
+        ("OTX_API_KEY",  "AlienVault OTX key",    True),
+    ]),
+    ("Optional", [
+        ("VULNERS_API_KEY",       "Vulners API key",       True),
+        ("OPENCVE_USERNAME",      "OpenCVE username",      False),
+        ("OPENCVE_PASSWORD",      "OpenCVE password",      True),
+        ("GOOGLE_SEARCH_API_KEY", "Google Search API key", True),
+        ("GOOGLE_SEARCH_CX",      "Google Search CX ID",   False),
+    ]),
 ]
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-
 DATA_DIR = os.path.expanduser("~/.auto-cti/data")
 os.makedirs(DATA_DIR, exist_ok=True)
-
 RUNS_DIR = os.path.join(DATA_DIR, "runs")
 
-# ---------------------------------------------------------------- theme + CSS
+# ---------------------------------------------------------------- html helper
 
-def get_theme():
-    if "theme" not in st.session_state:
-        st.session_state.theme = "dark"
-    return THEMES[st.session_state.theme]
+def compact(html: str) -> str:
+    return "".join(line.strip() for line in html.splitlines())
 
-def inject_custom_css(T):
+# ---------------------------------------------------------------- env helpers
+
+def set_env_var(key: str, value: str) -> None:
+    os.makedirs(os.path.dirname(ENV_PATH), exist_ok=True)
+    lines = []
+    if os.path.exists(ENV_PATH):
+        with open(ENV_PATH, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    found = False
+    new_lines = []
+    for line in lines:
+        if line.strip().startswith(f"{key}="):
+            new_lines.append(f"{key}={value}\n")
+            found = True
+        else:
+            new_lines.append(line)
+    if not found:
+        if new_lines and not new_lines[-1].endswith("\n"):
+            new_lines.append("\n")
+        new_lines.append(f"{key}={value}\n")
+    with open(ENV_PATH, "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+    try:
+        os.chmod(ENV_PATH, 0o600)
+    except Exception:
+        pass
+    os.environ[key] = value
+
+def read_env_values():
+    """Parse ~/.auto-cti/.env into a dict without touching os.environ."""
+    values = {}
+    if not os.path.exists(ENV_PATH):
+        return values
+    with open(ENV_PATH, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, _, v = line.partition("=")
+            values[k.strip()] = v.strip()
+    return values
+
+def write_env_file(merged: dict) -> None:
+    """Rewrite ~/.auto-cti/.env with a stable, grouped layout."""
+    os.makedirs(os.path.dirname(ENV_PATH), exist_ok=True)
+    with open(ENV_PATH, "w", encoding="utf-8") as f:
+        f.write("# ============================================================\n")
+        f.write("# Auto-CTI Environment Configuration\n")
+        f.write("# ============================================================\n\n")
+        for group_name, fields in KEY_GROUPS:
+            f.write(f"# ---------- {group_name} ----------\n")
+            for key, _label, _sec in fields:
+                f.write(f"{key}={merged.get(key, '')}\n")
+            f.write("\n")
+        f.write("# ---------- Feature Toggles ----------\n")
+        for tk in ["SCOUT_SKIP_NVD", "ENABLE_SPLOITUS",
+                   "ENABLE_VULNERS_LUCENE", "ENABLE_SEEBUG"]:
+            f.write(f"{tk}={merged.get(tk, 'false')}\n")
+    try:
+        os.chmod(ENV_PATH, 0o600)
+    except Exception:
+        pass
+
+# ---------------------------------------------------------------- CSS
+
+def inject_custom_css():
     st.markdown("""
     <style>
-    .stApp { background: #0a0e17; color: #e6edf7; }
+    /* ============================================================
+       THREAT CONSOLE — soft navy, cool blues
+       ============================================================ */
+
+    .stApp {
+        background:
+            radial-gradient(1400px 800px at 50% -10%, #142a5c 0%, transparent 60%),
+            linear-gradient(180deg, #0a1535 0%, #0e1a3f 50%, #0a1430 100%);
+        color: #f8fafc;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-feature-settings: "ss01" 1, "cv11" 1;
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+    }
     [data-testid="stSidebar"] { display: none; }
     header { visibility: hidden; }
     #MainMenu { visibility: hidden; }
-    .tlp-banner {
-        background: #091018; border: 1px solid #243248; border-radius: 6px;
-        padding: 0.4rem 1rem; text-align: center;
-        font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
-        font-weight: 600; letter-spacing: 0.08em;
-        color: #22d3ee !important; margin-bottom: 1rem;
+    footer { visibility: hidden; }
+
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+        max-width: 1080px;
+        margin: 0 auto;
     }
-    .tlp-banner * { color: #22d3ee !important; }
-    .hero-wrap { text-align: center; padding: 0.8rem 0 1.2rem 0; }
-    .hero-title {
-        font-family: 'Inter', sans-serif; font-size: 2.2rem; font-weight: 800;
-        background: linear-gradient(90deg, #ffffff 20%, #22d3ee 80%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        background-clip: text; color: #ffffff;
+
+    /* ---- Streamlit buttons ---- */
+    button[kind="primary"],
+    button[data-testid="baseButton-primary"],
+    [data-testid="stBaseButton-primary"] {
+        background: linear-gradient(180deg, #3b82f6, #2563eb) !important;
+        border: 1px solid #3b82f6 !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 18px rgba(59, 130, 246, 0.35) !important;
     }
-    .metric-card {
-        background: #111927; border: 1px solid #243248;
-        border-radius: 10px; padding: 1rem;
+    button[kind="primary"]:hover,
+    button[data-testid="baseButton-primary"]:hover,
+    [data-testid="stBaseButton-primary"]:hover {
+        background: linear-gradient(180deg, #60a5fa, #3b82f6) !important;
+        box-shadow: 0 6px 22px rgba(59, 130, 246, 0.5) !important;
+        color: #ffffff !important;
     }
-    .metric-value { font-size: 2rem; font-weight: 700; color: #ffffff !important; }
-    .tool-card {
-        background: #111927; border: 1px solid #243248; border-radius: 10px;
-        padding: 1rem 1.1rem; min-height: 150px;
+    button[kind="secondary"],
+    button[data-testid="baseButton-secondary"],
+    [data-testid="stBaseButton-secondary"] {
+        background: rgba(19, 35, 72, 0.6) !important;
+        border: 1px solid #1e3268 !important;
+        color: #8b95c2 !important;
     }
-    .tool-card-title {
-        font-weight: 700; color: #ffffff; font-size: 1rem; margin-top: 0.4rem;
+    button[kind="secondary"]:hover,
+    button[data-testid="baseButton-secondary"]:hover,
+    [data-testid="stBaseButton-secondary"]:hover {
+        border-color: #3b82f6 !important;
+        color: #60a5fa !important;
+        background: rgba(59, 130, 246, 0.08) !important;
     }
-    .tool-card-desc {
-        font-size: 0.78rem; color: #7d8da3; line-height: 1.45; margin-top: 0.35rem;
-    }
-    .tool-card-code {
-        font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
-        color: #22d3ee; margin-top: 0.5rem;
-    }
-    .status-badge {
-        display: inline-block; padding: 0.3rem 0.85rem; border-radius: 20px;
-        font-size: 0.72rem; font-weight: 700; font-family: 'JetBrains Mono', monospace;
-    }
-    .status-online { background: #10b98122; color: #10b981 !important; border: 1px solid #10b98155; }
-    .status-scanning { background: #f59e0b22; color: #f59e0b !important; border: 1px solid #f59e0b55; }
-    .status-completed { background: #3b82f622; color: #3b82f6 !important; border: 1px solid #3b82f655; }
-    .progress-track { background: #243248; border-radius: 100px; height: 7px; overflow: hidden; margin-top: 0.4rem; }
-    .progress-fill {
-        height: 100%; border-radius: 100px;
-        background: linear-gradient(90deg, #3b82f6, #22d3ee);
-        transition: width 0.5s ease;
-    }
-    .notice-box {
-        border-radius: 8px; padding: 0.8rem 1rem; font-size: 0.9rem;
-        background: #111927; color: #e6edf7 !important;
-    }
-    h3 { color: #ffffff !important; }
     .stButton > button {
-        background-color: #111927 !important; color: #e6edf7 !important;
-        border: 1px solid #243248 !important; border-radius: 8px !important;
+        border-radius: 8px !important;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.03em !important;
+        padding: 0.65rem 1.2rem !important;
+        min-height: 42px !important;
+        transition: all 0.18s ease !important;
     }
-    .stButton > button:hover {
-        border-color: #22d3ee !important; color: #22d3ee !important;
+
+    /* ---- Streamlit toggle: green when ON, red when OFF ---- */
+    div[data-testid="stToggle"] {
+        padding: 0.4rem 0;
     }
-    /* Tabs */
+    div[data-testid="stToggle"] [role="switch"] {
+        transition: all 0.2s ease !important;
+        border: 1px solid #1e3268 !important;
+    }
+    div[data-testid="stToggle"] [role="switch"][aria-checked="true"] {
+        background-color: #22c55e !important;
+        border-color: #22c55e !important;
+        box-shadow: 0 0 12px rgba(34, 197, 94, 0.4) !important;
+    }
+    div[data-testid="stToggle"] [role="switch"][aria-checked="false"] {
+        background-color: #b91c1c !important;
+        border-color: #b91c1c !important;
+        box-shadow: 0 0 12px rgba(185, 28, 28, 0.35) !important;
+    }
+    div[data-testid="stToggle"] label,
+    div[data-testid="stToggle"] p {
+        font-family: 'Inter', sans-serif !important;
+        font-size: 0.82rem !important;
+        color: #cbd3ec !important;
+        font-weight: 500 !important;
+    }
+
+    /* ---- text inputs (for the key editor) ---- */
+    .stTextInput input {
+        background-color: rgba(19, 35, 72, 0.6) !important;
+        border: 1px solid #1e3268 !important;
+        border-radius: 8px !important;
+        color: #f8fafc !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 0.82rem !important;
+        padding: 0.55rem 0.75rem !important;
+    }
+    .stTextInput input:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+    }
+    .stTextInput label p {
+        font-family: 'Inter', sans-serif !important;
+        font-size: 0.78rem !important;
+        color: #8b95c2 !important;
+        font-weight: 500 !important;
+    }
+
+    /* ---- top bar ---- */
+    .rb-top {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1.4rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #1e3268;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.62rem;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: #6b7ba8;
+        margin-bottom: 1.6rem;
+    }
+    .rb-top .cls { color: #60a5fa; }
+    .rb-top .sep { color: #1e3268; }
+
+    /* ---- tabs ---- */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 0.4rem; background: #0f1623; border-radius: 10px;
-        padding: 0.35rem; border: 1px solid #243248;
+        gap: 0.4rem;
+        background: transparent;
+        border-bottom: 1px solid #1e3268;
+        padding: 0;
+        margin-bottom: 1.8rem;
+        justify-content: center !important;
+        display: flex !important;
     }
     .stTabs [data-baseweb="tab"] {
-        height: 42px; background-color: transparent; border-radius: 8px;
-        padding: 0 1rem; color: #7d8da3 !important; font-weight: 600;
+        height: 42px;
+        border-radius: 0;
+        padding: 0 1.4rem;
+        color: #6b7ba8 !important;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.82rem;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        background: transparent !important;
+        border-bottom: 2px solid transparent !important;
+        border-left: none !important;
+        border-top: none !important;
+        border-right: none !important;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #111927 !important; color: #22d3ee !important;
-        border: 1px solid #243248 !important;
+        color: #ffffff !important;
+        border-bottom: 2px solid #3b82f6 !important;
+        background: transparent !important;
     }
+    .stTabs [data-baseweb="tab-highlight"] { background: transparent !important; }
+    .stTabs [data-baseweb="tab-border"] { background: transparent !important; }
+
+    /* ---- hero ---- */
+    .hero {
+        text-align: center;
+        padding-bottom: 2rem;
+        margin-bottom: 1.6rem;
+        border-bottom: 1px solid #1e3268;
+    }
+    .hero .eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.66rem;
+        letter-spacing: 0.36em;
+        text-transform: uppercase;
+        color: #6b7ba8;
+        margin-bottom: 1.4rem;
+    }
+    .hero h1 {
+        font-family: 'Inter', sans-serif;
+        font-size: 3rem;
+        font-weight: 800;
+        letter-spacing: -0.035em;
+        line-height: 1.05;
+        color: #ffffff;
+        margin: 0 0 1rem 0;
+    }
+    .hero h1 em {
+        font-style: normal;
+        color: #60a5fa;
+        font-weight: 800;
+    }
+    .hero .lede {
+        font-size: 1rem;
+        line-height: 1.6;
+        color: #8b95c2;
+        max-width: 620px;
+        margin: 0 auto 1.6rem;
+    }
+    .hero .state-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.7rem;
+        padding: 0.55rem 1.2rem;
+        border-radius: 999px;
+        background: rgba(19, 35, 72, 0.7);
+        border: 1px solid #1e3268;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+    .state-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: currentColor;
+        display: inline-block;
+        box-shadow: 0 0 12px currentColor;
+    }
+    .state-ready { color: #22c55e; }
+    .state-run   { color: #60a5fa; }
+    .state-done  { color: #3b82f6; }
+    .state-err   { color: #ef4444; }
+    .state-run .state-dot { animation: pulse 1.4s ease-in-out infinite; }
+    @keyframes pulse {
+        0%,100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(0.85); }
+    }
+    .state-sep { color: #1e3268; }
+
+    /* ---- section head ---- */
+    .rb-sec {
+        text-align: center;
+        padding: 0.5rem 0 1rem;
+        margin: 1.4rem 0 1rem;
+    }
+    .rb-sec .num {
+        display: inline-block;
+        font-family: 'JetBrains Mono', monospace;
+        color: #60a5fa;
+        font-size: 0.7rem;
+        letter-spacing: 0.24em;
+        font-weight: 700;
+        margin-right: 0.8rem;
+    }
+    .rb-sec .ttl {
+        display: inline-block;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.82rem;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: #8b95c2;
+        font-weight: 600;
+    }
+    .rb-sec::after {
+        content: "";
+        display: block;
+        width: 40px;
+        height: 2px;
+        background: #3b82f6;
+        margin: 0.7rem auto 0;
+        border-radius: 2px;
+    }
+
+    /* ---- stats ---- */
+    .stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    .stat {
+        background: linear-gradient(180deg, #132348 0%, #0e1a3d 100%);
+        border: 1px solid #1e3268;
+        border-radius: 12px;
+        padding: 1.4rem 1rem 1.3rem;
+        text-align: center;
+        position: relative;
+        transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+    .stat:hover {
+        transform: translateY(-3px);
+        border-color: #2a3f7a;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+    }
+    .stat .lbl {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.62rem;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: #6b7ba8;
+        margin-bottom: 0.6rem;
+    }
+    .stat .val {
+        font-family: 'Inter', sans-serif;
+        font-size: 2.6rem;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.03em;
+        color: #ffffff;
+        font-variant-numeric: tabular-nums;
+    }
+    .stat .val.crit  { color: #a78bfa; }
+    .stat .val.high  { color: #60a5fa; }
+    .stat .val.med   { color: #38bdf8; }
+    .stat .ft {
+        margin-top: 0.7rem;
+        font-size: 0.72rem;
+        color: #6b7ba8;
+        letter-spacing: 0.02em;
+    }
+    .stat .stripe {
+        position: absolute;
+        top: 0; left: 50%;
+        transform: translateX(-50%);
+        width: 44px; height: 3px;
+        border-radius: 0 0 3px 3px;
+        background: var(--c, #3b82f6);
+    }
+
+    /* ---- toggles note ---- */
+    .tgl-note {
+        text-align: center;
+        font-size: 0.78rem;
+        color: #6b7ba8;
+        margin: 0.3rem 0 1rem;
+    }
+    .tgl-note code {
+        background: rgba(19, 35, 72, 0.6);
+        border: 1px solid #1e3268;
+        padding: 0.15rem 0.45rem;
+        border-radius: 4px;
+        color: #60a5fa;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+    }
+
+    /* ---- agents ---- */
+    .agents {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    .agent {
+        background: linear-gradient(180deg, #132348 0%, #0e1a3d 100%);
+        border: 1px solid #1e3268;
+        border-radius: 12px;
+        padding: 1.4rem 1.2rem;
+        text-align: center;
+        position: relative;
+        transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+    .agent:hover {
+        transform: translateY(-3px);
+        border-color: #2a3f7a;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+    }
+    .agent .num {
+        display: inline-block;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.62rem;
+        letter-spacing: 0.22em;
+        color: #6b7ba8;
+        margin-bottom: 0.5rem;
+    }
+    .agent .nm {
+        font-family: 'Inter', sans-serif;
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #ffffff;
+        letter-spacing: -0.015em;
+    }
+    .agent .ds {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.6rem;
+        letter-spacing: 0.26em;
+        text-transform: uppercase;
+        color: #6b7ba8;
+        margin-top: 0.3rem;
+    }
+    .agent .bar {
+        height: 3px;
+        background: #1e3268;
+        border-radius: 3px;
+        margin: 1rem 0 0.75rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .agent .bar .fill {
+        position: absolute;
+        top: 0; left: 0; bottom: 0;
+        background: linear-gradient(90deg, #2563eb, #60a5fa);
+        border-radius: 3px;
+        transition: width 0.4s ease;
+    }
+    .agent .ft {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        align-items: baseline;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.62rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+    }
+    .agent .ft .st { color: #6b7ba8; font-weight: 600; }
+    .agent .ft .st.on   { color: #60a5fa; }
+    .agent .ft .st.done { color: #22c55e; }
+    .agent .ft .pc {
+        color: #ffffff;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0;
+    }
+
+    /* ---- progress ---- */
+    .pline {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.62rem;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: #6b7ba8;
+        margin: 1.4rem 0.2rem 0.6rem;
+    }
+    .pline .pc { color: #60a5fa; font-weight: 700; }
+    .ptrack {
+        height: 4px;
+        background: #132348;
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+    }
+    .pfill {
+        position: absolute;
+        top: 0; left: 0; bottom: 0;
+        background: linear-gradient(90deg, #2563eb, #60a5fa);
+        border-radius: 4px;
+        transition: width 0.4s ease;
+        box-shadow: 0 0 16px rgba(96, 165, 250, 0.5);
+    }
+
+    /* ---- console ---- */
+    .con {
+        background: #0a1535;
+        border: 1px solid #1e3268;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-top: 1rem;
+    }
+    .con .hd {
+        padding: 0.65rem 1rem;
+        border-bottom: 1px solid #1e3268;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.6rem;
+        letter-spacing: 0.26em;
+        text-transform: uppercase;
+        color: #6b7ba8;
+        background: rgba(19, 35, 72, 0.4);
+    }
+    .con .hd .rr { color: #4d5a85; letter-spacing: 0.18em; }
+    .con .bd {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.76rem;
+        line-height: 1.7;
+        padding: 0.9rem 1.1rem;
+        overflow-y: auto;
+        background: #08112b;
+        scrollbar-width: thin;
+        scrollbar-color: #1e3268 #08112b;
+    }
+    .con .bd::-webkit-scrollbar { width: 8px; }
+    .con .bd::-webkit-scrollbar-thumb { background: #1e3268; border-radius: 4px; }
+    .con .bd::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+    .con .ln { display: flex; gap: 0.65rem; margin-bottom: 0.12rem; }
+    .con .g { flex-shrink: 0; width: 0.85rem; text-align: center; }
+    .con .t { word-break: break-word; }
+
+    /* ---- notice ---- */
+    .nt {
+        border-radius: 12px;
+        background: rgba(19, 35, 72, 0.6);
+        border: 1px solid #1e3268;
+        border-left: 4px solid #3b82f6;
+        padding: 1rem 1.2rem;
+        font-size: 0.92rem;
+        color: #cbd3ec;
+        line-height: 1.55;
+        text-align: center;
+    }
+    .nt.success { border-left-color: #22c55e; }
+    .nt.warning { border-left-color: #facc15; }
+    .nt.error   { border-left-color: #ef4444; }
+    .nt.info    { border-left-color: #3b82f6; }
+    .nt .cap {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.6rem;
+        letter-spacing: 0.26em;
+        text-transform: uppercase;
+        color: #8b95c2;
+        display: block;
+        margin-bottom: 0.4rem;
+        font-weight: 700;
+    }
+
+    /* ---- tool card ---- */
+    .tc {
+        background: linear-gradient(180deg, #132348 0%, #0e1a3d 100%);
+        border: 1px solid #1e3268;
+        border-radius: 12px;
+        padding: 1.5rem 1.3rem;
+        height: 100%;
+        text-align: center;
+        transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+    .tc:hover {
+        transform: translateY(-3px);
+        border-color: #2a3f7a;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+    }
+    .tc .num {
+        display: inline-block;
+        font-family: 'JetBrains Mono', monospace;
+        color: #60a5fa;
+        font-size: 0.68rem;
+        letter-spacing: 0.24em;
+        font-weight: 700;
+        margin-bottom: 0.6rem;
+    }
+    .tc .tt {
+        font-family: 'Inter', sans-serif;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #ffffff;
+        letter-spacing: -0.01em;
+    }
+    .tc .dd {
+        font-size: 0.86rem;
+        color: #8b95c2;
+        line-height: 1.55;
+        margin-top: 0.6rem;
+    }
+    .tc .cm {
+        display: inline-block;
+        margin-top: 1rem;
+        padding: 0.32rem 0.7rem;
+        background: rgba(10, 21, 53, 0.7);
+        border: 1px solid #1e3268;
+        border-radius: 6px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
+        color: #60a5fa;
+        letter-spacing: 0.04em;
+    }
+
+    /* ---- code / dataframe ---- */
+    .stCode, pre {
+        background: #08112b !important;
+        border: 1px solid #1e3268 !important;
+        border-radius: 8px !important;
+    }
+    [data-testid="stDataFrame"] {
+        border: 1px solid #1e3268;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    /* ---- expander ---- */
+    .streamlit-expanderHeader, details summary {
+        font-family: 'Inter', sans-serif !important;
+        font-size: 0.82rem !important;
+        color: #cbd3ec !important;
+    }
+
+    /* ---- tighten Streamlit wrappers ---- */
+    [data-testid="stVerticalBlock"] > [style*="flex-direction: column"] > [data-testid="stVerticalBlock"] {
+        gap: 0.5rem;
+    }
+    [data-testid="stHorizontalBlock"] { gap: 0.7rem; }
     </style>
     """, unsafe_allow_html=True)
 
-# ---------------------------------------------------------------- shared helpers
+# ---------------------------------------------------------------- helpers
 
 def load_latest_json(directory, extension="*.json"):
     if not os.path.exists(directory):
@@ -166,8 +752,13 @@ def load_latest_json(directory, extension="*.json"):
         return None, latest
 
 def run_tool(script_relative, args=None, timeout=180):
-    """Run a src/tools script and capture its output."""
-    cmd = [sys.executable, "-u", script_relative]
+    # script_relative looks like "src/tools/check_keys.py", but PROJECT_ROOT
+    # is already ~/.auto-cti/src/, so strip the leading "src/" to avoid
+    # producing ~/.auto-cti/src/src/...
+    rel = script_relative[4:] if script_relative.startswith("src/") else script_relative
+    script_path = os.path.join(PROJECT_ROOT, rel)
+
+    cmd = [sys.executable, "-u", script_path]
     if args:
         cmd.extend(args)
     try:
@@ -183,188 +774,209 @@ def run_tool(script_relative, args=None, timeout=180):
     except Exception as e:
         return f"Tool failed: {e}", False
 
-def render_classification_banner():
-    st.markdown(f'<div class="tlp-banner">{CLASSIFICATION}</div>', unsafe_allow_html=True)
-
-def render_theme_toggle():
-    label = "☀️ Light Mode" if st.session_state.theme == "dark" else "🌙 Dark Mode"
-    if st.button(label, key="theme_toggle"):
-        st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
-        st.rerun()
-
-def render_notice(T, text, kind="info"):
-    colors = {"info": "#22d3ee", "success": "#10b981", "warning": "#f59e0b", "error": "#ef4444"}
-    icons = {"info": "ℹ️", "success": "✅", "warning": "⚠️", "error": "⛔"}
-    c = colors.get(kind, "#22d3ee")
-    st.markdown(f"""
-    <div class="notice-box" style="border:1px solid {c}55; border-left:4px solid {c};">
-        {icons.get(kind, '')}&nbsp; {text}
-    </div>
-    """, unsafe_allow_html=True)
-
-# ---------------------------------------------------------------- pipeline tab
-
 def get_severity_stats():
     pub_data, _ = load_latest_json(os.path.join(DATA_DIR, "publisher_agent_result"))
     if pub_data and "severity_stats" in pub_data:
         s = pub_data["severity_stats"]
-        return s.get("Total", "-"), s.get("Critical", "-"), s.get("High", "-"), s.get("Medium", "-")
-    triage_data, _ = load_latest_json(os.path.join(DATA_DIR, "triage_agent_result"))
-    if isinstance(triage_data, list) and triage_data:
-        df = pd.DataFrame(triage_data)
-        total = len(df)
-        if "CVSS_Severity" in df.columns:
-            sev = df["CVSS_Severity"].astype(str).str.lower()  # type: ignore
-            return total, sev.eq("critical").sum(), sev.eq("high").sum(), sev.eq("medium").sum()
-        return total, "-", "-", "-"
-    return "-", "-", "-", "-"
+        return s.get("Total", 0), s.get("Critical", 0), s.get("High", 0), s.get("Medium", 0)
+    return 0, 0, 0, 0
 
-def render_hero_header(T, status_text, status_class):
-    st.markdown(f"""
-    <div class="hero-wrap">
-        <div class="hero-title">AUTO-CTI SECURITY OPERATIONS CONSOLE</div>
-        <div style="font-size:0.8rem; color:#7d8da3; text-transform:uppercase; letter-spacing:0.06em;">
-            AI-POWERED THREAT INTELLIGENCE &amp; TRIAGE
-        </div>
-        <div style="margin-top:0.6rem;">
-            <span class="status-badge {status_class}">{status_text}</span>
-            <span style="color:#7d8da3;"> &nbsp;•&nbsp; LIVE DATA PIPELINE</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+def get_last_report_time():
+    report_dir = os.path.join(DATA_DIR, "Reports")
+    if not os.path.exists(report_dir):
+        return None
+    files = glob.glob(os.path.join(report_dir, "*.pdf"))
+    if not files:
+        return None
+    return datetime.datetime.fromtimestamp(os.path.getctime(max(files, key=os.path.getctime)))
 
-def render_executive_dashboard(T, agents_state):
-    total_pct = sum(a['pct'] for a in agents_state) / len(agents_state) if agents_state else 0
-    if total_pct == 100:
-        status_text, status_class = "✅ ANALYSIS COMPLETE", "status-completed"
-    elif total_pct > 0:
-        status_text, status_class = "⏳ SCANNING IN PROGRESS", "status-scanning"
+def render_notice(text, kind="info", caption="Notice"):
+    st.markdown(compact(f"""
+        <div class="nt {kind}">
+            <span class="cap">{caption}</span>
+            {text}
+        </div>
+    """), unsafe_allow_html=True)
+
+def render_top_bar():
+    st.markdown(compact(f"""
+        <div class="rb-top">
+            <span class="cls">{CLASSIFICATION}</span>
+            <span class="sep">/</span>
+            <span>AUTO-CTI · THREAT CONSOLE · REV 3</span>
+        </div>
+    """), unsafe_allow_html=True)
+
+def render_hero(running, done):
+    if running:
+        cls, txt = "state-run", "Scanning in progress"
+    elif done:
+        cls, txt = "state-done", "Last analysis complete"
     else:
-        status_text, status_class = "🟢 SYSTEM READY", "status-online"
+        cls, txt = "state-ready", "System ready"
 
-    render_hero_header(T, status_text, status_class)
-    total_cves, critical_count, high_count, medium_count = get_severity_stats()
-
-    st.markdown(f"""
-    <div style="margin-bottom:1.2rem;">
-        <div style="display:flex; justify-content:space-between; font-size:0.75rem;
-                    color:#7d8da3; font-family:'JetBrains Mono',monospace;">
-            <span>PIPELINE PROGRESS</span><span>{round(total_pct)}%</span>
-        </div>
-        <div class="progress-track"><div class="progress-fill" style="width:{total_pct}%;"></div></div>
-    </div>
-    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:1rem;">
-        <div class="metric-card">
-            <div style="color:#7d8da3; font-size:0.78rem;">Total CVEs</div>
-            <div class="metric-value">{total_cves}</div>
-        </div>
-        <div class="metric-card">
-            <div style="color:#7d8da3; font-size:0.78rem;">Critical</div>
-            <div class="metric-value" style="color:#ef4444 !important;">{critical_count}</div>
-        </div>
-        <div class="metric-card">
-            <div style="color:#7d8da3; font-size:0.78rem;">High</div>
-            <div class="metric-value" style="color:#f59e0b !important;">{high_count}</div>
-        </div>
-        <div class="metric-card">
-            <div style="color:#7d8da3; font-size:0.78rem;">Medium</div>
-            <div class="metric-value" style="color:#22d3ee !important;">{medium_count}</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-def generate_agent_rings_html(T, agents_data):
-    html = '<div style="display:flex; justify-content:center; gap:2.5rem; flex-wrap:wrap; margin:1rem 0;">'
-    for agent in agents_data:
-        pct = agent['pct']
-        circumference = 2 * 3.14159 * 32
-        offset = circumference - (pct / 100) * circumference
-        color = '#10b981' if pct == 100 else ('#22d3ee' if pct > 0 else '#243248')
-        html += f"""
-        <div style="display:flex; flex-direction:column; align-items:center;">
-            <div style="position:relative; width:78px; height:78px; display:flex; justify-content:center; align-items:center;">
-                <svg width="78" height="78" style="position:absolute; top:0; left:0; transform:rotate(-90deg);">
-                    <circle cx="39" cy="39" r="32" fill="none" stroke="#243248" stroke-width="6" />
-                    <circle cx="39" cy="39" r="32" fill="none" stroke="{color}" stroke-width="6"
-                            stroke-dasharray="{circumference}" stroke-dashoffset="{offset}"
-                            style="transition: stroke-dashoffset 0.5s ease;" />
-                </svg>
-                <span style="font-size:1.05rem; font-weight:700; color:#ffffff; font-family:'JetBrains Mono',monospace;">{pct}%</span>
+    st.markdown(compact(f"""
+        <div class="hero">
+            <div class="eyebrow">Autonomous Cyber Threat Intelligence</div>
+            <h1>Auto-<em>CTI</em> Threat Console</h1>
+            <p class="lede">
+                A multi-agent pipeline for the collection, triage, and publication
+                of publicly disclosed vulnerabilities. Every score is cross-verified
+                against authoritative records and reported with full provenance.
+            </p>
+            <div class="state-row {cls}">
+                <span class="state-dot"></span>
+                <span>{txt}</span>
+                <span class="state-sep">/</span>
+                <span style="color:#6b7ba8;">v3.0</span>
             </div>
-            <span style="margin-top:0.5rem; font-size:0.7rem; font-weight:700; color:#7d8da3;
-                         text-transform:uppercase; letter-spacing:0.05em;">{agent['name']}</span>
         </div>
-        """
-    html += '</div>'
-    return html
+    """), unsafe_allow_html=True)
+
+def render_stats():
+    total, crit, high, med = get_severity_stats()
+    st.markdown(compact(f"""
+        <div class="stats">
+            <div class="stat" style="--c:#60a5fa;">
+                <div class="stripe"></div>
+                <div class="lbl">Total CVEs</div>
+                <div class="val">{total}</div>
+                <div class="ft">Identified vulnerabilities</div>
+            </div>
+            <div class="stat" style="--c:#a78bfa;">
+                <div class="stripe"></div>
+                <div class="lbl">Critical</div>
+                <div class="val crit">{crit}</div>
+                <div class="ft">Immediate action required</div>
+            </div>
+            <div class="stat" style="--c:#3b82f6;">
+                <div class="stripe"></div>
+                <div class="lbl">High</div>
+                <div class="val high">{high}</div>
+                <div class="ft">Priority queue</div>
+            </div>
+            <div class="stat" style="--c:#38bdf8;">
+                <div class="stripe"></div>
+                <div class="lbl">Medium</div>
+                <div class="val med">{med}</div>
+                <div class="ft">Standard priority</div>
+            </div>
+        </div>
+    """), unsafe_allow_html=True)
+
+def render_section(num, title):
+    st.markdown(compact(f"""
+        <div class="rb-sec">
+            <span class="num">{num}</span>
+            <span class="ttl">{title}</span>
+        </div>
+    """), unsafe_allow_html=True)
+
+def render_toggles():
+    st.markdown(compact("""
+        <div class="tgl-note">
+            Feature toggles — click to write directly to <code>~/.auto-cti/.env</code>.
+            Green means enabled, red means disabled.
+        </div>
+    """), unsafe_allow_html=True)
+    cols = st.columns(len(TOGGLES))
+    for col, (key, label, hint) in zip(cols, TOGGLES):
+        with col:
+            current = os.getenv(key, "false").lower() == "true"
+            new_val = st.toggle(label, value=current, key=f"tgl_{key}", help=hint)
+            if new_val != current:
+                set_env_var(key, "true" if new_val else "false")
+                st.rerun()
+
+def render_agents(agents_state):
+    cards = ""
+    for i, stage in enumerate(PIPELINE_STAGES):
+        pct = agents_state[i]["pct"]
+        if pct == 100:
+            st_cls, st_txt = "done", "Complete"
+        elif pct > 0:
+            st_cls, st_txt = "on", "Running"
+        else:
+            st_cls, st_txt = "", "Idle"
+
+        cards += (
+            f'<div class="agent">'
+            f'<div class="num">{stage["num"]}</div>'
+            f'<div class="nm">{stage["name"]}</div>'
+            f'<div class="ds">{stage["desc"]}</div>'
+            f'<div class="bar"><div class="fill" style="width:{pct}%;"></div></div>'
+            f'<div class="ft"><span class="st {st_cls}">{st_txt}</span>'
+            f'<span class="pc">{pct}%</span></div>'
+            f'</div>'
+        )
+    st.markdown(f'<div class="agents">{cards}</div>', unsafe_allow_html=True)
+
+def render_progress(pct):
+    st.markdown(compact(f"""
+        <div class="pline">
+            <span>Pipeline progress</span>
+            <span class="pc">{round(pct)}%</span>
+        </div>
+        <div class="ptrack"><div class="pfill" style="width:{pct}%;"></div></div>
+    """), unsafe_allow_html=True)
+
+# ---------------------------------------------------------------- console
 
 def classify_log_line(line: str):
-    noise_patterns = [
-        "[CrewAIEventsBus]", "charmap", "codec can't encode",
-        "character maps to <undefined>", "Sync handler error",
-        "DeprecationWarning", "deprecated since", "has been renamed",
-    ]
-    for pattern in noise_patterns:
-        if pattern in line:
+    noise = ["[CrewAIEventsBus]", "charmap", "codec can't encode",
+             "character maps to <undefined>", "Sync handler error",
+             "DeprecationWarning", "deprecated since", "has been renamed"]
+    for p in noise:
+        if p in line:
             return None
     l = line.strip().lower()
     if any(k in l for k in ["[ok]", "successfully", "generated successfully", "saved at", "finished successfully", "complete"]):
-        return ("✅", "#10b981", line.strip())
+        return ("✓", "#22c55e", line.strip())
     if any(k in l for k in ["[failed]", "[exception]", "error:", "traceback", "exit code"]):
-        return ("⛔", "#ef4444", line.strip())
+        return ("✕", "#ef4444", line.strip())
     if any(k in l for k in ["warning", "warn:", "could not parse", "skipping"]):
-        return ("⚠️", "#f59e0b", line.strip())
-    if any(k in l for k in ["waking up", "compiling", "agent is", "publisher agent", "triage agent",
-                              "scout agent", "kickoff", "task started", "starting"]):
-        return ("🔄", "#22d3ee", line.strip())
+        return ("▲", "#facc15", line.strip())
+    if any(k in l for k in ["waking up", "compiling", "agent is", "publisher agent",
+                             "triage agent", "scout agent", "kickoff", "task started", "starting"]):
+        return ("◆", "#60a5fa", line.strip())
     if any(k in l for k in ["api key", "loaded:", "base_url", "model:", "gemini", "ollama"]):
-        return ("ℹ️", "#3b82f6", line.strip())
-    if len(line.strip()) > 120:
-        return ("💬", "#7d8da3", line.strip()[:160] + "…")
+        return ("·", "#6b7ba8", line.strip())
     if line.strip():
-        return ("▸", "#7d8da3", line.strip())
+        return ("·", "#cbd3ec", line.strip()[:180])
     return None
 
-def render_console(T, log_lines, height=300):
-    rows_html = ""
-    for line in log_lines[-500:]:
-        result = classify_log_line(line)
-        if result is None:
+def render_console(log_lines, height=340):
+    rows = ""
+    for line in log_lines[-400:]:
+        r = classify_log_line(line)
+        if r is None:
             continue
-        icon, color, text = result
-        safe_text = text.replace("<", "&lt;").replace(">", "&gt;")
-        rows_html += (f'<div style="display:flex; gap:0.5rem; margin-bottom:0.3rem;">'
-                      f'<span style="flex-shrink:0;">{icon}</span>'
-                      f'<span style="color:{color}; word-break:break-word;">{safe_text}</span>'
-                      f'</div>')
-    if not rows_html:
-        rows_html = '<span style="color:#7d8da3;">Waiting for agent output...</span>'
-    html = f"""
-    <div style="background:#000000; border:1px solid #243248; border-radius:10px; overflow:hidden; margin-top:0.5rem;">
-        <div style="background:#091018; padding:0.45rem 0.9rem; display:flex; align-items:center; gap:0.4rem;
-                    border-bottom:1px solid #243248; font-family:'JetBrains Mono',monospace;
-                    font-size:0.7rem; color:#7d8da3;">
-            <span style="width:9px;height:9px;border-radius:50%;background:#ef4444;display:inline-block;"></span>
-            <span style="width:9px;height:9px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
-            <span style="width:9px;height:9px;border-radius:50%;background:#10b981;display:inline-block;"></span>
-            <span style="margin-left:0.5rem;">SYSTEM CONSOLE — Smart Feed</span>
+        icon, color, text = r
+        safe = text.replace("<", "&lt;").replace(">", "&gt;")
+        rows += (f'<div class="ln">'
+                 f'<span class="g" style="color:{color};">{icon}</span>'
+                 f'<span class="t" style="color:{color};">{safe}</span>'
+                 f'</div>')
+    if not rows:
+        rows = '<span style="color:#6b7ba8;">Awaiting agent output…</span>'
+    html = compact(f"""
+        <div class="con">
+            <div class="hd">
+                <span>Live Agent Console</span>
+                <span class="rr">Stream · Tail · 400 lines</span>
+            </div>
+            <div class="bd" style="max-height:{height}px;">
+                {rows}
+            </div>
         </div>
-        <div id="smart-console"
-             style="font-family:'JetBrains Mono',monospace; font-size:0.8rem; padding:0.9rem 1rem;
-                    height:{height}px; overflow-y:auto; line-height:1.65; background:#000000;">
-            {rows_html}
-        </div>
-    </div>
-    <script>
-        const el1 = document.getElementById('smart-console');
-        if (el1) {{ el1.scrollTop = el1.scrollHeight; }}
-    </script>
-    """
-    components.html(html, height=height + 55, scrolling=False)
+    """)
+    st.markdown(html, unsafe_allow_html=True)
 
-def run_agent_with_console(ring_placeholder, console_placeholder, T, agents_data, current_index, script_name):
+# ---------------------------------------------------------------- pipeline tab
+
+def run_agent_with_console(agents_ph, console_ph, agents_data, current_index, script_name):
     try:
-        process = subprocess.Popen(
+        proc = subprocess.Popen(
             [sys.executable, "-u", script_name],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, bufsize=1, universal_newlines=True,
@@ -373,327 +985,342 @@ def run_agent_with_console(ring_placeholder, console_placeholder, T, agents_data
             cwd=PROJECT_ROOT
         )
         progress = 0
-        last_update_time = time.time()
+        last = time.time()
         while True:
-            assert process.stdout is not None
-            line = process.stdout.readline()
-            if line == "" and process.poll() is not None:
+            assert proc.stdout is not None
+            line = proc.stdout.readline()
+            if line == "" and proc.poll() is not None:
                 break
             if line:
                 st.session_state.console_log.append(line.rstrip())
                 progress = min(progress + 4, 95)
-                agents_data[current_index]['pct'] = progress
-                if time.time() - last_update_time >= 0.5:
-                    ring_placeholder.empty()
-                    with ring_placeholder:
-                        components.html(generate_agent_rings_html(T, agents_data), height=170, scrolling=False)
-                    console_placeholder.empty()
-                    with console_placeholder:
-                        render_console(T, st.session_state.console_log)
-                    last_update_time = time.time()
-        if process.returncode == 0:
-            agents_data[current_index]['pct'] = 100
+                agents_data[current_index]["pct"] = progress
+                if time.time() - last >= 0.5:
+                    with agents_ph:
+                        render_agents(agents_data)
+                    with console_ph:
+                        render_console(st.session_state.console_log)
+                    last = time.time()
+        if proc.returncode == 0:
+            agents_data[current_index]["pct"] = 100
             st.session_state.console_log.append(f"[OK] {script_name} finished successfully.")
-            ring_placeholder.empty()
-            with ring_placeholder:
-                components.html(generate_agent_rings_html(T, agents_data), height=170, scrolling=False)
-            console_placeholder.empty()
-            with console_placeholder:
-                render_console(T, st.session_state.console_log)
+            with agents_ph:
+                render_agents(agents_data)
+            with console_ph:
+                render_console(st.session_state.console_log)
             return True
         else:
-            st.session_state.console_log.append(f"[FAILED] {script_name} exited with code {process.returncode}.")
-            st.error(f"⚠️ Agent '{script_name}' failed with return code {process.returncode}.")
+            st.session_state.console_log.append(f"[FAILED] {script_name} exit {proc.returncode}.")
+            st.error(f"Agent '{script_name}' failed with return code {proc.returncode}.")
             return False
     except Exception as e:
         st.session_state.console_log.append(f"[EXCEPTION] {e}")
-        st.error(f"⚠️ Exception while running {script_name}: {e}")
+        st.error(f"Exception while running {script_name}: {e}")
         return False
 
-def display_statistics(T):
-    st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown("<h3>📊 Detailed Vulnerability Findings</h3>", unsafe_allow_html=True)
-    pub_data, _ = load_latest_json(os.path.join(DATA_DIR, "publisher_agent_result"))
-    if pub_data and "cve_summary" in pub_data:
-        df = pd.DataFrame(pub_data["cve_summary"])
-    else:
-        triage_data, _ = load_latest_json(os.path.join(DATA_DIR, "triage_agent_result"))
-        df = pd.DataFrame(triage_data) if isinstance(triage_data, list) else pd.DataFrame()
-    if not df.empty:
-        rename_map = {
-            "cve_id": "CVE ID", "description": "Description", "cvss_score": "CVSS Score",
-            "severity": "Severity", "cwe_id": "CWE", "urgency_score": "Urgency Score",
-            "mitre_mappings": "MITRE ATT&CK", "references": "References",
-        }
-        display_cols = [c for c in rename_map if c in df.columns]
-        st.dataframe(df[display_cols].rename(columns=rename_map),  # type: ignore
-                     use_container_width=True, hide_index=True)
-    else:
-        render_notice(T, "No vulnerability data found yet.", "info")
-
-def display_console_tools(T):
-    st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown("<h3>🖥️ Console Tools</h3>", unsafe_allow_html=True)
-    c1, c2, c3, c4 = st.columns(4)
-    report_dir = os.path.join(DATA_DIR, "Reports")
-    pdf_files = glob.glob(os.path.join(report_dir, "*.pdf")) if os.path.exists(report_dir) else []
-    with c1:
-        if pdf_files:
-            latest_pdf = max(pdf_files, key=os.path.getctime)
-            with open(latest_pdf, "rb") as f:
-                st.download_button("📥 Extract Latest PDF", data=f.read(),
-                                   file_name=os.path.basename(latest_pdf),
-                                   mime="application/pdf", use_container_width=True)
-        else:
-            st.button("📥 Extract Latest PDF", disabled=True, use_container_width=True)
-    pub_data, pub_path = load_latest_json(os.path.join(DATA_DIR, "publisher_agent_result"))
-    with c2:
-        if pub_data:
-            st.download_button("🗂️ Extract Latest JSON",
-                               data=json.dumps(pub_data, indent=2, ensure_ascii=False),
-                               file_name=os.path.basename(pub_path),  # type: ignore
-                               mime="application/json", use_container_width=True)
-        else:
-            st.button("🗂️ Extract Latest JSON", disabled=True, use_container_width=True)
-    with c3:
-        if st.button("🧹 Clear Console Log", use_container_width=True):
-            st.session_state.console_log = []
-            st.rerun()
-    with c4:
-        noise_count = sum(1 for l in st.session_state.get("console_log", [])
-                          if classify_log_line(l) is None)
-        st.button(f"🔇 {noise_count} filtered", disabled=True, use_container_width=True,
-                  help="Lines filtered from Smart Feed")
-    if pub_data:
-        with st.expander("🔍 View Raw Executive Briefing JSON"):
-            st.json(pub_data)
-
-def render_pipeline_tab(T):
+def render_pipeline_tab():
     if "running" not in st.session_state:
         st.session_state.running = False
     if "console_log" not in st.session_state:
         st.session_state.console_log = []
 
+    done = get_last_report_time() is not None
+    render_hero(st.session_state.running, done)
+
     if not st.session_state.running:
-        dummy_state = [{"name": s["name"], "pct": 0} for s in PIPELINE_STAGES]
-        render_executive_dashboard(T, dummy_state)
-        components.html(generate_agent_rings_html(T, dummy_state), height=170, scrolling=False)
-        st.markdown("<br>", unsafe_allow_html=True)
-        c1, c2, c3 = st.columns([1, 2, 1])
+        render_section("01", "Statistical summary")
+        render_stats()
+
+        render_section("02", "Configuration")
+        render_toggles()
+
+        c1, c2, c3 = st.columns([1.5, 1, 1.5])
         with c2:
-            if st.button("🛡️ INITIALIZE SYSTEM", use_container_width=True):
+            if st.button("Initiate pipeline", use_container_width=True, type="primary"):
                 st.session_state.running = True
                 st.session_state.console_log = []
                 os.environ["PIPELINE_START_TIME"] = str(time.time())
                 st.rerun()
-    else:
-        if "agents_state" not in st.session_state:
-            st.session_state.agents_state = [{"name": s["name"], "pct": 0} for s in PIPELINE_STAGES]
-        render_executive_dashboard(T, st.session_state.agents_state)
-        ring_placeholder = st.empty()
-        with ring_placeholder:
-            components.html(generate_agent_rings_html(T, st.session_state.agents_state),
-                            height=170, scrolling=False)
-        console_placeholder = st.empty()
-        with console_placeholder:
-            render_console(T, st.session_state.console_log)
-        last_stage_index = len(PIPELINE_STAGES) - 1
-        if st.session_state.agents_state[last_stage_index]['pct'] < 100:
-            for i, stage in enumerate(PIPELINE_STAGES):
-                if st.session_state.agents_state[i]['pct'] < 100:
-                    success = run_agent_with_console(
-                        ring_placeholder, console_placeholder, T,
-                        st.session_state.agents_state, i, stage["script"]
-                    )
-                    if not success:
-                        st.error(f"{stage['name']} agent failed. Pipeline stopped.")
-                        if st.button(f"🔄 Retry {stage['name']}"):
-                            st.session_state.agents_state[i]['pct'] = 0
-                            st.rerun()
-                        st.stop()
-                    st.rerun()
-                    break
-        else:
-            ring_placeholder.empty()
-            console_placeholder.empty()
-            components.html(generate_agent_rings_html(T, st.session_state.agents_state),
-                            height=170, scrolling=False)
-            st.markdown("<br>", unsafe_allow_html=True)
-            render_notice(T, "Pipeline completed successfully. Final report generated by the Publisher Agent.", "success")
-            display_console_tools(T)
-            display_statistics(T)
-            st.markdown("<br>", unsafe_allow_html=True)
-            c1, c2, c3 = st.columns([1, 2, 1])
-            with c2:
-                if st.button("🔄 RESET SYSTEM", use_container_width=True):
-                    st.session_state.running = False
-                    if "agents_state" in st.session_state:
-                        del st.session_state.agents_state
-                    st.session_state.console_log = []
-                    st.rerun()
 
-# ---------------------------------------------------------------- tools tab
+        last = get_last_report_time()
+        if last:
+            st.markdown(
+                f"<p style='text-align:center; color:#6b7ba8; "
+                f"font-family:JetBrains Mono,monospace; font-size:0.62rem; "
+                f"letter-spacing:0.24em; text-transform:uppercase; "
+                f"margin-top:1rem;'>"
+                f"Last report · {last.strftime('%d %b %Y · %H:%M')}</p>",
+                unsafe_allow_html=True
+            )
+        return
+
+    # ---- running ----
+    if "agents_state" not in st.session_state:
+        st.session_state.agents_state = [{"name": s["name"], "pct": 0} for s in PIPELINE_STAGES]
+
+    render_section("01", "Statistical summary")
+    render_stats()
+
+    total_pct = sum(a["pct"] for a in st.session_state.agents_state) / len(PIPELINE_STAGES)
+    render_progress(total_pct)
+
+    render_section("02", "Agent execution")
+    agents_ph = st.empty()
+    with agents_ph:
+        render_agents(st.session_state.agents_state)
+
+    console_ph = st.empty()
+    with console_ph:
+        render_console(st.session_state.console_log)
+
+    for i, stage in enumerate(PIPELINE_STAGES):
+        if st.session_state.agents_state[i]["pct"] < 100:
+            ok = run_agent_with_console(
+                agents_ph, console_ph,
+                st.session_state.agents_state, i, stage["script"]
+            )
+            if not ok:
+                st.error(f"{stage['name']} agent failed. Pipeline stopped.")
+                c1, c2, c3 = st.columns([1.5, 1, 1.5])
+                with c2:
+                    if st.button(f"Retry {stage['name']}", use_container_width=True):
+                        st.session_state.agents_state[i]["pct"] = 0
+                        st.rerun()
+                st.stop()
+
+    all_done = all(a["pct"] == 100 for a in st.session_state.agents_state)
+    if all_done:
+        with agents_ph:
+            render_agents(st.session_state.agents_state)
+
+        st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
+        render_notice("Pipeline completed. The final briefing has been published by the Publisher Agent.",
+                      "success", "Status")
+
+        render_section("03", "Outputs & artifacts")
+        render_console_tools()
+        render_detailed_stats()
+
+        c1, c2, c3 = st.columns([1.5, 1, 1.5])
+        with c2:
+            if st.button("Reset system", use_container_width=True):
+                st.session_state.running = False
+                if "agents_state" in st.session_state:
+                    del st.session_state.agents_state
+                st.session_state.console_log = []
+                st.rerun()
+
+def render_console_tools():
+    c1, c2, c3 = st.columns(3)
+    report_dir = os.path.join(DATA_DIR, "Reports")
+    pdfs = glob.glob(os.path.join(report_dir, "*.pdf")) if os.path.exists(report_dir) else []
+    with c1:
+        if pdfs:
+            latest = max(pdfs, key=os.path.getctime)
+            with open(latest, "rb") as f:
+                st.download_button("Download PDF briefing", data=f.read(),
+                                   file_name=os.path.basename(latest),
+                                   mime="application/pdf", use_container_width=True)
+        else:
+            st.button("Download PDF briefing", disabled=True, use_container_width=True)
+    pub, path = load_latest_json(os.path.join(DATA_DIR, "publisher_agent_result"))
+    with c2:
+        if pub:
+            st.download_button("Download JSON feed",
+                               data=json.dumps(pub, indent=2, ensure_ascii=False),
+                               file_name=os.path.basename(path),
+                               mime="application/json", use_container_width=True)
+        else:
+            st.button("Download JSON feed", disabled=True, use_container_width=True)
+    with c3:
+        if st.button("Clear console log", use_container_width=True):
+            st.session_state.console_log = []
+            st.rerun()
+
+def render_detailed_stats():
+    st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
+    pub, _ = load_latest_json(os.path.join(DATA_DIR, "publisher_agent_result"))
+    if pub and "cve_summary" in pub:
+        df = pd.DataFrame(pub["cve_summary"])
+    else:
+        tri, _ = load_latest_json(os.path.join(DATA_DIR, "triage_agent_result"))
+        df = pd.DataFrame(tri) if isinstance(tri, list) else pd.DataFrame()
+    if not df.empty:
+        rename = {"cve_id":"CVE ID","description":"Description","cvss_score":"CVSS",
+                  "severity":"Severity","cwe_id":"CWE","urgency_score":"Urgency",
+                  "mitre_mappings":"MITRE","references":"References"}
+        cols = [c for c in rename if c in df.columns]
+        st.dataframe(df[cols].rename(columns=rename),
+                     use_container_width=True, hide_index=True)
+    else:
+        render_notice("No vulnerability data is available yet.", "info", "Notice")
+
+# ---------------------------------------------------------------- tools
 
 TOOL_CARDS = [
-    {
-        "icon": "✓",
-        "title": "Verify Urgency Score",
-        "desc": "Recomputes every Urgency Score and compares it against the stored value.",
-        "cmd": "auto-cti -v",
-        "script": "src/tools/verify_urgency.py",
-        "args": [],
-        "key": "tool_verify",
-    },
-    {
-        "icon": "📊",
-        "title": "PoC Breakdown",
-        "desc": "Splits the “PoC found” figure into external PoC, patch analysis, non-PoC refs, and no PoC.",
-        "cmd": "auto-cti -b",
-        "script": "src/tools/poc_breakdown.py",
-        "args": [],
-        "key": "tool_poc",
-    },
-    {
-        "icon": "📦",
-        "title": "Archive Current Run",
-        "desc": "Snapshots the current Scout/Triage/Publisher outputs into a numbered folder.",
-        "cmd": "auto-cti -a",
-        "script": "src/tools/archive_run.py",
-        "args": [],
-        "key": "tool_archive",
-    },
+    {"num": "01",
+     "ttl": "Verify Urgency",
+     "dsc": "Recompute each Urgency Score against the deterministic formula and report any drift.",
+     "cmd": "auto-cti -v",
+     "script": "src/tools/verify_urgency.py", "key": "t_verify"},
+    {"num": "02",
+     "ttl": "PoC Breakdown",
+     "dsc": "Classify every CVE by PoC provenance: external, patch-derived, non-PoC, or absent.",
+     "cmd": "auto-cti -b",
+     "script": "src/tools/poc_breakdown.py", "key": "t_poc"},
+    {"num": "03",
+     "ttl": "Archive Run",
+     "dsc": "Snapshot the current pipeline outputs into a numbered run directory for reproducibility.",
+     "cmd": "auto-cti -a",
+     "script": "src/tools/archive_run.py", "key": "t_archive"},
 ]
 
-def render_tools_panel(T):
+def render_tools_panel():
     st.markdown(
-        "<h3 style='margin-bottom:0.2rem;'>🧰 Analysis Tools</h3>"
-        "<p style='color:#7d8da3; font-size:0.88rem; margin-top:0;'>"
-        "Run Auto-CTI's verification utilities directly from the console. "
-        "Each tool reads the current data under <code>~/.auto-cti/data/</code>."
+        "<p style='text-align:center; font-size:0.92rem; color:#8b95c2; "
+        "line-height:1.55; max-width:620px; margin:0 auto 1.8rem;'>"
+        "Verification utilities that operate on the current data directory "
+        "<code style='color:#60a5fa; font-family:\"JetBrains Mono\",monospace; "
+        "background:rgba(19,35,72,0.6); padding:0.12rem 0.4rem; "
+        "border:1px solid #1e3268; border-radius:4px;'>~/.auto-cti/data/</code>."
         "</p>",
         unsafe_allow_html=True
     )
-
     cols = st.columns(3)
     for col, card in zip(cols, TOOL_CARDS):
         with col:
-            st.markdown(f"""
-            <div class="tool-card">
-                <div style="font-size:1.8rem; line-height:1;">{card['icon']}</div>
-                <div class="tool-card-title">{card['title']}</div>
-                <div class="tool-card-desc">{card['desc']}</div>
-                <div class="tool-card-code">$ {card['cmd']}</div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button("Run", key=card["key"], use_container_width=True):
-                with st.spinner(f"Running {card['title']}..."):
-                    output, ok = run_tool(card["script"], card["args"])
-                st.session_state.tool_output = output
-                st.session_state.tool_name = card["title"]
+            st.markdown(compact(f"""
+                <div class="tc">
+                    <div class="num">{card['num']}</div>
+                    <div class="tt">{card['ttl']}</div>
+                    <div class="dd">{card['dsc']}</div>
+                    <div class="cm">$ {card['cmd']}</div>
+                </div>
+            """), unsafe_allow_html=True)
+            if st.button("Execute", key=card["key"], use_container_width=True):
+                with st.spinner(f"Running {card['ttl']}…"):
+                    out, ok = run_tool(card["script"])
+                st.session_state.tool_output = out
+                st.session_state.tool_name = card["ttl"]
                 st.session_state.tool_ok = ok
 
     if st.session_state.get("tool_output"):
         ok = st.session_state.get("tool_ok", True)
-        icon = "✅" if ok else "⚠️"
-        color = "#10b981" if ok else "#f59e0b"
-        st.markdown(f"""
-        <div style="margin-top:1.2rem; display:flex; align-items:center; gap:0.6rem;
-                    border-top:1px solid #243248; padding-top:0.9rem;">
-            <span style="font-size:1.15rem;">{icon}</span>
-            <span style="font-weight:700; color:{color};">
-                {st.session_state.get('tool_name', 'Tool')} — {'completed' if ok else 'finished with issues'}
-            </span>
-        </div>
-        """, unsafe_allow_html=True)
+        render_section("·", st.session_state.get("tool_name", "Tool") +
+                       (" — completed" if ok else " — finished with issues"))
         st.code(st.session_state.tool_output, language="text")
-        c1, c2, _ = st.columns([1, 1, 4])
-        with c1:
-            if st.button("Clear output", key="clear_tool_output", use_container_width=True):
-                st.session_state.tool_output = ""
-                st.session_state.tool_name = ""
-                st.rerun()
+        if st.button("Clear output", key="clear_tool_output"):
+            st.session_state.tool_output = ""
+            st.session_state.tool_name = ""
+            st.rerun()
 
-# ---------------------------------------------------------------- config tab
+# ---------------------------------------------------------------- config
 
-def render_config_panel(T):
+def render_config_panel():
     st.markdown(
-        "<h3 style='margin-bottom:0.2rem;'>⚙️ Configuration</h3>"
-        "<p style='color:#7d8da3; font-size:0.88rem; margin-top:0;'>"
-        "Test your API keys against their providers and manage <code>~/.auto-cti/.env</code>."
+        "<p style='text-align:center; font-size:0.92rem; color:#8b95c2; "
+        "line-height:1.55; max-width:620px; margin:0 auto 1.8rem;'>"
+        "Manage your API keys below. Values are written to "
+        "<code style='color:#60a5fa; font-family:\"JetBrains Mono\",monospace; "
+        "background:rgba(19,35,72,0.6); padding:0.12rem 0.4rem; "
+        "border:1px solid #1e3268; border-radius:4px;'>~/.auto-cti/.env</code> "
+        "with file mode 600."
         "</p>",
         unsafe_allow_html=True
     )
 
+    # -------- Key editor --------
+    render_section("01", "API key editor")
+
+    current = read_env_values()
+
+    with st.form("keys_form", clear_on_submit=False):
+        new_values = {}
+
+        for group_name, fields in KEY_GROUPS:
+            st.markdown(
+                f"<div style='font-family:\"JetBrains Mono\",monospace; "
+                f"font-size:0.66rem; letter-spacing:0.22em; text-transform:uppercase; "
+                f"color:#6b7ba8; margin:1rem 0 0.4rem;'>{group_name}</div>",
+                unsafe_allow_html=True
+            )
+            cols = st.columns(2)
+            for idx, (key, label, is_secret) in enumerate(fields):
+                col = cols[idx % 2]
+                with col:
+                    existing = current.get(key, "")
+                    val = st.text_input(
+                        label,
+                        value="" if is_secret else existing,
+                        placeholder=f"paste {key}" if is_secret else "",
+                        type="password" if is_secret else "default",
+                        key=f"kf_{key}",
+                        help=f"Environment variable: {key}"
+                    )
+                    new_values[key] = val
+
+        submitted = st.form_submit_button("Save all keys", use_container_width=True, type="primary")
+
+    if submitted:
+        merged = dict(current)
+        for k, v in new_values.items():
+            v = (v or "").strip()
+            if v:
+                merged[k] = v
+        write_env_file(merged)
+        load_env()
+        st.success("✅ Keys saved to ~/.auto-cti/.env")
+        st.rerun()
+
+    # -------- Diagnostics --------
+    render_section("02", "Diagnostics")
+
     c1, c2 = st.columns(2)
     with c1:
-        st.markdown(f"""
-        <div class="tool-card">
-            <div style="font-size:1.8rem; line-height:1;">🔑</div>
-            <div class="tool-card-title">Check API Keys</div>
-            <div class="tool-card-desc">
-                Live-tests every key against its provider (Gemini, NVD, GitHub, OTX). 
-                Prints OK / FAIL with status codes, never the key itself.
+        st.markdown(compact("""
+            <div class="tc">
+                <div class="num">I.</div>
+                <div class="tt">Check API Keys</div>
+                <div class="dd">Live-test every configured key against its provider. Prints OK or FAIL with status codes; never reveals the key.</div>
+                <div class="cm">$ auto-cti -k</div>
             </div>
-            <div class="tool-card-code">$ auto-cti -k</div>
-        </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
         if st.button("Run key check", key="cfg_check", use_container_width=True):
-            with st.spinner("Testing API keys..."):
-                output, ok = run_tool("src/tools/check_keys.py")
-            st.session_state.tool_output = output
+            with st.spinner("Testing API keys…"):
+                out, ok = run_tool("src/tools/check_keys.py")
+            st.session_state.tool_output = out
             st.session_state.tool_name = "Check API Keys"
             st.session_state.tool_ok = ok
 
     with c2:
-        env_path = os.path.expanduser("~/.auto-cti/.env")
-        env_exists = os.path.exists(env_path)
-        st.markdown(f"""
-        <div class="tool-card">
-            <div style="font-size:1.8rem; line-height:1;">📝</div>
-            <div class="tool-card-title">Edit .env</div>
-            <div class="tool-card-desc">
-                Open the configuration file in your terminal editor. 
-                Or download a copy here to inspect it.
+        st.markdown(compact("""
+            <div class="tc">
+                <div class="num">II.</div>
+                <div class="tt">Download .env</div>
+                <div class="dd">Download a copy of the current environment file for archival or inspection on another machine.</div>
+                <div class="cm">backup</div>
             </div>
-            <div class="tool-card-code">$ auto-cti -e</div>
-        </div>
-        """, unsafe_allow_html=True)
-        if env_exists:
-            with open(env_path, "rb") as f:
-                st.download_button("📥 Download .env", data=f.read(),
+        """), unsafe_allow_html=True)
+        if os.path.exists(ENV_PATH):
+            with open(ENV_PATH, "rb") as f:
+                st.download_button("Download .env", data=f.read(),
                                    file_name="auto-cti.env.txt", mime="text/plain",
                                    use_container_width=True)
         else:
-            st.button("📥 Download .env", disabled=True, use_container_width=True)
-
-    st.markdown(
-        "<p style='color:#7d8da3; font-size:0.82rem; margin-top:1rem;'>"
-        "For terminal editing, run <code>auto-cti -e</code> or edit "
-        "<code>~/.auto-cti/.env</code> directly. File permissions should be <code>600</code>."
-        "</p>",
-        unsafe_allow_html=True
-    )
+            st.button("Download .env", disabled=True, use_container_width=True)
 
     if st.session_state.get("tool_output") and st.session_state.get("tool_name") == "Check API Keys":
         ok = st.session_state.get("tool_ok", True)
-        icon = "✅" if ok else "⚠️"
-        color = "#10b981" if ok else "#f59e0b"
-        st.markdown(f"""
-        <div style="margin-top:1rem; display:flex; align-items:center; gap:0.6rem;
-                    border-top:1px solid #243248; padding-top:0.9rem;">
-            <span style="font-size:1.15rem;">{icon}</span>
-            <span style="font-weight:700; color:{color};">API Key Status</span>
-        </div>
-        """, unsafe_allow_html=True)
+        render_section("·", "API key status" + (" — all pass" if ok else " — attention required"))
         st.code(st.session_state.tool_output, language="text")
 
-# ---------------------------------------------------------------- reports tab
+# ---------------------------------------------------------------- reports
 
 def list_archived_runs():
     if not os.path.exists(RUNS_DIR):
         return []
     runs = []
-    for d in sorted(os.listdir(RUNS_DIR)):
+    for d in sorted(os.listdir(RUNS_DIR), reverse=True):
         full = os.path.join(RUNS_DIR, d)
         if not os.path.isdir(full):
             continue
@@ -706,65 +1333,62 @@ def list_archived_runs():
             except Exception:
                 pass
         runs.append((d, full, meta))
-    runs.sort(key=lambda x: x[0], reverse=True)
     return runs
 
-def display_report_history(T):
-    st.markdown("<h3>📄 Generated PDF Reports</h3>", unsafe_allow_html=True)
+def render_reports_panel():
+    render_section("01", "Published briefings")
     report_dir = os.path.join(DATA_DIR, "Reports")
     if not os.path.exists(report_dir):
-        render_notice(T, "No reports have been generated yet.", "info")
+        render_notice("No briefings have been generated yet.", "info", "Notice")
     else:
-        pdf_files = glob.glob(os.path.join(report_dir, "*.pdf"))
-        if not pdf_files:
-            render_notice(T, "Report directory is empty.", "info")
+        pdfs = sorted(glob.glob(os.path.join(report_dir, "*.pdf")),
+                      key=os.path.getctime, reverse=True)
+        if not pdfs:
+            render_notice("The reports directory is empty.", "info", "Notice")
         else:
-            pdf_files.sort(key=os.path.getctime, reverse=True)
-            for pdf_file in pdf_files:
-                file_name = os.path.basename(pdf_file)
-                creation_time = datetime.datetime.fromtimestamp(
+            for pdf_file in pdfs:
+                name = os.path.basename(pdf_file)
+                ts = datetime.datetime.fromtimestamp(
                     os.path.getctime(pdf_file)
-                ).strftime("%Y-%m-%d %H:%M:%S")
-                col1, col2 = st.columns([4, 1])
-                with col1:
+                ).strftime("%d %b %Y · %H:%M")
+                c1, c2 = st.columns([4, 1])
+                with c1:
                     st.markdown(
-                        f"📄 **{file_name}** "
-                        f"<span style='color:#7d8da3;'>({creation_time})</span>",
+                        f"<div style='padding:0.85rem 0; border-bottom:1px solid #1e3268; "
+                        f"font-size:0.94rem; color:#f8fafc; font-weight:500;'>"
+                        f"{name}<span style='color:#6b7ba8; font-family:\"JetBrains Mono\",monospace; "
+                        f"font-size:0.68rem; letter-spacing:0.08em; margin-left:1rem;'>{ts}</span></div>",
                         unsafe_allow_html=True
                     )
-                with col2:
+                with c2:
                     with open(pdf_file, "rb") as f:
-                        st.download_button("📥 Download", data=f.read(),
-                                           file_name=file_name, mime="application/pdf",
+                        st.download_button("Download", data=f.read(),
+                                           file_name=name, mime="application/pdf",
                                            key=pdf_file, use_container_width=True)
 
-    st.markdown("<h3 style='margin-top:1.5rem;'>📦 Archived Runs</h3>", unsafe_allow_html=True)
+    render_section("02", "Archived runs")
     runs = list_archived_runs()
     if not runs:
-        render_notice(T, "No archived runs yet. Use auto-cti -a or the Tools tab to archive.", "info")
+        render_notice("No archived runs yet. Use the Archive tool to snapshot the current state.",
+                      "info", "Notice")
         return
     for name, path, meta in runs:
         ts = meta.get("timestamp", "")
         files = meta.get("files", [])
         toggles = meta.get("toggles", {})
-        active_toggles = [k for k, v in toggles.items() if str(v).lower() == "true"]
-        with st.expander(f"📁 {name}  —  {len(files)} file(s)"):
-            st.markdown(f"**Path:** `{path}`")
+        active = [k for k, v in toggles.items() if str(v).lower() == "true"]
+        with st.expander(f"{name} · {len(files)} file(s)"):
+            st.markdown(f"**Path** · `{path}`")
             if ts:
-                st.markdown(f"**Timestamp:** `{ts}`")
-            if active_toggles:
-                st.markdown(f"**Active toggles:** {', '.join(active_toggles)}")
-            else:
-                st.markdown("**Active toggles:** _none_")
-            st.markdown(f"**Files:** {', '.join(files) if files else '_none_'}")
+                st.markdown(f"**Timestamp** · `{ts}`")
+            st.markdown(f"**Active toggles** · {', '.join(active) if active else '_none_'}")
+            st.markdown(f"**Files** · {', '.join(files) if files else '_none_'}")
 
 # ---------------------------------------------------------------- main
 
 def main():
-    T = get_theme()
-    inject_custom_css(T)
+    inject_custom_css()
 
-    # Session state init
     if "running" not in st.session_state:
         st.session_state.running = False
     if "console_log" not in st.session_state:
@@ -774,46 +1398,37 @@ def main():
     if "tool_name" not in st.session_state:
         st.session_state.tool_name = ""
 
-    # API key gate
     missing = get_missing_keys()
     if missing:
-        st.warning("🔑 A required API key is missing. Please enter it below to enable the pipeline.")
+        st.warning("A required API key is missing. Please enter it below to enable the pipeline.")
         with st.form("api_keys_form"):
             new_env = {}
             for key, url in missing.items():
                 st.markdown(f"**{key}** ([get it here]({url}))")
-                val = st.text_input(f"Enter {key}", type="password", key=f"key_{key}")
-                new_env[key] = val
-            submitted = st.form_submit_button("💾 Save Keys")
-            if submitted:
+                new_env[key] = st.text_input(f"Enter {key}", type="password", key=f"key_{key}")
+            if st.form_submit_button("Save keys"):
                 current = load_env()
                 for k, v in new_env.items():
                     if v:
                         current[k] = v
                 save_env(current)
-                st.success("✅ Keys saved! Reloading…")
+                st.success("Keys saved. Reloading…")
                 st.rerun()
         st.stop()
 
-    # Header bar
-    top_l, top_r = st.columns([6, 1])
-    with top_l:
-        render_classification_banner()
-    with top_r:
-        render_theme_toggle()
+    render_top_bar()
 
-    # Tabs
     tab_pipeline, tab_tools, tab_config, tab_reports = st.tabs([
-        "🛡️  Pipeline", "🧰  Analysis Tools", "⚙️  Configuration", "📂  Reports"
+        "Pipeline", "Analysis Tools", "Configuration", "Reports"
     ])
     with tab_pipeline:
-        render_pipeline_tab(T)
+        render_pipeline_tab()
     with tab_tools:
-        render_tools_panel(T)
+        render_tools_panel()
     with tab_config:
-        render_config_panel(T)
+        render_config_panel()
     with tab_reports:
-        display_report_history(T)
+        render_reports_panel()
 
 if __name__ == "__main__":
     main()

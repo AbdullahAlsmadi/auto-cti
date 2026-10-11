@@ -45,32 +45,65 @@ install_packages() {
     fi
 }
 
-# 1. Check Python and install if missing
-if ! command -v python3 &> /dev/null; then
-    echo "❌ Python3 not found. Installing..."
-    install_packages python3 python3-pip python3-venv
-fi
+# 1. Select a supported Python interpreter (must be 3.10, 3.11, or 3.12).
+#    Python 3.13+ is explicitly rejected: CrewAI's dependency chain
+#    (tiktoken / PyO3, docstring_parser, etc.) does not yet support it.
+PYTHON_BIN=""
+PYTHON_VERSION=""
 
-# 2. Verify Python version using numeric comparison
-PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
-MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
+for candidate in python3.12 python3.11 python3.10 python3; do
+    if command -v "$candidate" &> /dev/null; then
+        VER=$("$candidate" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+        MAJ=${VER%.*}
+        MIN=${VER#*.}
+        if [ "$MAJ" -eq 3 ] && [ "$MIN" -ge 10 ] && [ "$MIN" -le 12 ]; then
+            PYTHON_BIN=$(command -v "$candidate")
+            PYTHON_VERSION=$VER
+            echo "✅ Using Python $VER ($PYTHON_BIN)"
+            break
+        fi
+    fi
+done
 
-# Check if version is >= 3.9
-if [ "$MAJOR" -lt 3 ] || { [ "$MAJOR" -eq 3 ] && [ "$MINOR" -lt 9 ]; }; then
-    echo "❌ Python $PYTHON_VERSION is too old. Please install Python 3.9 or higher."
+# No supported Python found — refuse to continue
+if [ -z "$PYTHON_BIN" ]; then
+    DEFAULT_VER=$(python3 --version 2>&1 || echo "not installed")
+    echo
+    echo "❌ Auto-CTI requires Python 3.10, 3.11, or 3.12."
+    echo "   Your default python3 reports: $DEFAULT_VER"
+    echo
+    echo "   Python 3.13+ is NOT supported yet because several required"
+    echo "   packages (tiktoken via PyO3, docstring_parser, etc.) have not"
+    echo "   been updated for those versions."
+    echo
+    echo "   Install Python 3.12 and re-run this installer:"
+    echo "     Arch Linux:    sudo pacman -S python312"
+    echo "                    (or, if not in official repos: yay -S python312)"
+    echo "     Ubuntu/Debian: sudo apt install python3.12 python3.12-venv"
+    echo "     Fedora:        sudo dnf install python3.12"
+    echo
+    echo "   Then re-run:  ./install.sh"
+    echo
     exit 1
 fi
 
-# 3. Install GCC and make if missing (for building numpy)
+# Verify the venv module is available for the chosen interpreter
+if ! "$PYTHON_BIN" -c 'import venv' 2>/dev/null; then
+    echo "❌ The 'venv' module is missing for $PYTHON_BIN."
+    echo "   Ubuntu/Debian: sudo apt install python3.12-venv"
+    echo "   Fedora:        sudo dnf install python3.12"
+    exit 1
+fi
+
+# 2. Install GCC and make if missing (for building numpy)
 if ! command -v gcc &> /dev/null || ! command -v make &> /dev/null; then
     echo "📦 Installing build tools (gcc, make)..."
     install_packages gcc make
 fi
 
-# 4. Install Rust toolchain if missing (required to build tiktoken from source)
+# 3. Install Rust toolchain if missing (fallback for source-building tiktoken)
 if ! command -v cargo &> /dev/null; then
-    echo "📦 Installing Rust toolchain (required for tiktoken)..."
+    echo "📦 Installing Rust toolchain (fallback for tiktoken builds)..."
     if command -v pacman &> /dev/null; then
         install_packages rust
     elif command -v apt &> /dev/null; then
@@ -78,17 +111,17 @@ if ! command -v cargo &> /dev/null; then
     elif command -v dnf &> /dev/null; then
         install_packages rust cargo
     else
-        echo "⚠️  Cannot auto-install Rust. Please install 'rust' manually."
-        exit 1
+        echo "⚠️  Cannot auto-install Rust. Continuing without it;"
+        echo "    wheels should be available for Python $PYTHON_VERSION."
     fi
 fi
 
-# 5. Create installation directory
+# 4. Create installation directory
 INSTALL_DIR="$HOME/.auto-cti"
 mkdir -p "$INSTALL_DIR"
 mkdir -p "$INSTALL_DIR/data"
 
-# 6. Copy source files and documentation
+# 5. Copy source files and documentation
 echo "📦 Installing Auto-CTI to $INSTALL_DIR..."
 cp -r src/ "$INSTALL_DIR/"
 cp requirements.txt "$INSTALL_DIR/"
@@ -97,23 +130,23 @@ cp NOTICE "$INSTALL_DIR/" 2>/dev/null || true
 cp SECURITY.md "$INSTALL_DIR/" 2>/dev/null || true
 cp CITATION.cff "$INSTALL_DIR/" 2>/dev/null || true
 
-# 7. Create virtual environment and install dependencies
+# 6. Create virtual environment and install dependencies
 echo
-echo -e "\033[1;36m📦  Creating virtual environment…\033[0m"
-python3 -m venv "$INSTALL_DIR/venv"
+echo -e "\033[1;36m📦  Creating virtual environment with Python $PYTHON_VERSION…\033[0m"
+rm -rf "$INSTALL_DIR/venv"
+"$PYTHON_BIN" -m venv "$INSTALL_DIR/venv"
 source "$INSTALL_DIR/venv/bin/activate"
 
 echo -e "\033[1;36m📦  Upgrading pip…\033[0m"
 pip install --upgrade pip --quiet --disable-pip-version-check 2>&1 | tail -1
 
-# Count packages so we can show progress
 TOTAL_PKGS=$(grep -cve '^\s*$' -e '^#' "$INSTALL_DIR/requirements.txt")
 echo
 echo -e "\033[1;36m📦  Installing $TOTAL_PKGS dependency groups (this may take a few minutes)…\033[0m"
 echo -e "\033[2m    (pip output is hidden; only the final status is shown)\033[0m"
 echo
 
-# Attempt 1: prefer wheels only (fast, no compiler needed when wheels exist)
+# Attempt 1: prefer wheels (fast, no compiler needed)
 if pip install -r "$INSTALL_DIR/requirements.txt" \
         --quiet \
         --disable-pip-version-check \
@@ -122,7 +155,7 @@ if pip install -r "$INSTALL_DIR/requirements.txt" \
         2> /tmp/auto-cti-pip-error.log; then
     echo -e "\033[1;32m✅  Dependencies installed successfully.\033[0m"
 else
-    # Attempt 2: allow source builds (Rust is already installed above)
+    # Attempt 2: allow source builds (Rust may be needed)
     echo -e "\033[1;33m⚠️  Binary-only install incomplete; retrying with source builds…\033[0m"
     if pip install -r "$INSTALL_DIR/requirements.txt" \
             --quiet \
@@ -131,7 +164,7 @@ else
             2> /tmp/auto-cti-pip-error.log; then
         echo -e "\033[1;32m✅  Dependencies installed successfully (with source builds).\033[0m"
     else
-        echo -e "\033[1;31m❌  Dependency installation failed.\033[0m"
+        echo -e "\033[1;31m❌  Dependency installation failed on Python $PYTHON_VERSION.\033[0m"
         echo -e "\033[1;33m    Full log: /tmp/auto-cti-pip-error.log\033[0m"
         echo
         tail -20 /tmp/auto-cti-pip-error.log
@@ -142,7 +175,7 @@ fi
 
 deactivate
 
-# 8. Create global wrapper script
+# 7. Create global wrapper script
 mkdir -p "$HOME/.local/bin"
 cat > "$HOME/.local/bin/auto-cti" << 'EOF'
 #!/bin/bash
@@ -203,13 +236,13 @@ fi
 EOF
 chmod +x "$HOME/.local/bin/auto-cti"
 
-# 9. Add ~/.local/bin to PATH if not already
+# 8. Add ~/.local/bin to PATH if not already
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
     echo "✅ Added ~/.local/bin to PATH. Restart your shell or run: source ~/.bashrc"
 fi
 
-# 10. Create uninstall script
+# 9. Create uninstall script
 cat > "$INSTALL_DIR/uninstall.sh" << 'EOF'
 #!/bin/bash
 echo "🗑️  Uninstalling Auto-CTI..."
@@ -219,8 +252,7 @@ echo "✅ Auto-CTI removed completely."
 EOF
 chmod +x "$INSTALL_DIR/uninstall.sh"
 
-# 11. Create sample .env (will be overwritten by the app if missing)
-# Write the .env template directly to the location used by secure_config.py
+# 10. Create sample .env
 if [ ! -f "$INSTALL_DIR/.env" ]; then
     cat > "$INSTALL_DIR/.env" << 'EOF'
 # ============================================================

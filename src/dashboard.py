@@ -16,6 +16,7 @@ import os
 import sys
 import json
 import glob
+import math
 import time
 import datetime
 import subprocess
@@ -593,7 +594,7 @@ def inject_custom_css():
         box-shadow: 0 0 16px rgba(96, 165, 250, 0.5);
     }
 
-    /* ---- console (markdown-based, newest at top) ---- */
+    /* ---- console (markdown-based, newest at bottom via column-reverse) ---- */
     .cd-con {
         background: #0a1535;
         border: 1px solid #1e3268;
@@ -621,6 +622,8 @@ def inject_custom_css():
         padding: 0.9rem 1.1rem;
         overflow-y: auto;
         background: #08112b;
+        display: flex;
+        flex-direction: column-reverse;
         scrollbar-width: thin;
         scrollbar-color: #1e3268 #08112b;
     }
@@ -945,15 +948,16 @@ def classify_log_line(line: str):
     return None
 
 def render_console(log_lines, height=340):
-    """Console rendered via st.markdown (no iframe).
+    """Console rendered via st.markdown with a scrollable inner box.
 
-    Newest lines appear at the top so the latest output is always visible
-    without scrolling. Older lines stack below; scroll the page down to
-    read history. Because there is no internal scroll container, nothing
-    can jump or lose position.
+    DOM order is newest-first, and CSS `column-reverse` flips the visual
+    order so the newest line appears at the bottom of the box. With
+    column-reverse, `scrollTop = 0` is the visual bottom, so the browser
+    automatically stays pinned to the newest line. When the user scrolls
+    up to read history, new lines do not push the view.
     """
     rows = ""
-    # Newest first
+    # Newest first in DOM; column-reverse renders them with newest at the bottom
     for line in reversed(log_lines[-200:]):
         r = classify_log_line(line)
         if r is None:
@@ -971,7 +975,7 @@ def render_console(log_lines, height=340):
         <div class="cd-con">
             <div class="cd-hd">
                 <span>Live Agent Console</span>
-                <span class="cd-rr">Newest at top · latest 200 lines</span>
+                <span class="cd-rr">Newest at bottom · latest 200 lines</span>
             </div>
             <div class="cd-bd" style="max-height:{height}px;">
                 {rows}
@@ -982,7 +986,23 @@ def render_console(log_lines, height=340):
 
 # ---------------------------------------------------------------- pipeline tab
 
+# Approximate duration (seconds) of each agent used as the asymptotic
+# time constant for the progress bar. At t = tau the bar reaches ~60 %;
+# at 2·tau ~86 %; at 3·tau ~95 %.
+TAU_BY_SCRIPT = {
+    "scout_agent.py":      60,   # ~1–3 min
+    "triage_agent.py":    240,   # ~5–15 min
+    "publisher_agent.py":  60,   # ~1–2 min
+}
+
 def run_agent_with_console(agents_ph, console_ph, agents_data, current_index, script_name):
+    tau = TAU_BY_SCRIPT.get(script_name, 90)
+    agent_start = time.time()
+
+    def progress_from_elapsed(elapsed):
+        """Asymptotic curve that approaches 95 % but never exceeds it."""
+        return int(95 * (1 - math.exp(-elapsed / tau)))
+
     try:
         proc = subprocess.Popen(
             [sys.executable, "-u", script_name],
@@ -992,7 +1012,6 @@ def run_agent_with_console(agents_ph, console_ph, agents_data, current_index, sc
             env={**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1"},
             cwd=PROJECT_ROOT
         )
-        progress = 0
         last = time.time()
         while True:
             assert proc.stdout is not None
@@ -1001,7 +1020,7 @@ def run_agent_with_console(agents_ph, console_ph, agents_data, current_index, sc
                 break
             if line:
                 st.session_state.console_log.append(line.rstrip())
-                progress = min(progress + 4, 95)
+                progress = progress_from_elapsed(time.time() - agent_start)
                 agents_data[current_index]["pct"] = progress
                 if time.time() - last >= 0.5:
                     with agents_ph:
@@ -1177,6 +1196,11 @@ TOOL_CARDS = [
      "cmd": "auto-cti -b",
      "script": "src/tools/poc_breakdown.py", "key": "t_poc"},
     {"num": "03",
+     "ttl": "LLM Agreement",
+     "dsc": "Measure how often the LLM's raw CVSS score matched the authoritative source (NVD / CNA / Tenable).",
+     "cmd": "auto-cti -g",
+     "script": "src/tools/llm_agreement.py", "key": "t_llm"},
+    {"num": "04",
      "ttl": "Archive Run",
      "dsc": "Snapshot the current pipeline outputs into a numbered run directory for reproducibility.",
      "cmd": "auto-cti -a",
@@ -1194,23 +1218,30 @@ def render_tools_panel():
         "</p>",
         unsafe_allow_html=True
     )
-    cols = st.columns(3)
-    for col, card in zip(cols, TOOL_CARDS):
-        with col:
-            st.markdown(compact(f"""
-                <div class="tc">
-                    <div class="num">{card['num']}</div>
-                    <div class="tt">{card['ttl']}</div>
-                    <div class="dd">{card['dsc']}</div>
-                    <div class="cm">$ {card['cmd']}</div>
-                </div>
-            """), unsafe_allow_html=True)
-            if st.button("Execute", key=card["key"], use_container_width=True):
-                with st.spinner(f"Running {card['ttl']}…"):
-                    out, ok = run_tool(card["script"])
-                st.session_state.tool_output = out
-                st.session_state.tool_name = card["ttl"]
-                st.session_state.tool_ok = ok
+
+    # Two rows of two cards each
+    for row_start in (0, 2):
+        row_cards = TOOL_CARDS[row_start:row_start + 2]
+        if not row_cards:
+            continue
+        cols = st.columns(2)
+        for col, card in zip(cols, row_cards):
+            with col:
+                st.markdown(compact(f"""
+                    <div class="tc">
+                        <div class="num">{card['num']}</div>
+                        <div class="tt">{card['ttl']}</div>
+                        <div class="dd">{card['dsc']}</div>
+                        <div class="cm">$ {card['cmd']}</div>
+                    </div>
+                """), unsafe_allow_html=True)
+                if st.button("Execute", key=card["key"], use_container_width=True):
+                    with st.spinner(f"Running {card['ttl']}…"):
+                        out, ok = run_tool(card["script"])
+                    st.session_state.tool_output = out
+                    st.session_state.tool_name = card["ttl"]
+                    st.session_state.tool_ok = ok
+        st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
 
     if st.session_state.get("tool_output"):
         ok = st.session_state.get("tool_ok", True)

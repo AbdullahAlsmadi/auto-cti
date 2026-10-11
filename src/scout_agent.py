@@ -45,7 +45,8 @@ MAMORE_DIR = os.path.join(DATA_DIR, "MAMORE")
 SEEN_CVES_PATH = os.path.join(MAMORE_DIR, "seen_cve_ids.json")
 os.makedirs(MAMORE_DIR, exist_ok=True)
 
-DESIRED_CVE_COUNT = 100
+DESIRED_CVE_COUNT = 500
+GITHUB_MAX_PAGES = 150
 
 # Deterministic metadata (publication date and collection source) recorded in Python,
 # so it never depends on the LLM copying it correctly.
@@ -266,7 +267,7 @@ class NISTSearchTool(BaseTool):
             fmt = "%Y-%m-%dT%H:%M:%S.000"
             items, index = [], 0
             pause = 0.7 if nvd_api_key else 6.5    # NVD rate limits: 50 req/30 s with a key, 5 without
-            for _ in range(10):
+            for _ in range(20):
                 params = {"pubStartDate": start.strftime(fmt), "pubEndDate": end.strftime(fmt),
                           "resultsPerPage": 2000, "startIndex": index}
                 r = requests.get(nvd_url, headers=headers, params=params, timeout=60)
@@ -301,7 +302,7 @@ class NISTSearchTool(BaseTool):
         try:
             print("DEBUG - Trying GitHub Advisory Database (GraphQL, paginated)...")
             TARGET_COUNT = DESIRED_CVE_COUNT
-            MAX_PAGES = 30
+            MAX_PAGES = GITHUB_MAX_PAGES
             verified_cves = []
             seen_cve_ids = set()
             cursor = None

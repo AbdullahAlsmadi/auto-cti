@@ -593,30 +593,29 @@ def inject_custom_css():
         box-shadow: 0 0 16px rgba(96, 165, 250, 0.5);
     }
 
-    /* ---- console ---- */
-    .con {
+    /* ---- console (markdown-based, newest at top) ---- */
+    .cd-con {
         background: #0a1535;
         border: 1px solid #1e3268;
         border-radius: 12px;
         overflow: hidden;
+        font-family: 'JetBrains Mono', monospace;
         margin-top: 1rem;
     }
-    .con .hd {
+    .cd-hd {
         padding: 0.65rem 1rem;
         border-bottom: 1px solid #1e3268;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-family: 'JetBrains Mono', monospace;
         font-size: 0.6rem;
         letter-spacing: 0.26em;
         text-transform: uppercase;
         color: #6b7ba8;
         background: rgba(19, 35, 72, 0.4);
     }
-    .con .hd .rr { color: #4d5a85; letter-spacing: 0.18em; }
-    .con .bd {
-        font-family: 'JetBrains Mono', monospace;
+    .cd-hd .cd-rr { color: #4d5a85; letter-spacing: 0.18em; }
+    .cd-bd {
         font-size: 0.76rem;
         line-height: 1.7;
         padding: 0.9rem 1.1rem;
@@ -625,12 +624,12 @@ def inject_custom_css():
         scrollbar-width: thin;
         scrollbar-color: #1e3268 #08112b;
     }
-    .con .bd::-webkit-scrollbar { width: 8px; }
-    .con .bd::-webkit-scrollbar-thumb { background: #1e3268; border-radius: 4px; }
-    .con .bd::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
-    .con .ln { display: flex; gap: 0.65rem; margin-bottom: 0.12rem; }
-    .con .g { flex-shrink: 0; width: 0.85rem; text-align: center; }
-    .con .t { word-break: break-word; }
+    .cd-bd::-webkit-scrollbar { width: 8px; }
+    .cd-bd::-webkit-scrollbar-thumb { background: #1e3268; border-radius: 4px; }
+    .cd-bd::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+    .cd-ln { display: flex; gap: 0.65rem; margin-bottom: 0.12rem; }
+    .cd-g { flex-shrink: 0; width: 0.85rem; text-align: center; }
+    .cd-t { word-break: break-word; }
 
     /* ---- notice ---- */
     .nt {
@@ -946,26 +945,35 @@ def classify_log_line(line: str):
     return None
 
 def render_console(log_lines, height=340):
+    """Console rendered via st.markdown (no iframe).
+
+    Newest lines appear at the top so the latest output is always visible
+    without scrolling. Older lines stack below; scroll the page down to
+    read history. Because there is no internal scroll container, nothing
+    can jump or lose position.
+    """
     rows = ""
-    for line in log_lines[-400:]:
+    # Newest first
+    for line in reversed(log_lines[-200:]):
         r = classify_log_line(line)
         if r is None:
             continue
         icon, color, text = r
         safe = text.replace("<", "&lt;").replace(">", "&gt;")
-        rows += (f'<div class="ln">'
-                 f'<span class="g" style="color:{color};">{icon}</span>'
-                 f'<span class="t" style="color:{color};">{safe}</span>'
+        rows += (f'<div class="cd-ln">'
+                 f'<span class="cd-g" style="color:{color};">{icon}</span>'
+                 f'<span class="cd-t" style="color:{color};">{safe}</span>'
                  f'</div>')
     if not rows:
-        rows = '<span style="color:#6b7ba8;">Awaiting agent output…</span>'
+        rows = '<div style="color:#6b7ba8; padding:0.4rem 0;">Awaiting agent output…</div>'
+
     html = compact(f"""
-        <div class="con">
-            <div class="hd">
+        <div class="cd-con">
+            <div class="cd-hd">
                 <span>Live Agent Console</span>
-                <span class="rr">Stream · Tail · 400 lines</span>
+                <span class="cd-rr">Newest at top · latest 200 lines</span>
             </div>
-            <div class="bd" style="max-height:{height}px;">
+            <div class="cd-bd" style="max-height:{height}px;">
                 {rows}
             </div>
         </div>

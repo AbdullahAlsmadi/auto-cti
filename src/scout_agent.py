@@ -47,6 +47,11 @@ os.makedirs(MAMORE_DIR, exist_ok=True)
 
 DESIRED_CVE_COUNT = 100
 
+# Deterministic metadata (publication date and collection source) recorded in Python,
+# so it never depends on the LLM copying it correctly.
+PUBLISHED_LOOKUP = {}
+SOURCE_LOOKUP = {}
+
 def load_seen_cve_ids() -> set:
     if not os.path.exists(SEEN_CVES_PATH):
         return set()
@@ -190,61 +195,106 @@ class NISTSearchTool(BaseTool):
             headers["apiKey"] = nvd_api_key
         nvd_url = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 
-        def parse_nvd_response(data):
-            verified_cves = []
-            for item in data.get("vulnerabilities", []):
+        def best_cvss(metrics):
+            """Prefer the NVD (Primary) CVSS v3.x metric; fall back to a CNA (Secondary) one."""
+            for key in ("cvssMetricV31", "cvssMetricV30"):
+                entries = metrics.get(key, [])
+                for m in entries:
+                    if m.get("type") == "Primary":
+                        return m.get("cvssData", {}), "nvd_verified"
+                if entries:
+                    return entries[0].get("cvssData", {}), "cna_official"
+            return {}, None
+
+        verify_cache = {}
+
+        def parse_nvd_items(items, limit):
+            """Newest first; skip seen IDs; cross-verify CVEs that NVD has not analysed yet."""
+            items = sorted(items, key=lambda it: it.get("cve", {}).get("published", ""), reverse=True)
+            records = []
+            for item in items:
+                if len(records) >= limit:
+                    break
                 cve = item.get("cve", {})
                 cve_id = cve.get("id")
-                if not cve_id:
-                    continue
-                if cve_id in seen_ids:
+                if not cve_id or cve_id in seen_ids:
                     continue
                 desc = "No description available."
                 for d in cve.get("descriptions", []):
                     if d.get("lang") == "en":
                         desc = d.get("value", desc)
                         break
-                cvss_score = "N/A"
-                cvss_severity = "N/A"
-                cvss_vector = "N/A"
                 cwe_id = "N/A"
-                metrics = cve.get("metrics", {})
-                cvss_list = metrics.get("cvssMetricV31", metrics.get("cvssMetricV30", []))
-                if cvss_list:
-                    cvss_data = cvss_list[0].get("cvssData", {})
-                    cvss_score = cvss_data.get("baseScore", "N/A")
-                    cvss_severity = cvss_data.get("baseSeverity", "N/A")
-                    cvss_vector = cvss_data.get("vectorString", "N/A")
                 for weakness in cve.get("weaknesses", []):
                     for wd in weakness.get("description", []):
                         if wd.get("lang") == "en":
                             cwe_id = wd.get("value", "N/A")
                             break
-                if cvss_vector != "N/A":
-                    cvss_source = "nvd_verified"
-                else:
-                    cvss_source = "nvd_no_vector"
-                verified_cves.append(
+                cvss_data, cvss_source = best_cvss(cve.get("metrics", {}))
+                cvss_score = cvss_data.get("baseScore", "N/A")
+                cvss_severity = cvss_data.get("baseSeverity", "N/A")
+                cvss_vector = cvss_data.get("vectorString", "N/A")
+                if not cvss_data.get("vectorString"):
+                    # NVD has not analysed this CVE yet: cross-verify via CNA record / OpenCVE / Tenable
+                    if cve_id not in verify_cache:
+                        verify_cache[cve_id] = verify_cvss(cve_id, "N/A", "N/A")
+                        time.sleep(0.3)
+                    v_score, v_sev, v_source, v_vector = verify_cache[cve_id]
+                    if v_vector not in (None, "N/A"):
+                        cvss_score, cvss_severity, cvss_vector, cvss_source = v_score, v_sev, v_vector, v_source
+                    else:
+                        cvss_score, cvss_severity, cvss_vector, cvss_source = 0.0, "N/A", "N/A", "nvd_no_vector"
+                published = cve.get("published", "")[:10]   # YYYY-MM-DD
+                PUBLISHED_LOOKUP[cve_id] = published
+                SOURCE_LOOKUP[cve_id] = "NVD"
+                records.append(
                     f"SOURCE: NVD | VERIFIED_CVE_ID: {cve_id} | "
                     f"CVSS: {cvss_score} | SEVERITY: {cvss_severity} | "
-                    f"CWE: {cwe_id} | CVSS_SOURCE: {cvss_source} | "
+                    f"CWE: {cwe_id} | PUBLISHED: {published} | CVSS_SOURCE: {cvss_source} | "
                     f"CVSS_VECTOR: {cvss_vector} | DESC: {desc[:500]}"
                 )
-            return verified_cves
+            return records
+
+        def fetch_nvd_window(days):
+            """Fetch every CVE published in the last <days> days (NVD 2.0 allows windows up to 120 days).
+
+            NVD does not support sorting by publication date (the old sortBy request returned 404),
+            so the window is downloaded and sorted locally.
+            """
+            end = datetime.datetime.now(datetime.timezone.utc)
+            start = end - datetime.timedelta(days=days)
+            fmt = "%Y-%m-%dT%H:%M:%S.000"
+            items, index = [], 0
+            pause = 0.7 if nvd_api_key else 6.5    # NVD rate limits: 50 req/30 s with a key, 5 without
+            for _ in range(10):
+                params = {"pubStartDate": start.strftime(fmt), "pubEndDate": end.strftime(fmt),
+                          "resultsPerPage": 2000, "startIndex": index}
+                r = requests.get(nvd_url, headers=headers, params=params, timeout=60)
+                print(f"DEBUG - NVD Status (last {days} days, startIndex={index}): {r.status_code}")
+                if r.status_code != 200:
+                    break
+                data = r.json()
+                batch = data.get("vulnerabilities", [])
+                items.extend(batch)
+                index += len(batch)
+                if not batch or index >= data.get("totalResults", 0):
+                    break
+                time.sleep(pause)
+            return items
 
         try:
-            print(f"DEBUG - Trying NVD (resultsPerPage={DESIRED_CVE_COUNT})...")
-            params = {
-                "resultsPerPage": DESIRED_CVE_COUNT,
-                "sortBy": "publishDate",
-                "sortOrder": "desc"
-            }
-            r = requests.get(nvd_url, headers=headers, params=params, timeout=30)
-            print(f"DEBUG - NVD Status: {r.status_code}")
-            if r.status_code == 200:
-                cves = parse_nvd_response(r.json())
-                if cves:
-                    return "STRICT INSTRUCTION: USE EXACTLY THESE IDs AND SCORES:\n" + "\n".join(cves)
+            # Set SCOUT_SKIP_NVD=true in ~/.auto-cti/.env to start from GitHub Advisory instead
+            if os.getenv("SCOUT_SKIP_NVD", "false").lower() == "true":
+                raise RuntimeError("skipped by SCOUT_SKIP_NVD=true")
+            cves = []
+            for days in (7, 30, 120):
+                print(f"DEBUG - Trying NVD (publication window: last {days} days)...")
+                cves = parse_nvd_items(fetch_nvd_window(days), DESIRED_CVE_COUNT)
+                if len(cves) >= DESIRED_CVE_COUNT:
+                    break
+            if cves:
+                print(f"DEBUG - NVD: collected {len(cves)} CVEs")
+                return "STRICT INSTRUCTION: USE EXACTLY THESE IDs AND SCORES:\n" + "\n".join(cves)
         except Exception as e:
             print(f"DEBUG - NVD Error: {e}")
 
@@ -312,6 +362,8 @@ class NISTSearchTool(BaseTool):
                     cwe_nodes = adv.get("cwes", {}).get("nodes", [])
                     cwe_id = cwe_nodes[0].get("cweId", "N/A") if cwe_nodes else "N/A"
                     published = adv.get("publishedAt", "")[:20]
+                    PUBLISHED_LOOKUP[cve_id] = published[:10]
+                    SOURCE_LOOKUP[cve_id] = "GHSA"
                     verified_score, verified_severity, cvss_source, verified_vector = verify_cvss(
                         cve_id, cvss_score, cvss_severity
                     )
@@ -368,6 +420,8 @@ class NISTSearchTool(BaseTool):
                             if vuln_id in seen_ids:
                                 continue
                             published = vuln.get("published", "")[:20]
+                            PUBLISHED_LOOKUP[vuln_id] = published[:10]
+                            SOURCE_LOOKUP[vuln_id] = "OSV"
                             summary = vuln.get("summary", vuln.get("details", "No description."))
                             verified_score, verified_severity, cvss_source, verified_vector = verify_cvss(
                                 vuln_id, "N/A", "N/A"
@@ -539,6 +593,17 @@ if __name__ == "__main__":
             new_data = json.loads(raw_result).get("vulnerabilities", [])
         except json.JSONDecodeError:
             new_data = []
+
+    # Attach deterministic metadata (publication date, collection source) in Python
+    if isinstance(new_data, list):
+        for _item in new_data:
+            if isinstance(_item, dict):
+                _cid = _item.get("cve_id")
+                _item["published_date"] = PUBLISHED_LOOKUP.get(_cid, "")
+                _item["collection_source"] = SOURCE_LOOKUP.get(_cid, "")
+    if not isinstance(new_data, list) or not new_data:
+        print("Error: Scout collected 0 CVEs (all sources failed). Nothing was saved.")
+        sys.exit(1)
 
     if isinstance(new_data, list) and new_data:
         print(f"\n⚡ [Fast Mode] Enriching {len(new_data)} CVEs with AlienVault OTX pulses natively...")

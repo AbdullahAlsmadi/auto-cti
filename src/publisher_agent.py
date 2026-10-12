@@ -149,7 +149,7 @@ total_cves = len(cve_summary)
 # --- PoC breakdown: four honest categories instead of one "PoC found" figure ---
 _NON_POC_LINK = re.compile(
     r"trickest/cve|olbat/nvdcve|/advisories|/security/advisories|/commit/|/pull/|"
-    r"seebug\.org/search|nvd\.nist\.gov|cve\.org|tenable\.com|sec-dojo-com/cve-poc",
+    r"seebug\.org/search|nvd\.nist\.gov|cve\.org|tenable\.com|sec-dojo-com/cve-poc|vuldb\.com",
     re.IGNORECASE)
 
 def _is_non_poc_link(link: str) -> bool:

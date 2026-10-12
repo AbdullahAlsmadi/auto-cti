@@ -17,7 +17,6 @@ import os
 import json
 import re
 import time
-from unittest import result
 import requests
 import datetime
 import sys
@@ -64,17 +63,17 @@ try:
             raw_threat_data = day_data
 except FileNotFoundError:
     print(f"Error: Could not find {scout_file_path}. Please run scout_agent.py first.")
-    exit()
+    sys.exit(1)
 
 if not raw_threat_data:
     print(f"No data found for today ({today_date}) in the JSON file.")
-    exit()
+    sys.exit(1)
 
 cve_count = len(raw_threat_data)
 print(f"DEBUG - CVEs received from Scout: {cve_count}")
 
 BATCH_SIZE = 20
-MAX_ENTRY_WORKERS = 8
+MAX_ENTRY_WORKERS = 3
 
 output_dir = os.path.join(DATA_DIR, "triage_agent_result")
 os.makedirs(output_dir, exist_ok=True)
@@ -111,30 +110,69 @@ class RateLimiter:
 # Conservative 20/min so we leave headroom for other GitHub API calls
 _gh_search_limiter = RateLimiter(20)
 
+# ---------------------------------------------------------------------------
+# Circuit breaker: after N consecutive GitHub failures, stop calling GitHub
+# for the remainder of the run. Prevents a single rate-limit event from
+# stalling the whole run.
+# ---------------------------------------------------------------------------
+
+_gh_fail_count = 0
+_gh_tripped = False
+_gh_breaker_lock = threading.Lock()
+_GH_BREAKER_THRESHOLD = 8
+
+
+def _gh_should_skip() -> bool:
+    with _gh_breaker_lock:
+        return _gh_tripped
+
+
+def _gh_note_failure():
+    global _gh_fail_count, _gh_tripped
+    with _gh_breaker_lock:
+        _gh_fail_count += 1
+        if _gh_fail_count >= _GH_BREAKER_THRESHOLD and not _gh_tripped:
+            _gh_tripped = True
+            print(f"   [GitHub] circuit breaker TRIPPED after {_gh_fail_count} "
+                  f"failures — disabling GitHub for this run.")
+
+
+def _gh_note_success():
+    global _gh_fail_count
+    with _gh_breaker_lock:
+        _gh_fail_count = 0
+
 
 def _gh_request_with_retry(url, headers, params=None, method="GET",
-                           json_body=None, max_retries=3, timeout=15):
-    """Perform a GitHub API request with 429/403 rate-limit backoff."""
+                           json_body=None, max_retries=2, timeout=15):
+    """Perform a GitHub API request with short backoff.
+
+    Gives up quickly (15s / 30s) instead of 60s / 180s waits, and trips a
+    shared circuit breaker after repeated failures so that a single rate
+    limit event cannot stall the whole run.
+    """
+    if _gh_should_skip():
+        return None
     for attempt in range(max_retries):
         try:
             if method == "POST":
                 r = requests.post(url, headers=headers, json=json_body, timeout=timeout)
             else:
                 r = requests.get(url, headers=headers, params=params, timeout=timeout)
-            if r.status_code == 429:
-                wait = min(60 * (attempt + 1), 180)
-                print(f"   [GitHub] 429 rate limit, sleeping {wait}s (attempt {attempt+1})")
+            if r.status_code == 200:
+                _gh_note_success()
+                return r
+            if r.status_code in (403, 429):
+                wait = 15 * (attempt + 1)
+                print(f"   [GitHub] {r.status_code} rate limit, sleeping {wait}s")
                 time.sleep(wait)
-                continue
-            if r.status_code == 403 and "rate limit" in r.text.lower():
-                wait = min(60 * (attempt + 1), 180)
-                print(f"   [GitHub] 403 rate limit, sleeping {wait}s (attempt {attempt+1})")
-                time.sleep(wait)
+                _gh_note_failure()
                 continue
             return r
         except requests.exceptions.RequestException as e:
             print(f"   [GitHub] request error ({attempt+1}): {e}")
             time.sleep(2)
+    _gh_note_failure()
     return None
 
 
@@ -522,6 +560,8 @@ def _annotate_agreement(entry: dict) -> dict:
     return entry
 
 def fetch_exploit_references(cve_id: str) -> list:
+    if os.getenv("ENABLE_NVD_EXPLOIT_REFS", "true").lower() != "true":
+        return []
     exploit_tags = {"exploit", "poc", "proof-of-concept", "technical-description", "technical description"}
     found = []
     try:
@@ -582,7 +622,12 @@ def fetch_github_poc_repos(cve_id: str, cwe_id: str = "") -> list:
     """Find public PoC material on GitHub. Every result must mention the exact CVE ID.
 
     All GitHub Search API calls are throttled globally to avoid the 30/min limit.
+    Set ENABLE_GITHUB_POC=true in ~/.auto-cti/.env to enable this source.
     """
+    if os.getenv("ENABLE_GITHUB_POC", "false").lower() != "true":
+        return []
+    if _gh_should_skip():
+        return []
     try:
         headers = {"Accept": "application/vnd.github+json"}
         gh_token = os.getenv("GITHUB_TOKEN")
@@ -951,7 +996,7 @@ def enhance_poc(entry: dict) -> dict:
     
     if exploit_refs:
         print(f"   ✅ {cve_id}: Found {len(exploit_refs)} reference(s) on NVD/CVE.org.")
-    else:
+    elif os.getenv("ENABLE_GITHUB_POC", "false").lower() == "true":
         print(f"   [2/12] Searching GitHub for public PoC repositories...")
         exploit_refs = fetch_github_poc_repos(cve_id, entry.get("CWE_ID", "")) if cve_id else []
         time.sleep(0.3)
@@ -1064,6 +1109,66 @@ def enhance_poc(entry: dict) -> dict:
                                                     entry["PoC_Source"] = "patch_reverse_engineering"
                                                     entry["_poc_gap"] = False
                                                     return entry
+    else:
+        # GitHub PoC disabled. Go straight to source [3/12].
+        print(f"   [2/12] Skipping GitHub (ENABLE_GITHUB_POC!=true). Trying Vulners...")
+        exploit_refs = fetch_vulners_exploits(cve_id) if cve_id else []
+        time.sleep(0.3)
+        source_label = "vulners_exploit"
+        if exploit_refs:
+            print(f"   ✅ {cve_id}: Found {len(exploit_refs)} Vulners exploit entry(ies).")
+        else:
+            print(f"   [3/12] Searching Packet Storm Security for exploits...")
+            exploit_refs = fetch_packetstorm_exploits(cve_id) if cve_id else []
+            source_label = "packetstorm_exploit"
+            if exploit_refs:
+                print(f"   ✅ {cve_id}: Found {len(exploit_refs)} exploit(s) on Packet Storm.")
+            else:
+                print(f"   [4/12] Checking inTheWild.io for exploit references...")
+                exploit_refs = fetch_inthewild_exploits(cve_id) if cve_id else []
+                source_label = "inthewild_exploit"
+                if exploit_refs:
+                    print(f"   ✅ {cve_id}: Found {len(exploit_refs)} reference(s) on inTheWild.io.")
+                else:
+                    print(f"   [5/12] Checking 0day.today archive...")
+                    exploit_refs = fetch_0daytoday_exploits(cve_id) if cve_id else []
+                    source_label = "zeroday_exploit"
+                    if exploit_refs:
+                        print(f"   ✅ {cve_id}: Found {len(exploit_refs)} exploit(s) in 0day.today archive.")
+                    else:
+                        print(f"   [6/12] Falling back to Exploit-DB index...")
+                        exploit_refs = fetch_exploitdb_matches(cve_id) if cve_id else []
+                        source_label = "exploitdb_verified"
+                        if exploit_refs:
+                            print(f"   ✅ {cve_id}: Found {len(exploit_refs)} Exploit-DB entry(ies).")
+                        else:
+                            print(f"   [7/12] Checking Live OSINT (Google Custom Search)...")
+                            exploit_refs = fetch_google_osint_poc(cve_id) if cve_id else []
+                            source_label = "google_osint_live"
+                            if exploit_refs:
+                                print(f"   ✅ {cve_id}: Found {len(exploit_refs)} live OSINT reference(s).")
+                            else:
+                                print(f"   [8/12] Checking Rapid7 Metasploit database...")
+                                exploit_refs = check_rapid7_db(cve_id) if cve_id else []
+                                source_label = "rapid7_metasploit"
+                                if exploit_refs:
+                                    print(f"   ✅ {cve_id}: Found Rapid7 module.")
+                                else:
+                                    print(f"   [9/12] Checking Seebug database...")
+                                    exploit_refs = check_seebug(cve_id) if cve_id else []
+                                    source_label = "seebug_exploit"
+                                    if exploit_refs:
+                                        print(f"   ✅ {cve_id}: Found reference on Seebug.")
+                                    else:
+                                        print(f"   [10/12] No external PoC. Attempting Patch Diffing / Reverse Engineering...")
+                                        diff_text = fetch_patch_diff(cve_id) if cve_id else ""
+                                        if diff_text:
+                                            print(f"   ✅ {cve_id}: Found GitHub commit diff. Analyzing root cause via Gemini...")
+                                            analysis = analyze_diff_with_llm(cve_id, diff_text)
+                                            entry["PoC"] = analysis + "\n\n**Theoretical Attack Vector (Reverse-Engineered from Patch)**"
+                                            entry["PoC_Source"] = "patch_reverse_engineering"
+                                            entry["_poc_gap"] = False
+                                            return entry
 
     if exploit_refs:
         note = "\n\n**Verified Exploit / Technical References:**\n" + \
@@ -1363,6 +1468,11 @@ if __name__ == "__main__":
             entry["LLM_CVSS_Score_Raw"] = entry.get("CVSS_Score")
             entry["LLM_CVSS_Vector_Raw"] = entry.get("CVSS_Vector", "N/A")
             entry["LLM_CVSS_Severity_Raw"] = entry.get("CVSS_Severity", "Unknown")
+
+            # Deterministic metadata recorded by the Scout (used for the recency analysis)
+            _raw = next((it for it in raw_threat_data if it.get("cve_id") == cve_id), {})
+            entry["Published_Date"] = _raw.get("published_date", "")
+            entry["Collection_Source"] = _raw.get("collection_source", "")
 
             with cache_lock:
                 cache = load_cache()

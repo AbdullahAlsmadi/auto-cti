@@ -153,7 +153,7 @@ def find_runs(root):
 
     runs = []
     for sub in sorted(glob.glob(os.path.join(root, "*")), key=natural_key):
-        triage = glob.glob(os.path.join(sub, "Triaged_Report_*.json"))
+        triage = glob.glob(os.path.join(sub, "Triaged_Report*.json"))
         scout = os.path.join(sub, "cti_report.json")
         if os.path.isdir(sub) and triage and os.path.exists(scout):
             runs.append((os.path.basename(sub), scout, triage[0]))

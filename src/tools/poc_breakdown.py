@@ -34,7 +34,7 @@ CACHE_PATH = os.path.expanduser("~/.auto-cti/data/MAMORE/triage_cache.json")
 NON_POC = re.compile(
     r"trickest/cve|olbat/nvdcve|/advisories|/security/advisories|"
     r"/blob/|/commit/|/pull/|seebug\.org/search|"
-    r"nvd\.nist\.gov|cve\.org|tenable\.com|sec-dojo-com/cve-poc"
+    r"nvd\.nist\.gov|cve\.org|tenable\.com|sec-dojo-com/cve-poc|vuldb\.com"
 )
 
 
@@ -44,7 +44,7 @@ def is_non_poc(link):
     low = link.lower()
     if re.search(r"trickest/cve|olbat/nvdcve|/advisories|/security/advisories|"
                  r"/commit/|/pull/|seebug\.org/search|nvd\.nist\.gov|cve\.org|"
-                 r"tenable\.com|sec-dojo-com/cve-poc", low):
+                 r"tenable\.com|sec-dojo-com/cve-poc|vuldb\.com", low):
         return True
     if "/blob/" in low:
         return not (re.search(r"poc|exploit", low.split("/blob/", 1)[1])
@@ -72,7 +72,7 @@ def classify(entry):
 def load_entries(arg):
     if arg and os.path.isdir(arg):
         entries = []
-        for f in sorted(glob.glob(os.path.join(arg, "*", "Triaged_Report_*.json"))):
+        for f in sorted(glob.glob(os.path.join(arg, "*", "Triaged_Report*.json"))):
             with open(f, encoding="utf-8") as fh:
                 entries += json.load(fh)["report"]
         return entries

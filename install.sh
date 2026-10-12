@@ -46,8 +46,6 @@ install_packages() {
 }
 
 # 1. Select a supported Python interpreter (must be 3.10, 3.11, or 3.12).
-#    Python 3.13+ is explicitly rejected: CrewAI's dependency chain
-#    (tiktoken / PyO3, docstring_parser, etc.) does not yet support it.
 PYTHON_BIN=""
 PYTHON_VERSION=""
 
@@ -65,7 +63,6 @@ for candidate in python3.12 python3.11 python3.10 python3; do
     fi
 done
 
-# No supported Python found — refuse to continue
 if [ -z "$PYTHON_BIN" ]; then
     DEFAULT_VER=$(python3 --version 2>&1 || echo "not installed")
     echo
@@ -87,7 +84,6 @@ if [ -z "$PYTHON_BIN" ]; then
     exit 1
 fi
 
-# Verify the venv module is available for the chosen interpreter
 if ! "$PYTHON_BIN" -c 'import venv' 2>/dev/null; then
     echo "❌ The 'venv' module is missing for $PYTHON_BIN."
     echo "   Ubuntu/Debian: sudo apt install python3.12-venv"
@@ -130,6 +126,14 @@ cp NOTICE "$INSTALL_DIR/" 2>/dev/null || true
 cp SECURITY.md "$INSTALL_DIR/" 2>/dev/null || true
 cp CITATION.cff "$INSTALL_DIR/" 2>/dev/null || true
 
+# Record the exact code version (stored in every archived run)
+VERSION="unknown"
+if command -v git &> /dev/null && git rev-parse --short HEAD &> /dev/null; then
+    VERSION="$(git rev-parse --short HEAD)"
+    git diff --quiet 2>/dev/null || VERSION="$VERSION-dirty"
+fi
+echo "$VERSION" > "$INSTALL_DIR/VERSION"
+
 # 6. Create virtual environment and install dependencies
 echo
 echo -e "\033[1;36m📦  Creating virtual environment with Python $PYTHON_VERSION…\033[0m"
@@ -146,7 +150,6 @@ echo -e "\033[1;36m📦  Installing $TOTAL_PKGS dependency groups (this may take
 echo -e "\033[2m    (pip output is hidden; only the final status is shown)\033[0m"
 echo
 
-# Attempt 1: prefer wheels (fast, no compiler needed)
 if pip install -r "$INSTALL_DIR/requirements.txt" \
         --quiet \
         --disable-pip-version-check \
@@ -155,7 +158,6 @@ if pip install -r "$INSTALL_DIR/requirements.txt" \
         2> /tmp/auto-cti-pip-error.log; then
     echo -e "\033[1;32m✅  Dependencies installed successfully.\033[0m"
 else
-    # Attempt 2: allow source builds (Rust may be needed)
     echo -e "\033[1;33m⚠️  Binary-only install incomplete; retrying with source builds…\033[0m"
     if pip install -r "$INSTALL_DIR/requirements.txt" \
             --quiet \
@@ -191,7 +193,8 @@ elif [ "$1" == "-p" ]; then
 elif [ "$1" == "-d" ]; then
     python -m streamlit run src/dashboard.py
 elif [ "$1" == "-f" ]; then
-    python src/scout_agent.py && python src/triage_agent.py && python src/publisher_agent.py
+    python src/scout_agent.py && python src/triage_agent.py && python src/publisher_agent.py \
+        && python src/tools/archive_run.py "${@:2}"
 elif [ "$1" == "-u" ]; then
     "$HOME/.auto-cti/uninstall.sh"
 elif [ "$1" == "-v" ]; then
@@ -201,7 +204,7 @@ elif [ "$1" == "-b" ]; then
 elif [ "$1" == "-g" ]; then
     python src/tools/llm_agreement.py "${@:2}"
 elif [ "$1" == "-a" ]; then
-    python src/tools/archive_run.py
+    python src/tools/archive_run.py "${@:2}"
 elif [ "$1" == "-k" ]; then
     python src/tools/check_keys.py
 elif [ "$1" == "-e" ]; then
@@ -215,13 +218,13 @@ else
     echo "    -s   Run Scout Agent"
     echo "    -t   Run Triage Agent"
     echo "    -p   Run Publisher Agent"
-    echo "    -f   Run full pipeline (Scout → Triage → Publisher)"
+    echo "    -f   Run full pipeline (Scout → Triage → Publisher → Archive)"
     echo
     echo "  ANALYSIS TOOLS (verification):"
     echo "    -v   Verify Urgency Score formula"
     echo "    -b   PoC breakdown (external / patch-diff / none)"
     echo "    -g   LLM vs authoritative CVSS agreement"
-    echo "    -a   Archive the current run"
+    echo "    -a   Archive the current run (optionally: -a <label>)"
     echo
     echo "  CONFIGURATION:"
     echo "    -k   Check API keys (live test, no secrets shown)"
@@ -231,10 +234,11 @@ else
     echo "    -u   Remove Auto-CTI completely"
     echo
     echo "  Examples:"
-    echo "    auto-cti -d              # start the SOC dashboard"
-    echo "    auto-cti -b --list       # list plausible PoC links"
-    echo "    auto-cti -v /path/to/runs  # verify a batch of archived runs"
-    echo "    auto-cti -g              # LLM agreement with authoritative sources"
+    echo "    auto-cti -d                    # start the SOC dashboard"
+    echo "    auto-cti -f cycle1_run1        # run + archive with a label"
+    echo "    auto-cti -b --list             # list plausible PoC links"
+    echo "    auto-cti -v /path/to/runs      # verify a batch of archived runs"
+    echo "    auto-cti -g                    # LLM agreement with authoritative sources"
     echo
 fi
 EOF
@@ -291,6 +295,8 @@ SCOUT_SKIP_NVD=false
 ENABLE_SPLOITUS=false
 ENABLE_VULNERS_LUCENE=false
 ENABLE_SEEBUG=false
+ENABLE_GITHUB_POC=false
+ENABLE_NVD_EXPLOIT_REFS=true
 EOF
     chmod 600 "$INSTALL_DIR/.env"
 fi

@@ -18,7 +18,7 @@ import os
 import stat
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
+from dotenv import load_dotenv, dotenv_values
 
 CONFIG_DIR = Path.home() / ".auto-cti"
 ENV_FILE = CONFIG_DIR / ".env"
@@ -42,8 +42,20 @@ OPTIONAL_KEYS = {
     "OPENCVE_PASSWORD": "https://www.opencve.io/register",
 }
 
+# Feature toggles that must be preserved when saving .env
+TOGGLE_KEYS = [
+    "SCOUT_SKIP_NVD",
+    "ENABLE_SPLOITUS",
+    "ENABLE_VULNERS_LUCENE",
+    "ENABLE_SEEBUG",
+    "ENABLE_GITHUB_POC",
+    "ENABLE_NVD_EXPLOIT_REFS",
+]
+
+
 def ensure_config_dir():
     CONFIG_DIR.mkdir(mode=0o700, exist_ok=True)
+
 
 def load_env():
     ensure_config_dir()
@@ -57,19 +69,32 @@ def load_env():
         load_dotenv(PROJECT_ENV, override=True)
     return os.environ
 
+
 def save_env(env_dict):
+    """Merge only known Auto-CTI settings into the .env file.
+
+    env_dict may be os.environ: unrelated variables (PATH, other tools'
+    secrets) are never written to ~/.auto-cti/.env.
+    """
     ensure_config_dir()
+    known = list(REQUIRED_KEYS) + list(OPTIONAL_KEYS) + TOGGLE_KEYS
+    current = dict(dotenv_values(ENV_FILE)) if ENV_FILE.exists() else {}
+    for key in known:
+        if key in env_dict and env_dict[key] is not None:
+            current[key] = env_dict[key]
     with open(ENV_FILE, 'w') as f:
         f.write("# Auto-CTI Environment Configuration\n")
-        for key, value in env_dict.items():
-            f.write(f"{key}={value}\n")
+        for key, value in current.items():
+            f.write(f"{key}={value or ''}\n")
     os.chmod(ENV_FILE, 0o600)
     print("✅ Keys saved securely to ~/.auto-cti/.env")
+
 
 def get_missing_keys():
     env = load_env()
     missing = {key: url for key, url in REQUIRED_KEYS.items() if not env.get(key)}
     return missing
+
 
 def prompt_missing_keys():
     if not sys.stdin.isatty():
@@ -88,6 +113,7 @@ def prompt_missing_keys():
         else:
             print(f"   ⚠️  Skipped {key} – some features may not work.")
     load_dotenv(ENV_FILE, override=True)
+
 
 def init_config():
     load_env()

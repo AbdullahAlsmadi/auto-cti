@@ -28,6 +28,7 @@
   - [Windows — VS Code (WSL extension)](#-windows--vs-code-wsl-extension)
 - [Configuration](#configuration)
 - [Running the System](#running-the-system)
+- [Command Reference](#command-reference)
 - [Output & Reports](#output--reports)
 - [Validation Metrics](#validation-metrics)
 - [Resolved Issues & Development History](#resolved-issues--development-history)
@@ -64,12 +65,17 @@ A Streamlit-based SOC dashboard provides live monitoring, progress tracking, and
 
 - ✅ **Fully automated pipeline** — from data collection to executive report generation
 - ✅ **Multi-source CVSS cross-verification** — every score is checked against NVD, CVE Services (MITRE CNA records), OpenCVE, and Tenable (in that priority order), with a per-CVE Score Provenance label
+- ✅ **Deterministic Urgency Score** — computed in Python (not by the LLM) and verified against a reference formula
 - ✅ **12-stage PoC/exploit discovery waterfall** — NVD/CVE.org tagged references → GitHub (curated repos, advisories, general search) → Vulners → Packet Storm → inTheWild.io → Sploitus → 0day.today → Exploit-DB → Google Custom Search OSINT → Rapid7 Metasploit → Seebug → LLM-based patch-diff reverse engineering (final fallback)
+- ✅ **Automatic run archiving** — every `auto-cti -f` run is snapshotted with a run number, timestamp, code version (`git` hash) and active feature toggles
+- ✅ **Reproducible analysis tools** — verify Urgency Score formula (`-v`), PoC category breakdown (`-b`), and LLM-vs-authoritative CVSS agreement rate (`-g`) on any cache or archived run
+- ✅ **API key health-check tool** — `auto-cti -k` live-tests every configured key without exposing secrets
+- ✅ **Safe `.env` management** — only known Auto-CTI keys are written; environment variables (PATH, shell secrets) are never leaked into `.env`
 - ✅ **Professional PDF reports** — TLP:AMBER classified, with clickable hyperlinks to official references
 - ✅ **Embedded analytics charts** — every PDF includes a severity-distribution bar chart and a PoC-discovery pie chart, rendered with Matplotlib
 - ✅ **Cross-run deduplication (MAMORE)** — tracks previously reported CVE IDs so no CVE is reported twice across runs
 - ✅ **Result caching** — a per-CVE triage cache (`triage_cache.json`) skips redundant enrichment API calls on repeat processing
-- ✅ **Secure API key storage** — keys stored securely in `~/.auto-cti/.env` with 600 permissions
+- ✅ **Secure API key storage** — keys stored in `~/.auto-cti/.env` with mode `600`
 - ✅ **Interactive first-run setup** — prompts for missing API keys with direct sign-up URLs
 - ✅ **Streamlit SOC dashboard** — live agent progress rings, smart-filtered console logs, report history and downloads
 - ✅ **One-command installation** — automated Linux setup via Bash script
@@ -97,9 +103,11 @@ A Streamlit-based SOC dashboard provides live monitoring, progress tracking, and
 │   AlienVault OTX       (12-stage)                                          │
 └──────────────────────────────────────────────────────────────────────────────┘
                               │
-                    ┌─────────▼──────────┐
-                    │  ~/.auto-cti/data/ │
-                    │  (Secure Storage)  │
+                              ▼
+                    ┌────────────────────┐
+                    │ Archive Run (-a)   │
+                    │ ~/.auto-cti/data/  │
+                    │   runs/NNN_...     │
                     └────────────────────┘
 ```
 
@@ -115,11 +123,13 @@ The pipeline is orchestrated by `src/main_system.py` using **CrewAI Flow**, whic
 
 Fetches recent CVEs with automatic fallback across sources, in this priority order:
 
-1. **NIST NVD CVE API v2.0** — primary source (`resultsPerPage=100`, sorted by publish date descending)
-2. **GitHub Advisory Database (GraphQL)** — fallback, paginated up to 10 pages of 50 advisories each, cross-verified per-CVE via CVE Services API / OpenCVE / Tenable
+1. **NIST NVD CVE API v2.0** — primary source (publication-date window up to 120 days, sorted locally)
+2. **GitHub Advisory Database (GraphQL)** — fallback, paginated up to 30 pages of 100 advisories each, cross-verified per-CVE via CVE Services API / OpenCVE / Tenable
 3. **OSV.dev API** — secondary fallback, queried per-ecosystem (PyPI, npm, Go, Maven, NuGet, crates.io)
 
 Every CVE collected via the GHSA or OSV fallback paths is independently verified against CVE Services API → OpenCVE → Tenable (HTML scrape) and tagged with a `cvss_source` field (`nvd_verified`, `cna_official`, `tenable_verified`, `cna_no_cvss`, or `ghsa_only`).
+
+**Deterministic metadata** (`published_date`, `collection_source`) is recorded in Python and attached to every CVE before the report is saved, so it never depends on the LLM copying it correctly.
 
 **Deduplication:** Uses **MAMORE** (`seen_cve_ids.json`) for cross-run tracking so no CVE is ever reported twice.
 
@@ -131,7 +141,7 @@ Every CVE collected via the GHSA or OSV fallback paths is independently verified
 **Role:** Threat Analyst
 **LLM:** `gemini/gemini-3.5-flash-lite` via Google Gemini API (cloud)
 
-The most intelligence-intensive agent. Processes the Scout's raw data and produces a structured threat assessment for each CVE:
+The most intelligence-intensive agent. Processes the Scout's raw data in batches of 20 CVEs and produces a structured threat assessment for each CVE:
 
 | Field | Description |
 |---|---|
@@ -143,30 +153,39 @@ The most intelligence-intensive agent. Processes the Scout's raw data and produc
 | `MITRE_Mappings` | Relevant ATT&CK technique codes (e.g., T1190) |
 | `Urgency_Score` | Deterministic 1–100 score, recalculated in Python (not trusted from LLM output) |
 | `PoC` | 4-sentence technical proof-of-concept narrative, enriched with real references where found |
+| `PoC_Source` | Category tag: `nvd_cve_org_reference`, `github_poc_repo`, `vulners_exploit`, `packetstorm_exploit`, `inthewild_exploit`, `zeroday_exploit`, `exploitdb_verified`, `google_osint_live`, `rapid7_metasploit`, `seebug_exploit`, `patch_reverse_engineering`, or `llm_only` |
 | `References` | NVD, CVE.org, and Tenable URLs, each checked for liveness before inclusion |
+| `Published_Date` / `Collection_Source` | Propagated from Scout for recency analysis |
+| `LLM_CVSS_Score_Raw` / `LLM_CVSS_Vector_Raw` | The model's original CVSS output, preserved before authoritative override — used to measure model-vs-authority agreement |
+| `LLM_vs_Authoritative_Delta` / `LLM_vs_Authoritative_Match` | Per-CVE comparison between the LLM's raw score and the authoritative score |
 
 **CVSS accuracy strategy — Python-layer enforcement over LLM self-reporting:**
 - `enforce_authoritative_cvss()` overwrites the LLM's CVSS output with the Python-verified score/vector whenever the Scout-stage source was `nvd_verified`, `cna_official`, `tenable_verified`, `opencve_verified`, or `cve_org_official`.
 - `recalculate_score_from_vector()` uses the `cvss` library to mathematically derive the score from the vector for everything else.
 - `verify_and_correct_cvss()` runs a **second, independent** re-verification pass (NVD → OpenCVE → CVE.org → Tenable) after triage, correcting any drift.
-- `verify_tenable_result()` is a secondary gate on scraped Tenable data: it rejects a result if the CVE ID isn't present in the scraped page text, or if the scraped score deviates more than 0.2 from the score mathematically recomputed from the scraped vector. This catches the failure mode where a page's score and vector come from mismatched CVSS versions.
-- **Urgency Score formula (deterministically enforced):** `min(90, CVSS × 9)`, `+10` if AlienVault OTX pulses were found for the CVE, `−5` if severity is Low/None, clamped to `[1, 100]`. This overwrites whatever value the LLM produced — confirmed correct against multiple real report runs.
+- `verify_tenable_result()` is a secondary gate on scraped Tenable data: it rejects a result if the CVE ID isn't present in the scraped page text, or if the scraped score deviates more than 0.2 from the score mathematically recomputed from the scraped vector.
+- **Urgency Score formula (deterministically enforced):** `min(90, CVSS × 9)`, `+10` if AlienVault OTX pulses were found for the CVE, `−5` if severity is Low/None, clamped to `[1, 100]`.
+
+**Resilience features** (added for large-batch studies):
+- **Batched LLM calls** — 20 CVEs per batch, avoiding Gemini output-token limits.
+- **Rate limiter for GitHub Search API** — a thread-safe token bucket keeps GitHub calls within the 30 req/min limit.
+- **Circuit breaker** — after 8 consecutive GitHub failures, the breaker trips and GitHub PoC lookup is skipped for the rest of the run, preventing a rate-limit storm from stalling the pipeline.
+- **Configurable workers** — `MAX_ENTRY_WORKERS = 3` concurrent enrichment threads.
+- **Environment toggles** — `ENABLE_GITHUB_POC` and `ENABLE_NVD_EXPLOIT_REFS` allow disabling heavy external sources without code changes.
 
 **PoC discovery — 12-stage waterfall**, attempted in order, stopping at the first hit:
 1. NVD / CVE Services API tagged Exploit/PoC references
-2. GitHub curated PoC repositories (`nomi-sec/PoC-in-GitHub`, `trickest/cve`, etc.)
-3. GitHub Advisory Database entry references
-4. GitHub general repository/code search
-5. Vulners aggregated exploit index
-6. Packet Storm Security
-7. inTheWild.io
-8. Sploitus (aggregator)
-9. 0day.today archive
-10. Exploit-DB (via bulk CSV index)
-11. Google Custom Search OSINT (requires `GOOGLE_SEARCH_API_KEY` + `GOOGLE_SEARCH_CX`)
-12. Rapid7 Metasploit module check, then Seebug — and if all else fails, an **LLM-based patch-diff reverse engineering** step that fetches the CNA-referenced GitHub commit diff and asks Gemini to write a theoretical attack analysis from the code change itself
-
-> **Note:** The general GitHub search now includes CWE-to-keyword relevance filtering and aggregator-repo detection to minimize false-positive PoC references. See the [Validation Metrics](#validation-metrics) section for observed discovery rates.
+2. GitHub curated PoC repositories (`nomi-sec/PoC-in-GitHub`, `sirius306/CVE-PoC-Hub`, etc.)
+3. Vulners aggregated exploit index
+4. Packet Storm Security
+5. inTheWild.io
+6. Sploitus (aggregator, environment-gated)
+7. 0day.today archive
+8. Exploit-DB (via bulk CSV index)
+9. Google Custom Search OSINT (requires `GOOGLE_SEARCH_API_KEY` + `GOOGLE_SEARCH_CX`)
+10. Rapid7 Metasploit module check
+11. Seebug (environment-gated)
+12. LLM-based patch-diff reverse engineering (final fallback; fetches the CNA-referenced GitHub commit diff and asks Gemini to write a theoretical attack analysis)
 
 ---
 
@@ -177,9 +196,15 @@ The most intelligence-intensive agent. Processes the Scout's raw data and produc
 Compiles the triaged data into two outputs:
 
 - **JSON Feed** — Structured machine-readable report for SIEM ingestion (`~/.auto-cti/data/publisher_agent_result/`)
-- **PDF Briefing** — Executive-ready PDF with TLP:AMBER classification, risk statistics, executive summary, critical action list, CVE quick-reference table, detailed per-CVE findings, and two embedded analytics figures (severity distribution bar chart, PoC discovery pie chart).
+- **PDF Briefing** — Executive-ready PDF with TLP:AMBER classification, risk statistics, executive summary, critical action list, CVE quick-reference table, detailed per-CVE findings, and two embedded analytics figures.
 
-PDF layout and text are generated directly in Python using `fpdf2` — only the executive summary and critical action list text are LLM-generated; all statistics, tables, and chart data are computed deterministically from the triage output. Charts are rendered with `matplotlib` and saved to `~/.auto-cti/data/charts/` before being embedded.
+PDF layout and text are generated directly in Python using `fpdf2` — only the executive summary and critical action list text are LLM-generated. Charts are rendered with `matplotlib` and saved to `~/.auto-cti/data/charts/` before being embedded.
+
+The **PoC Discovery Summary** (Section 4.1) reports four honest categories rather than a single inflated "PoC found" figure:
+- **External PoC** — plausible external exploit reference, requires manual verification
+- **Patch analysis (LLM)** — technical narrative derived from vendor patch diff, not a real exploit
+- **Non-PoC references only** — matched advisory / source-code / aggregator URLs (false-positive filter)
+- **No PoC** — no external reference and no patch analysis available
 
 ---
 
@@ -192,8 +217,9 @@ Provides:
 - Smart-filtered console logs (strips CrewAI internal noise, encoding warnings) alongside a raw debug log view
 - Metric cards for total CVEs and severity breakdown
 - One-click PDF/JSON download for the latest report, plus full report history
+- Configuration panel to edit API keys in-place and run `check_keys` from the browser
+- Analysis Tools tab to run `-v`, `-b`, `-g`, `-a` interactively
 - Dark/Light theme toggle
-- TLP:AMBER classification banner
 
 ---
 
@@ -224,25 +250,30 @@ Auto_CTI/
 ├── src/                      # Core system modules and agents
 │   ├── tools/
 │   │   ├── __init__.py
-│   │   └── verify_urgency.py # Urgency Score verification tool
+│   │   ├── archive_run.py       # -a  snapshot current run (with label + toggles)
+│   │   ├── check_keys.py        # -k  live-test every API key
+│   │   ├── edit_env.py          # -e  open ~/.auto-cti/.env in $EDITOR
+│   │   ├── llm_agreement.py     # -g  LLM vs authoritative CVSS agreement
+│   │   ├── poc_breakdown.py     # -b  PoC category breakdown
+│   │   └── verify_urgency.py    # -v  Urgency Score formula verification
 │   ├── utils/
 │   │   ├── __init__.py
-│   │   └── secure_config.py  # Environment and key management
+│   │   └── secure_config.py  # Environment and key management (safe merge)
 │   ├── __init__.py
 │   ├── dashboard.py          # UI for live monitoring
 │   ├── main_system.py        # Main CrewAI orchestration script
 │   ├── publisher_agent.py    # JSON/PDF report generation
 │   ├── scout_agent.py        # Threat discovery and CVE fetching
 │   └── triage_agent.py       # Vulnerability analysis and verification
-├── .gitignore                # Git ignored files list
+├── .gitignore
 ├── install.sh                # Linux installation and setup script
 ├── uninstall.sh              # System cleanup script
-├── README.md                 # Project documentation
-├── requirements.txt          # Python dependencies
+├── README.md
+├── requirements.txt
 ├── LICENSE                   # Apache License 2.0 (full text)
 ├── NOTICE                    # Apache-2.0 attribution notice
 ├── SECURITY.md               # Vulnerability disclosure policy
-└── CITATION.cff              # Citation metadata (GitHub "Cite this repository")
+└── CITATION.cff              # Citation metadata
 ```
 
 **Runtime Data Architecture:**
@@ -250,7 +281,7 @@ Auto_CTI/
 ```
 ~/.auto-cti/
 ├── .env                              # Active secure API keys (600 permissions)
-│                                      # Template written directly to ~/.auto-cti/.env
+├── VERSION                           # Installed code version (git short hash)
 └── data/
     ├── Scout_Agent_Results/          # Raw CVE data (cti_report.json)
     ├── triage_agent_result/          # Analyzed CVE list (Triaged_Report_<date>.json)
@@ -258,7 +289,14 @@ Auto_CTI/
     ├── Reports/                      # Final PDF briefings (AutoCTI_Report_<timestamp>.pdf)
     ├── charts/                       # Generated severity/PoC charts embedded in each PDF
     ├── MAMORE/                       # seen_cve_ids.json (dedup) + triage_cache.json (result cache)
-    └── PoC_Gap_Reports/               # Per-run report of CVEs with no external PoC found
+    ├── PoC_Gap_Reports/              # Per-run report of CVEs with no external PoC found
+    └── runs/                         # Archived runs (one folder per -a or -f invocation)
+        └── 001_cycle1_run1_20261013_111530/
+            ├── cti_report.json
+            ├── Triaged_Report.json
+            ├── Executive_Briefing.json
+            ├── AutoCTI_Report.pdf
+            └── run_meta.json          # run #, label, timestamp, code_version, toggles
 ```
 
 ---
@@ -266,15 +304,13 @@ Auto_CTI/
 ## Prerequisites
 
 - **Operating System:** Linux (`install.sh`/`uninstall.sh` are Bash-based; tested on Arch Linux) or macOS. **Windows users:** run everything inside **WSL2** (plain WSL terminal or VS Code's WSL-connected terminal) — see the [Installation & Setup](#installation--setup) guides below. Native cmd.exe/PowerShell is not supported.
-- **Python Version:** `install.sh` currently invokes `python3.12` explicitly for the venv — ensure Python 3.12 is installed, independent of your system's default `python3`
+- **Python Version:** `install.sh` auto-detects Python 3.10, 3.11, or 3.12 for the venv. Python 3.13+ is currently **rejected** because several required dependencies (tiktoken via PyO3, docstring_parser, etc.) do not yet support it.
 - **API Keys:** Required for full functionality:
-  - Google Gemini API (free tier available)
-  - NIST NVD
-  - GitHub Personal Access Token
-  - AlienVault OTX
-  - Vulners (optional)
-  - OpenCVE (optional)
-  - Google Custom Search API key + Search Engine ID (optional, enables PoC waterfall stage 11)
+  - Google Gemini API (free tier available) — **required**
+  - NIST NVD — recommended
+  - GitHub Personal Access Token — recommended
+  - AlienVault OTX — recommended
+  - Vulners, OpenCVE, Google Custom Search — optional
 
 ---
 
@@ -318,7 +354,7 @@ cd auto-cti
 chmod +x install.sh
 ./install.sh
 ```
-This creates `~/.auto-cti/venv` (Python 3.12), copies `src/` into `~/.auto-cti/`, and installs the global `auto-cti` command into `~/.local/bin`.
+This creates `~/.auto-cti/venv`, copies `src/` into `~/.auto-cti/`, writes the code version to `~/.auto-cti/VERSION`, and installs the global `auto-cti` command into `~/.local/bin`.
 
 **Step 4 — Add your API keys:**
 ```bash
@@ -478,42 +514,59 @@ Open the printed `http://localhost:8501` link in your Windows browser.
 
 ## Configuration
 
----
-
-## Configuration
-
-On first run (when running an agent directly, not via the dashboard), the system interactively prompts for any missing required API keys with sign-up URLs. You can also manually edit `~/.auto-cti/.env`:
+On first run (when running an agent directly, not via the dashboard), the system interactively prompts for any missing **required** keys. Optional keys are not requested — you can add them later by editing `~/.auto-cti/.env` or by using `auto-cti -e`.
 
 ```env
-# Google Gemini API Key — used by all three agents
-GEMINI_API_KEY=your_gemini_api_key_here
+# ============================================================
+# Auto-CTI Environment Configuration
+# ============================================================
 
-# NIST NVD API Key — reduces rate limiting on the primary CVE source
-NVD_API_KEY=your_nvd_api_key_here
+# ---------- Required ----------
+# Get from: https://ai.google.dev/gemini-api/docs/api-key
+GEMINI_API_KEY=
 
-# GitHub Personal Access Token — increases GitHub API rate limit
-GITHUB_TOKEN=your_github_token_here
+# ---------- Recommended ----------
+# Get from: https://nvd.nist.gov/developers/request-an-api-key
+NVD_API_KEY=
+# Get from: https://github.com/settings/tokens
+GITHUB_TOKEN=
+# Get from: https://otx.alienvault.com/
+OTX_API_KEY=
 
-# Vulners API Key — for exploit enrichment (ID-based lookups only)
-VULNERS_API_KEY=your_vulners_api_key_here
+# ---------- Optional ----------
+# Get from: https://vulners.com/register
+VULNERS_API_KEY=
+# Get from: https://www.opencve.io/register
+OPENCVE_USERNAME=
+OPENCVE_PASSWORD=
+# Get from: https://developers.google.com/custom-search/v1/overview
+GOOGLE_SEARCH_API_KEY=
+# Get from: https://programmablesearchengine.google.com/about/
+GOOGLE_SEARCH_CX=
 
-# AlienVault OTX API Key — for active threat pulses
-OTX_API_KEY=your_otx_api_key_here
+# ---------- Feature Toggles ----------
+# Skip NVD in Scout and start from GitHub Advisory Database instead
+SCOUT_SKIP_NVD=false
 
-# Google Custom Search — enables PoC waterfall stage 11 (OSINT)
-GOOGLE_SEARCH_API_KEY=your_google_search_api_key
-GOOGLE_SEARCH_CX=your_search_engine_id
-
-# OpenCVE credentials (optional)
-OPENCVE_USERNAME=your_opencve_username
-OPENCVE_PASSWORD=your_opencve_password
-
-# Feature toggles (disable by default)
+# Enable the Sploitus exploit aggregator (default: disabled — often returns 403)
 ENABLE_SPLOITUS=false
+
+# Enable Vulners Lucene search (default: disabled — requires paid plan)
 ENABLE_VULNERS_LUCENE=false
+
+# Enable Seebug database lookup (default: disabled — string match produces false positives)
+ENABLE_SEEBUG=false
+
+# Enable GitHub PoC repository search in Triage (default: disabled in study mode
+# to avoid GitHub Search API rate limits; enable for ad-hoc single runs)
+ENABLE_GITHUB_POC=false
+
+# Search NVD for tagged exploit references during PoC enrichment (default: enabled)
+ENABLE_NVD_EXPLOIT_REFS=true
 ```
 
 > ⚠️ **Never commit your `.env` file to version control.** Keys are stored with `600` permissions.
+> The dashboard writes to `.env` using a safe-merge routine: only keys that exist in the Auto-CTI schema are persisted; environment variables such as `PATH` or shell secrets are never written.
 
 ---
 
@@ -525,21 +578,36 @@ After `install.sh`, the `auto-cti` command is available globally via `~/.local/b
 auto-cti
 ```
 ```
-🛡️ Auto-CTI Command Guide:
-   auto-cti -d  - Launch interactive dashboard
-   auto-cti -s  - Run Scout Agent
-   auto-cti -t  - Run Triage Agent
-   auto-cti -p  - Run Publisher Agent
-   auto-cti -f  - Run full pipeline
-   auto-cti -v  - Verify Urgency Score formula
-   auto-cti -u  - Remove Auto-CTI completely
-```
+🛡️  Auto-CTI Command Guide
+============================================
 
-- `auto-cti -d` — Launches the Streamlit SOC dashboard at `http://localhost:8501`.
-- `auto-cti -s` / `-t` / `-p` — Run an individual agent in isolation.
-- `auto-cti -f` — Runs Scout → Triage → Publisher sequentially in the terminal.
-- `auto-cti -v` — Recomputes the Urgency Score of the latest triage report and checks it against the stored values. Pass a folder path to verify a batch of runs (e.g., `auto-cti -v "/path/to/runs"`).
-- `auto-cti -u` — Uninstalls Auto-CTI completely.
+  CORE COMMANDS (pipeline):
+    -d   Launch interactive dashboard
+    -s   Run Scout Agent
+    -t   Run Triage Agent
+    -p   Run Publisher Agent
+    -f   Run full pipeline (Scout → Triage → Publisher → Archive)
+
+  ANALYSIS TOOLS (verification):
+    -v   Verify Urgency Score formula
+    -b   PoC breakdown (external / patch-diff / none)
+    -g   LLM vs authoritative CVSS agreement
+    -a   Archive the current run (optionally: -a <label>)
+
+  CONFIGURATION:
+    -k   Check API keys (live test, no secrets shown)
+    -e   Edit .env file in your editor
+
+  MAINTENANCE:
+    -u   Remove Auto-CTI completely
+
+  Examples:
+    auto-cti -d                    # start the SOC dashboard
+    auto-cti -f cycle1_run1        # run + archive with a label
+    auto-cti -b --list             # list plausible PoC links
+    auto-cti -v /path/to/runs      # verify a batch of archived runs
+    auto-cti -g                    # LLM agreement with authoritative sources
+```
 
 ### Manual / Development Mode
 
@@ -551,37 +619,75 @@ streamlit run src/dashboard.py     # dashboard
 
 ---
 
+## Command Reference
+
+### Core Commands
+
+| Command | Description |
+|---|---|
+| `auto-cti -d` | Launch the Streamlit SOC dashboard at `http://localhost:8501` |
+| `auto-cti -s` | Run the Scout Agent only (collect CVEs) |
+| `auto-cti -t` | Run the Triage Agent only (analyze collected CVEs) |
+| `auto-cti -p` | Run the Publisher Agent only (build JSON + PDF) |
+| `auto-cti -f [label]` | Run the full pipeline **and archive the run** (optional label e.g. `cycle1_run1`) |
+
+### Analysis Tools
+
+| Command | Description |
+|---|---|
+| `auto-cti -v [path]` | Recompute every Urgency Score and compare against the stored value (uses `OTX_Pulse_Count` from the cache; falls back to Scout files) |
+| `auto-cti -b [path] [--list]` | Classify every CVE by PoC provenance into four honest categories |
+| `auto-cti -g [cache]` | Measure how often the LLM's raw CVSS score agreed with the authoritative source |
+| `auto-cti -a [label]` | Snapshot the current pipeline outputs into a numbered folder under `~/.auto-cti/data/runs/`, together with the code version and active feature toggles |
+
+### Configuration
+
+| Command | Description |
+|---|---|
+| `auto-cti -k` | Live-test every API key against its provider (prints `OK` / `FAIL (<code>)`, never the key) |
+| `auto-cti -e` | Open `~/.auto-cti/.env` in `$EDITOR` (defaults to `nano`) |
+
+### Maintenance
+
+| Command | Description |
+|---|---|
+| `auto-cti -u` | Uninstall Auto-CTI completely (removes `~/.auto-cti` and the wrapper script) |
+
+---
+
 ## Output & Reports
 
 - **JSON Feed:** `~/.auto-cti/data/publisher_agent_result/` — structured data for SIEM integration.
 - **PDF Briefing:** `~/.auto-cti/data/Reports/` — TLP:AMBER classified PDF with statistics, charts, executive summary, critical action list, and detailed CVE findings.
+- **Archived Runs:** `~/.auto-cti/data/runs/NNN_<label>_<timestamp>/` — every `-f` or `-a` invocation is snapshotted with the four output files plus a `run_meta.json` recording the run number, label, timestamp, code version, and feature toggle state.
 
 ---
 
 ## Validation Metrics
 
-The system computes the following metrics in every PDF report. The values below reflect observed ranges across multiple validation runs (3+ runs, 100 CVEs each):
+The system computes the following metrics in every PDF report and via the CLI analysis tools. The values below reflect observed ranges across validation runs.
 
 | Metric | Description | Observed Range |
 |---|---|---|
-| PoC Discovery Rate | % of CVEs with a matched external exploit/PoC reference | 26% – 67% |
-| CVSS Verification Rate | % of scores confirmed against authoritative sources | 59% – 87% verified, 13% – 41% refined |
-| Total Processing Time | Wall-clock time for the full pipeline run | 12 – 23 minutes |
+| PoC Discovery Rate (strict) | % of CVEs with a matched external exploit/PoC reference | 2.5% – 39% (depends on sample; `vuldb.com` advisory pages excluded from the strict count) |
+| Patch-diff Analysis Rate | % of CVEs where a vendor commit diff was reverse-engineered by the LLM | 13% – 77% |
+| CVSS Verification Rate | % of scores confirmed against authoritative sources | 96% – 99% verified, 1% – 4% refined |
+| **LLM CVSS Agreement Rate** | % of CVEs where the LLM's raw CVSS score exactly matched the authoritative source | **88% – 99% exact match** |
+| Total Processing Time | Wall-clock time for the full pipeline run | 8 – 23 minutes per 100 CVEs |
 | PoC Sources Attempted | Stages in the PoC waterfall | 12 |
 
 **Key observations from validation:**
 
 | Observation | Detail |
 |---|---|
-| **CVSS Verification** | Always correctly reported (e.g., 78% verified, 22% refined) – no false 100% claims. |
-| **Section 4.2 vs Section 5** | No contradictions – Score Provenance labels match the summary statistics in every report. |
-| **PoC References** | Relevant – no skincare repos, "awesome-stars" lists, or false-positive aggregators. |
-| **Patch-Diff LLM** | Successfully executes – logs show `Found GitHub commit diff. Analyzing root cause via Gemini...` |
-| **Sploitus/Vulners** | Skipped as intended – no HTTP errors (both are environment-gated and disabled by default). |
-| **Aggregator Repo Detection** | Actively flags and removes suspicious repos appearing across multiple CVEs (e.g., `nomi-sec/PoC-in-GitHub`, `blackjack550/vigil`). |
-| **MAMORE Deduplication** | Prevents duplicate reporting across runs – previously seen CVEs are skipped automatically. |
+| **Urgency Verification** | `auto-cti -v` reports 100% match with 0 mismatches on every validated run — the formula is deterministic in Python, not the LLM. |
+| **LLM Agreement** | `auto-cti -g` reports mean absolute delta of 0.02–0.25 CVSS points; median is 0.00. Where disagreements occur they are typically confined to a single case with a delta of ~1.8–4.5 points. |
+| **CVSS Verification** | Always correctly reported (e.g., 99% verified, 1% refined) — no false 100% claims. |
+| **PoC Categories** | The four-category breakdown (external, patch-analysis, non-PoC refs, no PoC) prevents the "PoC found" figure from inflating. |
+| **Aggregator Repo Detection** | Actively flags and removes suspicious repos appearing across multiple CVEs (e.g., `nomi-sec/PoC-in-GitHub`, `trickest/cve`, `olbat/nvdcve`, `vuldb.com` advisory pages). |
+| **MAMORE Deduplication** | Prevents duplicate reporting across runs — previously seen CVEs are skipped automatically. |
 
-> **Note:** PoC discovery rates vary depending on the age of the CVEs processed (newly published CVEs often lack public exploits), the availability of GitHub PoC repositories, and network conditions during the run. The system gracefully handles API limits and source unavailability via its 12-stage fallback waterfall.
+> **Note:** PoC discovery rates vary with the age of the CVEs processed, the availability of GitHub PoC repositories, and network conditions. The system gracefully handles API limits and source unavailability via its 12-stage fallback waterfall and its rate-limit circuit breaker.
 
 ---
 
@@ -591,47 +697,63 @@ The system computes the following metrics in every PDF report. The values below 
 
 1. **CVSS Verification Rate Overstatement (Fixed ✅)**  
    *Previously:* The generated PDF reported a 100% verification rate even when some scores were `Estimated (Unverified)`.  
-   *Resolution:* Replaced the substring check (`"verified" in score_source`) with an explicit allow-list of verified sources (`nvd_verified`, `cna_official`, `tenable_verified`, `opencve_verified`, `cve_org_official`). The PDF now correctly reports the actual verification percentage (e.g., 71% verified, 29% refined).
+   *Resolution:* Replaced the substring check (`"verified" in score_source`) with an explicit allow-list of verified sources. The PDF now correctly reports the actual verification percentage.
 
 2. **GitHub PoC Relevance Filtering (Fixed ✅)**  
-   *Previously:* The system returned any GitHub repository mentioning a CVE ID, leading to false positives (e.g., skincare repos, "awesome-stars" lists).  
-   *Resolution:* Implemented `_get_cwe_keywords()` to filter repositories by CWE-specific keywords (e.g., `xss`, `sql`, `deserialization`). Only repositories containing relevant exploit/PoC terms are now cited.
+   *Previously:* The system returned any GitHub repository mentioning a CVE ID, leading to false positives.  
+   *Resolution:* Implemented `_get_cwe_keywords()` to filter repositories by CWE-specific keywords. Only repositories containing relevant exploit/PoC terms are now cited.
 
 3. **Cross-CVE Aggregator Repo Detection (Fixed ✅)**  
    *Previously:* The deduplication logic for aggregator repositories did not execute due to a string format mismatch.  
-   *Resolution:* Corrected the detection pattern from `"- [https://github.com/](https://github.com/)"` to `"- https://github.com/"`. Suspicious aggregator repos that appear across multiple CVEs are now flagged and removed.
+   *Resolution:* Corrected the detection pattern. Suspicious aggregator repos that appear across multiple CVEs are now flagged and removed.
 
 4. **`.env` Path Mismatch (Fixed ✅)**  
    *Previously:* `install.sh` wrote the template to `~/.auto-cti/config/.env`, but `secure_config.py` read from `~/.auto-cti/.env`.  
-   *Resolution:* Updated `install.sh` to write directly to `~/.auto-cti/.env` and removed the obsolete `config/` directory. The template now includes all required keys and feature toggles.
+   *Resolution:* `install.sh` now writes directly to `~/.auto-cti/.env`. The obsolete `config/` directory was removed.
 
 5. **Non-Functional PoC Sources (Vulners Lucene & Sploitus) (Fixed ✅)**  
-   *Previously:* These sources returned HTTP 402/403 errors on every attempt, wasting ~1–2 seconds per CVE.  
-   *Resolution:* Both are now **environment-gated** (`ENABLE_VULNERS_LUCENE` and `ENABLE_SPLOITUS`) and disabled by default. They can be re-enabled by users with paid plans or workarounds.
+   *Previously:* These sources returned HTTP 402/403 errors on every attempt, wasting time per CVE.  
+   *Resolution:* Both are now **environment-gated** and disabled by default.
 
 6. **Redundant CVSS Re-verification (Fixed ✅)**  
-   *Previously:* The system verified CVSS scores up to three times per CVE (pre-LLM, post-LLM cache, and independent re-verification).  
-   *Resolution:* Removed the duplicate pre-LLM enrichment loop. The authoritative `verify_and_correct_cvss()` now runs once per CVE after the LLM output, significantly reducing runtime.
+   *Previously:* The system verified CVSS scores up to three times per CVE.  
+   *Resolution:* Removed the duplicate pre-LLM enrichment loop.
 
 7. **`is_reference_alive()` Fail-Open (Fixed ✅)**  
    *Previously:* Network timeouts were treated as "the link is alive," leading to broken references being labeled "Official".  
-   *Resolution:* Changed exception handling to return `False` on any network error. Only truly reachable URLs are now marked as alive.
+   *Resolution:* Changed exception handling to return `False` on any network error.
 
 8. **Patch-Diff LLM Bypassing CrewAI Setup (Fixed ✅)**  
-   *Previously:* The LLM patch-diff analysis made a raw REST call to `gemini-1.5-flash`, bypassing CrewAI's configuration.  
-   *Resolution:* Replaced the raw call with `llm(prompt)`, ensuring consistent model version, API key handling, and retry policies.
+   *Previously:* The LLM patch-diff analysis made a raw REST call to a specific Gemini model.  
+   *Resolution:* Routed through `litellm.completion()` to guarantee consistent model, API key handling, and retry policies.
 
 9. **Missing Environment Keys in Template (Fixed ✅)**  
    *Previously:* `GOOGLE_SEARCH_API_KEY` and `GOOGLE_SEARCH_CX` were not included in the installer's `.env` template.  
-   *Resolution:* Added these keys, along with feature toggles (`ENABLE_SPLOITUS`, `ENABLE_VULNERS_LUCENE`), to the default template.
+   *Resolution:* Added these keys, along with all feature toggles.
 
-10. **Stray `analyze_diff_with_llm` Reference (Fixed ✅)**  
-    *Previously:* A leftover line caused a `NameError` during Triage Agent execution.  
-    *Resolution:* Removed the stray line. The function is now correctly defined and used.
+10. **Triage Silent Success on Empty LLM Output (Fixed ✅)**  
+    *Previously:* When Gemini returned an empty array, the Triage Agent printed "Complete" and wrote a 0-CVE report.  
+    *Resolution:* Added a hard-fail path that exits with code 1 if the LLM returns zero records.
 
-11. **GitHub Search `NoneType` Error (Fixed ✅)**  
-    *Previously:* Repository names or descriptions with `None` values caused `.lower()` to fail.  
-    *Resolution:* Changed to `(repo.get("name") or "").lower()` to safely handle `None` values.
+11. **GitHub Search API Rate-Limit Storm (Fixed ✅)**  
+    *Previously:* With `MAX_ENTRY_WORKERS = 8`, concurrent GitHub Search API calls saturated the 30 req/min limit, causing a cascade of 403 responses and multi-hour stalls.  
+    *Resolution:* Added a thread-safe rate limiter (20 req/min), reduced workers to 3, added a circuit breaker that disables GitHub for the rest of the run after 8 consecutive failures, and shortened wait intervals from 60 s to 15 s. GitHub PoC lookup is now opt-in via `ENABLE_GITHUB_POC=true`.
+
+12. **Archive Tool / Analysis Tool Incompatibility (Fixed ✅)**  
+    *Previously:* `archive_run.py` saved the triaged report as `Triaged_Report.json`, but `verify_urgency.py` and `poc_breakdown.py` searched for `Triaged_Report_*.json`, so `auto-cti -v` and `auto-cti -b` on an archived folder returned "No runs found."  
+    *Resolution:* Analysis tools now use the glob `Triaged_Report*.json`, matching both the archived name and the dated name.
+
+13. **Archive Run Metadata Missing (Fixed ✅)**  
+    *Previously:* `run_meta.json` recorded feature toggles via `os.getenv()` but never loaded `~/.auto-cti/.env`, so all toggles were `null`.  
+    *Resolution:* `archive_run.py` now reads the `.env` file directly via `python-dotenv` and records real toggle values, plus the code version from `~/.auto-cti/VERSION`.
+
+14. **Full Pipeline Did Not Archive (Fixed ✅)**  
+    *Previously:* `auto-cti -f` replaced the previous run's Scout, Triage, and Publisher files.  
+    *Resolution:* `auto-cti -f` now chains into `archive_run.py` and snapshots every run into `~/.auto-cti/data/runs/`. Optional labels are supported: `auto-cti -f cycle1_run1`.
+
+15. **`save_env` Leaked Process Environment (Fixed ✅)**  
+    *Previously:* The dashboard's API-key editor passed the entire `os.environ` dictionary to `save_env()`, which wrote every variable (including `PATH`, shell secrets, and other tools' credentials) into `~/.auto-cti/.env`.  
+    *Resolution:* `save_env()` now performs a safe merge: it reads the current `.env`, updates only keys that exist in the Auto-CTI schema, and writes the result back. Environment variables not belonging to Auto-CTI are never persisted.
 
 ---
 
@@ -653,10 +775,10 @@ The system computes the following metrics in every PDF report. The values below 
 | Exploit-DB | Official exploit database | https://www.exploit-db.com/ |
 | Vulners | Aggregated vulnerability database (ID-based lookups only) | https://vulners.com/ |
 | Packet Storm | Security exploit archive | https://packetstormsecurity.com/ |
-| Sploitus | Exploit aggregator (currently gated — see Feature Toggles) | https://sploitus.com/ |
+| Sploitus | Exploit aggregator (environment-gated) | https://sploitus.com/ |
 | inTheWild.io | Active exploitation tracking | https://inthewild.io/ |
 | Rapid7 Metasploit | Exploit module cross-check | https://github.com/rapid7/metasploit-framework |
-| Seebug | Exploit database cross-check | https://www.seebug.org/ |
+| Seebug | Exploit database cross-check (environment-gated) | https://www.seebug.org/ |
 
 ---
 
